@@ -1,0 +1,8 @@
+.python-version
+.venv
+.tox
+.idea
+
+
+*.egg-info
+.mypy_cache
