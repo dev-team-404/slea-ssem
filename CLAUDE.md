@@ -117,4 +117,55 @@ Key Components:
 
 ---
 
+## REQ-Based Development Workflow (for MVP 1.0)
+
+**When to use**: Each user request follows format: `"REQ-X-Y 기능 구현해"` (implement REQ X-Y)
+
+### Command Format
+```
+User: "REQ-B-A2-Edit-1 기능 구현해"
+Assistant: (Automatically follows 4-phase workflow below)
+```
+
+### Phase 1️⃣: SPECIFICATION (Parse & Pause for Review)
+```
+- Extract REQ ID, 요구사항, 우선순위, Acceptance Criteria from feature_requirement_mvp1.md
+- Summarize: intent, constraints, performance goals
+- Define: Location (module path), Signature (types, I/O, side effects),
+  Behavior (logic, validation), Dependencies, Non-functional (perf/security)
+- 🛑 PAUSE: Present spec, ask "Approved? Continue to Phase 2?"
+```
+
+### Phase 2️⃣: TEST DESIGN (TDD Before Code)
+```
+- Create: tests/<domain>/test_<feature>.py
+- Design 4-5 test cases:
+  ✓ Happy path (valid inputs)
+  ✓ Input validation errors
+  ✓ Edge cases (DB, timeout, concurrency)
+  ✓ Acceptance criteria verification
+- Include REQ ID in docstrings: # REQ: REQ-X-Y-Edit-1
+- 🛑 PAUSE: Present test list, ask "Tests approved? Continue to Phase 3?"
+```
+
+### Phase 3️⃣: IMPLEMENTATION (Code to Spec)
+```
+- Write minimal code satisfying spec + tests
+- Follow SOLID + conventions from above
+- Run: tox -e style && pytest tests/<domain>/test_<feature>.py
+- 🛑 STOP if validation fails; report errors
+```
+
+### Phase 4️⃣: SUMMARY (Report & Commit)
+```
+- Modified files + rationale
+- Test results (all pass)
+- Traceability: REQ → Spec → Tests → Code
+- Create git commit: ./tools/commit.sh
+```
+
+**Key Principle**: Phase 1-2 pause for review = prevent rework. Spec must be approved before coding.
+
+---
+
 **Forcing Function Principle**: 3-4 intuitive commands (dev.sh, commit.sh, tox) reduce learning curve & execution variance. See `docs/PROJECT_SETUP_PROMPT.md` for details.
