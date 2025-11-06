@@ -1719,13 +1719,16 @@ def validate_question_quality(
 
     Returns (단일):
         {
-            "is_valid": True,  # LLM 점수 >= 0.7 AND 규칙 검증 통과
+            "is_valid": True,  # 최소 기준(final_score >= 0.7) 통과 여부
             "score": 0.92,  # LLM 의미 점수 (0~1)
             "rule_score": 0.95,  # 규칙 기반 점수 (0~1)
             "final_score": 0.92,  # min(score, rule_score)
             "feedback": "명확하고 적절한 난이도의 문항입니다.",
             "issues": [],  # 발견된 문제점
             "recommendation": "pass" | "revise" | "reject"
+            # pass: final_score >= 0.85 → 즉시 저장
+            # revise: 0.70 <= final_score < 0.85 → 피드백 후 재생성
+            # reject: final_score < 0.70 → 폐기, 새 문항 생성
         }
 
     Returns (배치):
@@ -2290,18 +2293,23 @@ class ItemGenAgent:
         previous_score: int = None
     ) -> list[dict]:
         """
-        문항을 생성합니다.
+        Mode 1: 문항을 생성합니다. (ReAct 패턴 - 도구 선택 규칙 따름)
 
         실행 흐름:
-        1. 사용자 정보 조회 (get_user_profile)
-        2. 관심분야별 템플릿 검색 (search_question_templates)
-           → 이 템플릿들이 QUESTION_GENERATION_TEMPLATE의 few-shot 예시로 활용됨
-        3. 난이도별 키워드 조회 (get_difficulty_keywords)
-        4. 사용자 정보 + 템플릿 + 키워드를 통합한 프롬프트 구성
-        5. LLM이 문항 생성 (ReAct 루프 시작)
-        6. 각 문항 검증 (validate_question_quality)
-        7. 검증 통과 문항 저장 (save_generated_question)
-        8. 최종 결과를 _parse_agent_output으로 JSON 변환
+        1. ✓ REQUIRED: get_user_profile → 사용자 정보 조회
+        2. ⊗ CONDITIONAL: search_question_templates
+           - 관심분야 있으면 → 검색해서 Few-shot 예시로 활용
+           - 검색 결과 없으면 → 스킵
+        3. ✓ REQUIRED: get_difficulty_keywords → 난이도별 핵심 개념 파악
+        4. ✓ REQUIRED: LLM이 {count}개 문항 배치 생성
+           - 난이도 분포 적용
+           - 유형 비율 적용 (객관식 40%, OX 20%, 주관식 40%)
+        5. ✓ REQUIRED: validate_question_quality (배치 검증)
+           - 점수 >= 0.85: PASS → 즉시 저장
+           - 0.70~0.84: REVISE → 피드백 후 재생성 (최대 2회)
+           - < 0.70: REJECT → 폐기, 다른 문항 생성
+        6. ✓ REQUIRED: save_generated_question (검증 통과 문항만)
+        7. ✓ REQUIRED: _parse_agent_output → 최종 결과 파싱
 
         Args:
             user_id: 사용자 ID
@@ -2355,8 +2363,10 @@ class ItemGenAgent:
 
         from langchain.agents import AgentExecutor
 
+        # Mode 1: self.agent는 _get_generation_system_prompt()로 초기화됨
+        # (Mode 2와 구분하여 생성 전용 프롬프트 사용)
         executor = AgentExecutor(
-            agent=self.agent,
+            agent=self.agent,  # Mode 1: 생성 전용 에이전트
             tools=self.tools,
             max_iterations=self.max_iterations,
             verbose=True
@@ -2365,9 +2375,21 @@ class ItemGenAgent:
         result = executor.invoke({"input": input_prompt})
         return self._parse_agent_output(result)
 
-    def _get_system_prompt(self) -> str:
+    def _create_agent(self):
+        """LangChain Agent 생성 (기본 구조)"""
+        from langchain.agents import create_tool_calling_agent
+
+        # 주의: 실제 실행 시에는 generate_questions/score_and_explain에서
+        # 각 메서드에 맞는 프롬프트를 AgentExecutor에 전달합니다.
+        return create_tool_calling_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=self._get_generation_system_prompt()  # 기본값: 생성용
+        )
+
+    def _get_generation_system_prompt(self) -> str:
         """
-        시스템 프롬프트 (QUESTION_GENERATION_TEMPLATE 포함)
+        Mode 1: 문항 생성 전용 시스템 프롬프트
 
         주의: 이 프롬프트는 generate_questions() 실행 시,
         search_question_templates()로 검색된 템플릿들이
@@ -2392,6 +2414,41 @@ class ItemGenAgent:
 - 난이도 1~3: 기본 개념 정의, 단순 적용
 - 난이도 4~6: 개념 이해, 실무 적용
 - 난이도 7~10: 심화 개념, 시스템 설계, 엣지 케이스"""
+
+    def _get_scoring_system_prompt(self) -> str:
+        """
+        Mode 2: 자동 채점 & 해설 생성 전용 시스템 프롬프트
+        """
+        return """당신은 AI 역량 평가 시스템의 자동 채점 및 해설 생성 에이전트입니다.
+
+당신의 역할:
+- 응시자의 답변을 문항 유형에 맞게 채점
+- 객관식/OX: 정답 대조로 정확한 채점
+- 주관식: 의미 기반 평가로 키워드 포함도 및 문맥 이해도 판단
+- 모든 문항에 대해 학습 효과를 높이는 해설 생성
+- 틀린 답변에 대해 건설적인 피드백 제공
+
+채점 기준:
+- 채점 점수는 0~100 범위
+- 객관식/OX: 정답 매칭 시 100점, 오답 0점
+- 주관식: 키워드 포함도/문맥 이해도 평가 (0~100)
+- is_correct: 주관식은 점수 >= 70일 때만 True
+
+제약사항:
+- 객관적이고 공정한 채점
+- 해설은 250자 이내, 명확하고 이해하기 쉬운 언어 사용
+- 한국어 기본, 명확한 표현 사용
+
+해설 구성:
+- 정답 이유
+- 자주 하는 실수
+- 관련된 개념 설명"""
+
+    def _get_system_prompt(self) -> str:
+        """
+        Deprecated: 하위호환성용. _get_generation_system_prompt() 사용 권장
+        """
+        return self._get_generation_system_prompt()
 
     def _parse_agent_output(self, result: dict) -> list[dict]:
         """
@@ -2513,22 +2570,33 @@ class ItemGenAgent:
            - 모든 필드가 포함된 채점 결과 반환
            - test_responses & attempt_answers에 자동 저장
 
-        JSON 형식으로 반환하세요:
+        JSON 형식으로 반환하세요 (Tool 6 스키마와 일치):
         {{
-            "attempt_id": "uuid",
+            "attempt_id": "uuid",  # Tool 6이 자동 생성
             "question_id": "{question_id}",
             "user_id": "{user_id}",
             "is_correct": True|False,
-            "score": 85,
-            "explanation": "...",
-            "graded_at": "..."
+            "score": 85,  # 0~100
+            "explanation": "정답 해설: ...",
+            "keyword_matches": ["keyword1", "keyword2"],  # 주관식인 경우만
+            "feedback": "더 나은 답변을 위한 피드백 (있을 경우)",  # 부분 정답 시
+            "graded_at": "2025-11-06T10:35:00Z"
         }}
         """
 
-        from langchain.agents import AgentExecutor
+        from langchain.agents import AgentExecutor, create_tool_calling_agent
+
+        # Mode 2: 별도의 에이전트 생성 (Mode 1 프롬프트 오버라이드)
+        # Note: self.agent는 Mode 1(생성) 프롬프트로 초기화되므로,
+        # score_and_explain에서는 Mode 2 전용 프롬프트로 새 에이전트를 생성해야 함
+        scoring_agent = create_tool_calling_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=self._get_scoring_system_prompt()  # ← Mode 2 전용 프롬프트
+        )
 
         executor = AgentExecutor(
-            agent=self.agent,
+            agent=scoring_agent,  # Mode 2 에이전트 사용
             tools=self.tools,
             max_iterations=3,
             verbose=True
