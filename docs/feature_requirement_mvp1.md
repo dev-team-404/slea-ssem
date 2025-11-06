@@ -9,7 +9,7 @@
 
 ## 📌 Executive Summary
 
-SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 측정하고 등급화**하는 시스템입니다. Samsung AD SSO를 통한 가입, 적응형 2단계 레벨 테스트, LLM 기반 자동 채점·해설, 그리고 상대 순위 제시로 구성됩니다. 모든 핵심 기능은 **Multi-AI-Agent 아키텍처**로 자동화되며, 관리자 개입을 최소화합니다.
+SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 측정하고 등급화**하는 시스템입니다. Samsung AD SSO를 통한 가입, 적응형 2단계 레벨 테스트, LLM 기반 자동 채점·해설, 그리고 상대 순위 제시로 구성됩니다. 핵심 기능(문제 생성/채점)은 **Multi-AI-Agent 아키텍처**로 자동화되며, 관리자 개입을 최소화합니다.
 
 **Target Users**: S.LSI 전사 임직원(총 ~7000명 기준)
 
@@ -219,18 +219,30 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 # 🔧 BACKEND REQUIREMENTS
 
-## A-1. Samsung AD 인증 (Backend)
+## A-1. Samsung AD 인증 및 사용자 세션 관리 (Backend)
+
+> **⚠️ 중요**: Samsung AD SSO 인증 자체는 기존 기업 서비스를 이용합니다. Backend의 책임은 **인증 후 사용자 정보 수신 및 세션 관리**입니다.
 
 | REQ ID | 요구사항 | 우선순위 |
 |--------|---------|---------|
-| **REQ-101-B** | Auth-Service가 Samsung AD 인증 코드를 받아 액세스 토큰 및 사용자 정보를 조회해야 한다. | **M** |
-| **REQ-102-B** | 인증 성공 시 JWT 토큰을 발급하고, 토큰에 user_id, email, dept를 포함해야 한다. | **M** |
-| **REQ-103-B** | 신규 사용자는 is_new_user=true 플래그와 함께 응답해야 한다. | **M** |
+| **REQ-101-B** | Auth-Service가 Frontend로부터 Samsung AD 인증 후 사용자 정보(name, knox-id, dept, business_unit)를 수신하여 JWT 토큰을 생성해야 한다. | **M** |
+| **REQ-102-B** | JWT 토큰을 발급하고, 토큰에 user_id, knox_id, email, dept, business_unit을 포함해야 한다. | **M** |
+| **REQ-103-B** | 신규 사용자는 users 테이블에 새 레코드를 생성하고, is_new_user=true 플래그와 함께 응답해야 한다. | **M** |
+| **REQ-103-B (추가)** | 기존 사용자가 재로그인하는 경우, is_new_user=false로 설정하고 last_login을 현재 시간으로 업데이트해야 한다. | **M** |
+
+**구현 상세**:
+
+- **Samsung AD 연동**: Frontend에서 Samsung AD SSO 완료 후 사용자 정보(name, knox-id, dept, business_unit) 전달
+- **신규 사용자 등록**: users 테이블에 새 레코드 생성 (emp_no=knox_id, email, dept, status='active', created_at=현재시간)
+- **기존 사용자 업데이트**: 기존 사용자 로그인 시 last_login 타임스탬프 업데이트
+- **접속 히스토리**: last_login 정보를 통해 사용자의 접속 빈도 및 학습 활동 추적 가능
 
 **수용 기준**:
 
-- "Samsung AD 콜백 후 3초 내 JWT 토큰이 발급된다."
-- "토큰 검증 시 사용자 정보가 정확히 반환된다."
+- "Frontend로부터 AD 정보 수신 후 1초 내 JWT 토큰이 발급된다."
+- "신규 사용자 생성 후 users 테이블에 레코드가 저장되고, is_new_user=true로 반환된다."
+- "재로그인 시 기존 레코드의 last_login이 업데이트되고, is_new_user=false로 반환된다."
+- "last_login 조회를 통해 사용자의 접속 히스토리 분석 가능하다."
 
 ---
 
