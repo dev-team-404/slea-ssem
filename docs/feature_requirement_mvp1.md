@@ -1463,6 +1463,617 @@ ELSE IF total_candidates >= 100:
 
 ---
 
+# 🤖 AGENT REQUIREMENT
+
+## 개요
+
+**Item-Gen-Agent**는 LLM을 기반으로 **동적 문항 생성, 자동 채점, 해설 생성**을 수행하는 자율 AI 에이전트입니다. LangChain의 최신 Agent 패턴과 FastMCP (Model Context Protocol) 프레임워크를 활용하여, Backend API를 도구화하고, 에이전트가 스스로 5개의 도구를 판단·활용하면서 주어진 작업을 완료합니다.
+
+**핵심 특징:**
+- **위치**: `./src/agent` 폴더
+- **프레임워크**: LangChain + FastMCP
+- **LLM**: 사내 Local LLM
+- **도구**: Backend API를 FastMCP @tool로 등록 (5개)
+- **의사결정**: 에이전트가 상황에 따라 도구를 선택·활용
+
+---
+
+## 아키텍처
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                  Client (Frontend)                      │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTP Request
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│            FastAPI Backend Server                       │
+│  ┌──────────────────────────────────────────────┐      │
+│  │  Item-Gen-Agent (LangChain)                  │      │
+│  │  - 문항 생성, 채점, 해설 로직                 │      │
+│  │  - Tool 선택 및 실행                          │      │
+│  └──────────────────────────────────────────────┘      │
+│  ┌──────────────────────────────────────────────┐      │
+│  │  FastMCP Server (@tool 등록)                 │      │
+│  │  - Tool 1: 사용자 정보 조회                  │      │
+│  │  - Tool 2: 관심분야별 문항 템플릿 검색       │      │
+│  │  - Tool 3: 난이도별 키워드 조회              │      │
+│  │  - Tool 4: 문항 품질 검증                    │      │
+│  │  - Tool 5: 생성된 문항 저장                  │      │
+│  └──────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+                     │ SQL
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│            PostgreSQL Database                          │
+│ (users, user_profile_surveys, question_bank, etc.)     │
+└─────────────────────────────────────────────────────────┘
+                     │ HTTP
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│           사내 Local LLM Server                          │
+│  (문항 생성, 채점, 해설 생성)                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## FastMCP Tool 정의 (5개)
+
+### Tool 1: Get User Profile
+
+**목적**: 사용자의 자기평가 정보 조회
+
+```python
+@tool
+def get_user_profile(user_id: str) -> dict:
+    """
+    사용자의 자기평가 정보를 조회합니다.
+
+    Args:
+        user_id: 사용자 ID (UUID)
+
+    Returns:
+        {
+            "user_id": "uuid",
+            "self_level": "beginner|intermediate|advanced",
+            "years_experience": 3,
+            "job_role": "Backend Engineer",
+            "duty": "FastAPI 개발",
+            "interests": ["LLM", "RAG", "Agent Architecture"],
+            "previous_score": 72  # 이전 응시 점수 (있을 경우)
+        }
+    """
+    # FastAPI Endpoint: GET /api/v1/profile/{user_id}
+```
+
+### Tool 2: Search Question Templates
+
+**목적**: 관심분야별 문항 템플릿 검색 (문항 생성의 참고 자료)
+
+```python
+@tool
+def search_question_templates(
+    interests: list[str],
+    difficulty: int,
+    category: str
+) -> list[dict]:
+    """
+    관심분야와 난이도에 맞는 문항 템플릿을 검색합니다.
+    (이미 검증된 과거 문항을 참고하여 유사한 구조의 문항 생성 시 활용)
+
+    Args:
+        interests: ["LLM", "RAG", ...] - 관심분야 목록
+        difficulty: 1~10 - 난이도
+        category: "technical" | "business" | "general"
+
+    Returns:
+        [
+            {
+                "id": "question_id",
+                "stem": "LLM과 RAG의 차이점은?",
+                "type": "short_answer",
+                "correct_rate": 0.75,  # 정답률
+                "usage_count": 5
+            },
+            ...
+        ]
+    """
+    # FastAPI Endpoint: POST /api/v1/tools/search-templates
+```
+
+### Tool 3: Get Difficulty Keywords
+
+**목적**: 난이도별 키워드 및 개념 조회
+
+```python
+@tool
+def get_difficulty_keywords(
+    difficulty: int,
+    category: str
+) -> dict:
+    """
+    특정 난이도와 카테고리에 맞는 핵심 키워드와 개념을 조회합니다.
+    (문항 생성 시 포함할 주요 개념을 파악하기 위함)
+
+    Args:
+        difficulty: 1~10 - 난이도
+        category: 카테고리 (e.g., "LLM", "RAG", "Agent Architecture")
+
+    Returns:
+        {
+            "keywords": ["prompt engineering", "token window", "hallucination"],
+            "concepts": ["Context Window", "Attention Mechanism"],
+            "example_questions": [
+                "What is prompt engineering and why is it important?"
+            ]
+        }
+    """
+    # FastAPI Endpoint: POST /api/v1/tools/difficulty-keywords
+```
+
+### Tool 4: Validate Question Quality
+
+**목적**: 생성된 문항의 품질 검증
+
+```python
+@tool
+def validate_question_quality(
+    stem: str,
+    question_type: str,
+    choices: list[str] = None,
+    correct_answer: str = None
+) -> dict:
+    """
+    생성된 문항이 요구사항을 충족하는지 검증합니다.
+
+    Args:
+        stem: 문항 내용
+        question_type: "multiple_choice" | "true_false" | "short_answer"
+        choices: 객관식 선택지 (해당하는 경우)
+        correct_answer: 정답
+
+    Returns:
+        {
+            "is_valid": True,
+            "score": 0.92,  # 0~1 범위의 품질 점수
+            "feedback": "명확하고 적절한 난이도의 문항입니다.",
+            "issues": []  # 발견된 문제점 (있을 경우)
+        }
+    """
+    # FastAPI Endpoint: POST /api/v1/tools/validate-question
+```
+
+### Tool 5: Save Generated Question
+
+**목적**: 생성된 문항을 question_bank에 저장
+
+```python
+@tool
+def save_generated_question(
+    item_type: str,
+    stem: str,
+    choices: list[str] = None,
+    correct_key: str = None,
+    correct_keywords: list[str] = None,
+    difficulty: int = None,
+    categories: list[str] = None,
+    round_id: str = None
+) -> dict:
+    """
+    생성된 문항을 DB에 저장합니다.
+
+    Args:
+        item_type: "multiple_choice" | "true_false" | "short_answer"
+        stem: 문항 내용
+        choices: 객관식 선택지
+        correct_key: 정답 (객관식/OX)
+        correct_keywords: 정답 키워드 (주관식)
+        difficulty: 난이도 (1~10)
+        categories: 카테고리 (e.g., ["LLM", "RAG"])
+        round_id: 라운드 ID
+
+    Returns:
+        {
+            "question_id": "uuid",
+            "saved_at": "2025-11-06T10:30:00Z",
+            "success": True
+        }
+    """
+    # FastAPI Endpoint: POST /api/v1/tools/save-question
+```
+
+---
+
+## Agent 스펙
+
+### Agent 클래스: `ItemGenAgent`
+
+```python
+class ItemGenAgent:
+    """
+    LangChain을 기반으로 하는 Item 생성 에이전트
+    """
+
+    def __init__(
+        self,
+        llm_endpoint: str,
+        mcp_server: FastMCPServer,
+        model_name: str = "local-llm",
+        temperature: float = 0.7,
+        max_iterations: int = 10
+    ):
+        """
+        Args:
+            llm_endpoint: 사내 Local LLM 엔드포인트
+            mcp_server: FastMCP 서버 인스턴스
+            model_name: LLM 모델명
+            temperature: LLM 생성 시 창의성 (0~1)
+            max_iterations: 최대 반복 시도 횟수
+        """
+        self.llm = ChatLocal(
+            endpoint=llm_endpoint,
+            model=model_name,
+            temperature=temperature
+        )
+        self.tools = self._register_tools(mcp_server)
+        self.agent = self._create_agent()
+        self.max_iterations = max_iterations
+
+    def _register_tools(self, mcp_server: FastMCPServer) -> list:
+        """FastMCP에서 5개의 도구를 가져옵니다."""
+        return [
+            mcp_server.get_tool("get_user_profile"),
+            mcp_server.get_tool("search_question_templates"),
+            mcp_server.get_tool("get_difficulty_keywords"),
+            mcp_server.get_tool("validate_question_quality"),
+            mcp_server.get_tool("save_generated_question")
+        ]
+
+    def _create_agent(self):
+        """LangChain Agent 생성"""
+        from langchain.agents import create_tool_calling_agent
+
+        return create_tool_calling_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=self._get_system_prompt()
+        )
+
+    def generate_questions(
+        self,
+        user_id: str,
+        round_number: int,
+        count: int = 5,
+        previous_score: int = None
+    ) -> list[dict]:
+        """
+        문항을 생성합니다.
+
+        Args:
+            user_id: 사용자 ID
+            round_number: 라운드 번호 (1 또는 2)
+            count: 생성할 문항 수 (기본 5개)
+            previous_score: 이전 라운드 점수 (2라운드인 경우)
+
+        Returns:
+            생성된 문항 리스트
+        """
+        input_prompt = f"""
+        사용자 ID: {user_id}
+        라운드: {round_number}
+        필요한 문항 수: {count}개
+        {'이전 점수: ' + str(previous_score) if previous_score else ''}
+
+        다음 과정을 따르세요:
+        1. get_user_profile 도구로 사용자 정보를 조회하세요.
+        2. search_question_templates 도구로 관련 템플릿을 검색하세요.
+        3. get_difficulty_keywords 도구로 핵심 개념을 파악하세요.
+        4. {count}개의 문항을 생성하세요 (객관식/OX/주관식 혼합).
+        5. 각 문항에 대해 validate_question_quality 도구로 검증하세요.
+        6. 검증 통과한 문항을 save_generated_question 도구로 저장하세요.
+
+        생성된 모든 문항을 JSON 형식으로 반환하세요.
+        """
+
+        from langchain.agents import AgentExecutor
+
+        executor = AgentExecutor(
+            agent=self.agent,
+            tools=self.tools,
+            max_iterations=self.max_iterations,
+            verbose=True
+        )
+
+        result = executor.invoke({"input": input_prompt})
+        return self._parse_agent_output(result)
+
+    def _get_system_prompt(self) -> str:
+        """시스템 프롬프트"""
+        return """당신은 AI 역량 평가 시스템의 지능형 문항 생성 에이전트입니다.
+
+당신의 역할:
+- 사용자의 경력, 직군, 관심분야에 맞춰진 문항을 동적으로 생성
+- 난이도를 적절히 조정하여 도전적이면서도 공정한 평가 보장
+- 객관식, OX, 주관식을 적절히 혼합
+- 생성된 문항의 품질을 검증한 후 저장
+
+제약사항:
+- 각 문항은 250자 이내
+- 정답은 명확하고 검증 가능해야 함
+- 편향된 표현이나 부적절한 내용 금지
+- 한국어 기본, 명확한 표현 사용"""
+
+    def _parse_agent_output(self, result: dict) -> list[dict]:
+        """에이전트 출력을 문항 리스트로 파싱"""
+        # 구현 예시
+        pass
+```
+
+---
+
+## Prompt Engineering 가이드
+
+### 1. 문항 생성 프롬프트 패턴
+
+```python
+QUESTION_GENERATION_TEMPLATE = """
+사용자 프로필 분석:
+- 수준: {self_level}
+- 경력: {years_experience}년
+- 관심분야: {interests}
+- 직군: {job_role}
+
+생성 조건:
+- 라운드: {round_number}
+- 난이도: {difficulty}/10
+- 타입: {question_type}
+- 최근 점수: {previous_score}
+
+요구사항:
+1. 사용자의 경력과 관심분야를 반영한 현실적인 시나리오 사용
+2. 난이도에 맞춘 개념 깊이 조정
+   - 초급(1~3): 기본 개념 정의, 단순 적용
+   - 중급(4~6): 개념 이해, 실무 적용
+   - 고급(7~10): 심화 개념, 시스템 설계, 엣지 케이스
+3. 객관식: 4~5개 선택지, 명확한 정답
+4. 주관식: 30자 이상 100자 이내 답변 기대
+5. OX: 자주 헷갈리는 개념 활용
+
+생성 결과 JSON:
+{{
+    "stem": "문항 내용",
+    "type": "multiple_choice|true_false|short_answer",
+    "choices": [...],  # 객관식인 경우
+    "correct_answer": "정답",
+    "difficulty": {difficulty},
+    "category": "{interests[0]}",
+    "explanation": "왜 이것이 정답인가?"
+}}
+"""
+```
+
+### 2. Few-Shot 프롬프트 (예시 기반)
+
+```python
+FEW_SHOT_EXAMPLES = """
+예시 1 - 객관식:
+사용자: LLM 관심, 3년 경력, 초급
+Q: LLM과 traditional NLP 모델의 주요 차이점은?
+A) Parameter 수와 학습 데이터 규모
+B) 사용하는 프로그래밍 언어
+C) 구동 환경 (GPU vs CPU)
+정답: A) - transformer 기반 대규모 매개변수
+
+예시 2 - 주관식:
+사용자: RAG 관심, 5년 경력, 중급
+Q: Retrieval-Augmented Generation에서 "Augmentation"은 무엇인가?
+정답: 외부 지식베이스에서 검색한 관련 정보를 LLM의 프롬프트에 추가하여 응답 정확도를 높이는 것
+"""
+```
+
+---
+
+## 에러 처리 & 복원력
+
+| 시나리오 | 처리 방식 |
+|---------|---------|
+| **Tool 호출 실패** | 최대 3회 재시도 후, 캐시된 템플릿 반환 |
+| **LLM 응답 형식 오류** | 응답 파싱 실패 시, JSON 구조 강제 변환 |
+| **문항 품질 검증 실패** | 검증 점수 < 0.7일 경우, 프롬프트 개선 후 재생성 |
+| **DB 저장 실패** | 로그 기록 후, 메모리 버퍼에 임시 저장 |
+| **LLM 타임아웃 (>30s)** | 중단 후, 부분 생성된 문항 중 유효한 것 저장 |
+
+---
+
+## 개발 가이드
+
+### 프로젝트 구조
+
+```
+./src/agent/
+├── __init__.py
+├── agent.py              # ItemGenAgent 클래스
+├── mcp_server.py         # FastMCP 서버 설정
+├── tools/
+│   ├── __init__.py
+│   ├── user_tools.py     # Tool 1: User Profile
+│   ├── template_tools.py # Tool 2: Templates
+│   ├── keyword_tools.py  # Tool 3: Keywords
+│   ├── validation_tools.py # Tool 4: Validation
+│   └── storage_tools.py  # Tool 5: Storage
+├── prompts/
+│   ├── system.py
+│   ├── generation.py
+│   └── few_shot.py
+├── config.py
+├── logger.py
+└── tests/
+    ├── test_agent.py
+    ├── test_tools.py
+    └── test_integration.py
+```
+
+### 핵심 개발 단계
+
+1. **FastMCP 서버 설정** (`mcp_server.py`)
+   - Backend API와 통신하는 도구 등록
+   - 에러 처리 및 재시도 로직
+
+2. **Tool 구현** (`tools/` 폴더)
+   - 각 도구는 독립적인 모듈로 구현
+   - 도구별 단위 테스트 작성
+
+3. **Agent 초기화** (`agent.py`)
+   - LangChain Agent 생성
+   - 도구 바인딩
+   - 프롬프트 로딩
+
+4. **테스트 주도 개발 (TDD)**
+   - 각 도구별 단위 테스트
+   - 에이전트 통합 테스트
+   - 엣지 케이스 시뮬레이션
+
+---
+
+## 배포 & 운영
+
+### 환경 변수 (.env)
+
+```bash
+# LLM 설정
+LOCAL_LLM_ENDPOINT=http://localhost:8888
+LOCAL_LLM_MODEL=qwen-14b-chat
+LOCAL_LLM_TIMEOUT=30
+
+# FastMCP 설정
+MCP_SERVER_PORT=8889
+MCP_DEBUG=false
+
+# Agent 설정
+AGENT_TEMPERATURE=0.7
+AGENT_MAX_ITERATIONS=10
+AGENT_VERBOSE=true
+
+# 캐시 설정
+CACHE_ENABLED=true
+CACHE_TTL=3600
+```
+
+### 모니터링 & 로깅
+
+```python
+import logging
+
+logger = logging.getLogger("item_gen_agent")
+logger.setLevel(logging.INFO)
+
+# 로깅 항목:
+# - 도구 호출 시간
+# - LLM 응답 토큰 수
+# - 문항 생성 성공/실패율
+# - 품질 검증 점수
+```
+
+---
+
+## 참고 자료 & 학습 가이드
+
+### 1. MCP (Model Context Protocol) 학습
+
+**문제**: MCP 개발 경험이 1번만 있는 상황
+
+**해결책**:
+- [Anthropic MCP 공식 문서](https://modelcontextprotocol.io)
+  - SSE 기반 통신 이해
+  - Tool 등록 패턴
+  - Error Handling
+- FastMCP 라이브러리 예제:
+  ```python
+  from fastmcp import FastMCP
+
+  app = FastMCP()
+
+  @app.tool()
+  def my_tool(param: str) -> dict:
+      return {"result": "output"}
+  ```
+
+### 2. LangChain Agent 최신 기술
+
+**문제**: LangChain Agent 최신 개발 경험 부족
+
+**해결책**:
+- LangChain v0.2+ 문서 (ReAct 패턴, Tool Calling)
+- 권장 튜토리얼:
+  1. [LangChain Agents](https://python.langchain.com/docs/modules/agents/)
+  2. [Tool Calling Agent](https://python.langchain.com/docs/modules/agents/concepts)
+  3. [AgentExecutor Deep Dive](https://python.langchain.com/docs/modules/agents/agent_types/tool_calling_agent)
+
+**핵심 개념**:
+- `create_tool_calling_agent`: LLM의 native tool calling 활용
+- `AgentExecutor`: 에이전트 실행 엔진
+- `Tool.from_function`: 함수를 도구로 변환
+
+### 3. 효율적인 AI Agent 개발
+
+**문제**: 효율적인 AI Agent 개발 경험 부족
+
+**권장 사항**:
+1. **작은 것부터 시작**
+   - 단일 도구로 시작 → 점진적 복잡도 증가
+   - 모의 LLM 사용 (프롬프트 테스트 시)
+
+2. **Prompt Engineering 최적화**
+   - Few-shot 예시 사용
+   - Chain-of-Thought (CoT) 프롬프팅
+   - 역할 정의 (Role Playing)
+
+3. **테스트 주도 개발**
+   ```python
+   # 1. 도구별 단위 테스트
+   def test_get_user_profile():
+       result = get_user_profile("user123")
+       assert "interests" in result
+
+   # 2. 에이전트 통합 테스트
+   def test_agent_generates_questions():
+       agent = ItemGenAgent(...)
+       questions = agent.generate_questions("user123", 1, count=5)
+       assert len(questions) == 5
+
+   # 3. 프롬프트 검증
+   def test_prompt_format():
+       prompt = agent._get_system_prompt()
+       assert "동적 생성" in prompt
+   ```
+
+4. **디버깅 전략**
+   - `AgentExecutor` verbose=True로 실행 흐름 추적
+   - 각 도구의 입출력 로깅
+   - LLM 응답 내용 분석
+
+---
+
+## 성능 목표
+
+| 지표 | 목표 |
+|------|------|
+| **문항 생성 시간** | ≤ 3초/세트 (5문항) |
+| **도구 호출 성공률** | ≥ 99% |
+| **문항 품질 검증 통과율** | ≥ 95% |
+| **LLM 응답 정확도** | 일관된 JSON 형식 |
+| **캐시 hit rate** | ≥ 80% (템플릿 재사용) |
+
+---
+
+**주의사항**:
+- Local LLM 성능에 따라 조정 필요
+- 초기 운영 중 프롬프트 최적화 지속
+- 도구 응답 시간 모니터링 필수
+
+---
+
 **Version History**:
 
 - v1.0 (2025-11-06): Initial Feature Requirement with Frontend/Backend split
