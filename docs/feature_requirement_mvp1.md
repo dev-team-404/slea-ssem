@@ -21,6 +21,8 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 - ✅ Samsung AD 기반 사용자 인증
 - ✅ 닉네임 등록 및 중복 검증
+- ✅ **닉네임 재설정 (기존 사용자 프로필 수정)**
+- ✅ **자기평가 정보 수정**
 - ✅ 자기평가 정보 수집 (수준, 경력, 직군, 업무, 관심분야)
 - ✅ LLM 기반 동적 문항 생성 (1~n차 적응형)
 - ✅ 객관식/OX/주관식 혼합 문항 지원
@@ -29,12 +31,18 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 - ✅ 5등급 체계 산출 (Beginner ~ Elite)
 - ✅ 상대 순위 및 백분위 표시
 - ✅ 결과 저장 및 재응시 기능
-- ✅ 결과 공유용 배지/이미지 (사내)
+- ✅ **테스트 진행 중 실시간 응답 저장**
+- ✅ **중단 후 재개 기능 (20분 초과 시 재개 안내)**
+- ✅ **20분 시간 제한 타이머 및 초과 처리**
+- ✅ 결과 공유용 배지/이미지 (사내 + 특수 배지)
+- ✅ **재미 모드 (카테고리 선택형 퀴즈 + 참여 배지/포인트)**
 - ✅ 마케팅, 반도체, 센서, RTL 등 "재미" 카테고리 문항
+- ✅ **학습 일정 예고 프리뷰 (MVP 2.0 미리보기)**
 
 ### 미포함 (Out of Scope)
 
-- ❌ 정식 학습 일정 자동 생성 (MVP 2.0)
+- ❌ 정식 학습 일정 자동 생성 및 코디네이팅 (MVP 2.0)
+- ❌ RAG 기반 문항 생성 (MVP 2.0)
 - ❌ 외부 결제/과금 시스템
 - ❌ 관리자 콘솔 고도화
 - ❌ 학습 아이템 등록/검색 (MVP 2.0)
@@ -107,6 +115,26 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 ---
 
+## REQ-F-A2-Edit: 프로필 수정 화면 (닉네임/자기평가 변경)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-F-A2-Edit-1** | 대시보드 또는 프로필 메뉴에서 "프로필 수정" 옵션을 제공해야 한다. | **M** |
+| **REQ-F-A2-Edit-2** | 기존 닉네임을 표시하고, 사용자가 새로운 닉네임으로 변경할 수 있어야 한다. | **M** |
+| **REQ-F-A2-Edit-3** | 닉네임 중복 확인 시, 기존 닉네임(현재 사용 중)은 제외하고 검증해야 한다. | **M** |
+| **REQ-F-A2-Edit-4** | 닉네임 변경 후 "저장" 버튼 클릭 시, DB에 업데이트되고 "저장되었습니다" 메시지를 표시해야 한다. | **M** |
+| **REQ-F-A2-Edit-5** | 자기평가 정보(수준, 경력, 직군, 업무, 관심분야)도 수정할 수 있어야 한다. | **M** |
+| **REQ-F-A2-Edit-6** | 수정된 자기평가 정보는 다음 테스트 응시 시 자동으로 반영되어야 한다. | **M** |
+
+**수용 기준**:
+
+- "프로필 수정 페이지에서 현재 닉네임이 표시된다."
+- "새 닉네임 입력 후 중복 확인 시, 기존 닉네임과의 충돌을 무시하고 검증한다."
+- "저장 버튼 클릭 후 1초 내 확인 메시지가 표시된다."
+- "페이지 새로고침 시 변경된 닉네임이 반영된다."
+
+---
+
 ## REQ-F-A3: 온보딩 모달
 
 | REQ ID | 요구사항 | 우선순위 |
@@ -142,16 +170,21 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 | REQ ID | 요구사항 | 우선순위 |
 |--------|---------|---------|
 | **REQ-F-B2-1** | 생성된 문항을 순차적으로 표시하고, 사용자가 답안을 입력하고 제출할 수 있는 UI를 제공해야 한다. | **M** |
-| **REQ-F-B2-2** | 문항 풀이 중 진행률 표시(예: 3/5), 응답 입력 필드, "다음" 버튼을 제공해야 한다. | **M** |
+| **REQ-F-B2-2** | 문항 풀이 중 진행률 표시(예: 3/5), 응답 입력 필드, "다음" 버튼, 남은 시간(타이머)을 제공해야 한다. | **M** |
 | **REQ-F-B2-3** | 각 문항 제출 후 1초 내에 "정답입니다" 또는 "오답입니다" 토스트/피드백을 표시해야 한다. | **M** |
 | **REQ-F-B2-4** | 주관식 답변의 부분점수(예: 70점)를 명확하게 표시해야 한다. | **M** |
-| **REQ-F-B2-5** | (선택) 응답 시간 제한 표시(카운트다운 타이머)를 제공할 수 있다. | **C** |
+| **REQ-F-B2-5** | **20분 제한 타이머를 화면 상단에 표시**하고, 시간이 지날수록 색상이 변해야 한다(녹색 → 주황색 → 빨간색). | **M** |
+| **REQ-F-B2-6** | **테스트 진행 중 각 응답은 자동으로 실시간 저장(Autosave)되어야 한다.** 저장 완료 시 화면에 "저장됨" 표시를 해야 한다. | **M** |
+| **REQ-F-B2-7** | **20분 초과 시, "시간이 초과되었습니다" 모달을 표시하고, 기존 진행 상황에서 재개할 수 있는 버튼을 제공해야 한다.** | **M** |
 
 **수용 기준**:
 
 - "문항이 1개씩 순차적으로 표시된다."
 - "각 문항 제출 후 1초 내 피드백이 표시된다."
 - "진행률이 실시간으로 업데이트된다."
+- "**20분 타이머가 화면 상단에 표시되고, 시간이 감소함에 따라 색상이 변한다.**"
+- "**각 응답 입력 후 2초 내에 '저장됨' 메시지가 표시된다.**"
+- "**시간 초과 시 현재 상태가 저장되고, 재개 옵션이 제공된다.**"
 
 ---
 
@@ -197,6 +230,45 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 - "이전 결과 vs 현재 결과 비교가 시각적으로 표시된다."
 - "재응시 버튼 클릭 시 이전 정보가 미리 로드된다."
+
+---
+
+## REQ-F-B6: 재미 모드 (카테고리 선택형 퀴즈)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-F-B6-1** | 대시보드에 "재미 모드" 버튼 또는 메뉴를 별도로 제공해야 한다. | **M** |
+| **REQ-F-B6-2** | "재미 모드" 클릭 시, 카테고리 선택 페이지를 표시하여 사용자가 선택할 수 있게 해야 한다: <br> - 마케팅 <br> - 반도체 <br> - 센서 <br> - RTL <br> - 기타 | **M** |
+| **REQ-F-B6-3** | 카테고리 선택 후 "시작" 버튼 클릭 시, 3~5개의 라이트 퀴즈 문항이 로드되어야 한다. | **M** |
+| **REQ-F-B6-4** | 퀴즈 풀이는 5~10분 내에 완료되도록 가벼운 형식이어야 하며, 시간 제한이 없어야 한다. | **M** |
+| **REQ-F-B6-5** | 모든 문항 제출 후 "결과 페이지"를 표시하여 점수, 짧은 해설, 참고 링크를 제시해야 한다. | **M** |
+| **REQ-F-B6-6** | 결과 페이지에 "참여 배지" 및 "포인트 획득" 정보를 표시해야 한다. (예: "반도체 마스터 배지 +50포인트") | **M** |
+| **REQ-F-B6-7** | "결과 공유" 버튼을 제공하여 사내 피드(카카오톡, 사내 SNS 등)에 공유할 수 있어야 한다. | **S** |
+
+**수용 기준**:
+
+- "대시보드에서 '재미 모드' 버튼이 쉽게 접근 가능하다."
+- "카테고리 선택 후 3초 내 퀴즈 문항이 로드된다."
+- "모든 문항 제출 후 점수와 배지 정보가 표시된다."
+- "공유 버튼 클릭 시 공유 대상 선택 다이얼로그가 나타난다."
+
+---
+
+## REQ-F-B7: 학습 일정 예고 (MVP 2.0 프리뷰)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-F-B7-1** | 레벨 테스트 최종 결과 페이지의 하단에 **"학습 일정 초안 보기 (MVP 2.0 미리보기)"** CTA 버튼을 제공해야 한다. | **M** |
+| **REQ-F-B7-2** | 버튼 클릭 시, **2~4주 맞춤 학습 계획 초안**을 표시해야 한다: <br> - 주당 학습 시간 <br> - 카테고리별 추천 자료 (사내/사외/영상/블로그) <br> - 예상 소요 시간 <br> - 학습 경로 | **M** |
+| **REQ-F-B7-3** | 학습 계획 초안 페이지에 **"관심 있음" 버튼**을 제공하여, 사용자가 대기리스트에 등록할 수 있게 해야 한다. | **M** |
+| **REQ-F-B7-4** | "관심 있음" 버튼 클릭 시, **"MVP 2.0 학습 코디네이터 오픈 시 자동 알림"** 확인 모달을 표시하고, 이메일 구독 옵션을 제공해야 한다. | **M** |
+| **REQ-F-B7-5** | (선택) "다시 보지 않기" 체크박스를 제공하여 이 프리뷰를 숨길 수 있어야 한다. | **S** |
+
+**수용 기준**:
+
+- "결과 페이지에 '학습 일정 초안 보기' 버튼이 보인다."
+- "버튼 클릭 후 2초 내 학습 계획 초안이 로드된다."
+- "'관심 있음' 버튼 클릭 시 대기리스트 등록 확인 메시지가 나타난다."
 
 ---
 
@@ -285,6 +357,22 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 ---
 
+## REQ-B-A2-Edit: 프로필 수정 (Backend)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-B-A2-Edit-1** | Profile-Service가 사용자의 닉네임 변경 요청을 받아, 기존 닉네임은 제외하고 중복 여부를 확인해야 한다. | **M** |
+| **REQ-B-A2-Edit-2** | 닉네임 변경 시 users 테이블의 nickname 필드를 업데이트하고, updated_at 타임스탬프를 갱신해야 한다. | **M** |
+| **REQ-B-A2-Edit-3** | 자기평가 정보(수준, 경력, 직군, 업무, 관심분야) 변경 요청을 받아, user_profile_surveys 테이블에 새 레코드를 생성하거나 기존 레코드를 업데이트해야 한다. | **M** |
+| **REQ-B-A2-Edit-4** | 프로필 수정 API는 1초 내에 응답해야 한다. | **M** |
+
+**수용 기준**:
+
+- "닉네임 변경 요청 후 1초 내 성공/실패 응답이 반환된다."
+- "DB 조회 시 updated_at이 최신 타임스탬프로 갱신되어 있다."
+
+---
+
 ## REQ-B-B1: 자기평가 데이터 수집 및 저장 (Backend)
 
 | REQ ID | 요구사항 | 우선순위 |
@@ -319,13 +407,31 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 ---
 
+## REQ-B-B2-Plus: 테스트 진행 중 실시간 저장 및 재개 (Backend)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-B-B2-Plus-1** | 사용자가 각 문항에 답변을 입력할 때마다, 해당 응답을 자동으로 임시 저장해야 한다. (실시간 Autosave) | **M** |
+| **REQ-B-B2-Plus-2** | 20분 제한 시간이 초과될 때, 현재까지의 모든 응답 상태를 자동으로 저장하고, 사용자에게 재개 옵션을 제공해야 한다. | **M** |
+| **REQ-B-B2-Plus-3** | 사용자가 시간 초과 후 재개를 선택할 시, 이전 진행 상황(답변, 라운드, 점수)을 복원하여 이어서 풀 수 있어야 한다. | **M** |
+| **REQ-B-B2-Plus-4** | attempt_answers 테이블에 저장 시, response_time_ms(응답 시간), saved_at(저장 타임스탬프) 등의 메타데이터도 함께 기록해야 한다. | **M** |
+| **REQ-B-B2-Plus-5** | 실시간 저장은 최대 2초 이내에 완료되어야 한다. | **M** |
+
+**수용 기준**:
+
+- "**각 문항 답변 입력 후 2초 내에 자동 저장이 완료된다.**"
+- "**시간 초과 시 현재까지의 모든 응답이 DB에 저장된다.**"
+- "**재개 시 이전 답변이 모두 복원되고, 마지막으로 풀던 문항부터 이어서 진행 가능하다.**"
+
+---
+
 ## REQ-B-B3: 채점 및 해설 생성 (Backend)
 
 | REQ ID | 요구사항 | 우선순위 |
 |--------|---------|---------|
 | **REQ-B-B3-1** | Scoring-Agent가 각 문항 제출 시 1초 내에 정오답 판정 및 점수를 계산해야 한다. | **M** |
 | **REQ-B-B3-2** | 채점 로직을 구현해야 한다: <br> - 객관식/OX: 정답 일치 판정 (정답 1점, 오답 0점) <br> - 주관식: LLM 기반 키워드 매칭으로 부분점수 지원 (예: 0~100점) | **M** |
-| **REQ-B-B3-3** | (선택) 응답 시간에 따른 페널티를 적용할 수 있다. (예: 20분 초과 시 감점) | **C** |
+| **REQ-B-B3-3** | **20분 초과 시 응답 시간에 따른 페널티를 적용해야 한다.** (예: 20분을 초과한 경우, 초과분만큼 감점 처리) | **M** |
 | **REQ-B-B3-4** | Explain-Agent가 각 문항에 대해 정답/오답 해설(500자 이상) 및 참고 링크(3개 이상)를 생성해야 한다. | **M** |
 
 **수용 기준**:
@@ -361,11 +467,14 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 | **REQ-B-B5-2** | History-Service가 직전 응시 이력을 조회하여 개선도(점수 변화, 등급 변화, 소요 시간 비교)를 계산해서 반환해야 한다. | **S** |
 | **REQ-B-B5-3** | 사용자는 언제든 레벨 테스트를 반복 응시할 수 있는 API를 제공해야 한다. | **M** |
 | **REQ-B-B5-4** | 재응시 시, History-Service가 이전 자기평가 정보를 자동으로 로드하여 반환해야 한다. | **S** |
+| **REQ-B-B5-5** | **재응시 시 자기평가 폼을 수정하고 제출하면, user_profile_surveys 테이블에 새로운 레코드를 생성하고, 새로운 attempts와 연결해야 한다.** 이전 프로필 정보는 유지되며, 새로운 정보는 이번 응시에만 적용된다. | **M** |
 
 **수용 기준**:
 
 - "결과 저장 후 DB 조회 시 응시 이력이 정확히 저장되어 있다."
 - "이전 응시 정보 조회 요청 시 1초 내 응답한다."
+- "**재응시 시 새로운 자기평가를 제출하면, user_profile_surveys 테이블에 새 레코드가 생성되고 attempts와 연결된다.**"
+- "**이전 자기평가는 변경되지 않으며, 새로운 자기평가는 새로운 문항 생성에만 적용된다.**"
 
 ---
 
@@ -382,6 +491,42 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 
 - "신고된 문항이 큐에 기록되고, 다음 배치에서 재생성된다."
 - "정답률 < 10%인 문항은 추천하지 않는다."
+
+---
+
+## REQ-B-B6-Plus: 재미 모드 (Backend)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-B-B6-Plus-1** | Fun-Gen-Agent가 사용자가 선택한 카테고리(마케팅, 반도체, 센서, RTL 등)에 맞춰 3~5개의 라이트 퀴즈 문항을 동적으로 생성해야 한다. | **M** |
+| **REQ-B-B6-Plus-2** | 재미 모드의 문항은 시간 제한이 없고, 가벼운 형식(객관식/OX)이어야 한다. | **M** |
+| **REQ-B-B6-Plus-3** | Scoring-Agent가 즉시 채점하고 점수를 반환해야 한다. | **M** |
+| **REQ-B-B6-Plus-4** | Badge-Service가 재미 모드 참여에 따른 배지와 포인트를 지급해야 한다: <br> - 카테고리별 "마스터 배지" (각 카테고리 3회 이상 참여 시) <br> - 특정 점수 달성 시 "전문가 배지" <br> - 참여 횟수별 "포인트" (1회 참여 +10포인트, 누적 가능) | **M** |
+| **REQ-B-B6-Plus-5** | 사용자가 획득한 배지와 포인트는 profile 조회 API에서 함께 반환되어야 한다. | **M** |
+
+**수용 기준**:
+
+- "카테고리 선택 후 3초 내 문항이 생성된다."
+- "모든 문항 제출 후 1초 내 채점 결과와 배지 정보가 반환된다."
+- "배지와 포인트 정보가 사용자 프로필에 누적된다."
+
+---
+
+## REQ-B-B7: 학습 일정 예고 프리뷰 (Backend)
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-B-B7-1** | Plan-Preview-Agent가 사용자의 레벨 테스트 결과(점수, 등급, 약점 분야)를 분석하여, **2~4주의 맞춤 학습 계획 초안**을 자동으로 생성해야 한다. | **M** |
+| **REQ-B-B7-2** | 학습 계획은 다음 정보를 포함해야 한다: <br> - 주당 추천 학습 시간 <br> - 카테고리별 추천 자료 (사내/사외, 동영상/블로그/문서) <br> - 각 자료의 예상 소요 시간 <br> - 학습 순서 및 우선순위 | **M** |
+| **REQ-B-B7-3** | 사용자가 "관심 있음" 버튼을 클릭할 시, 해당 사용자를 **대기리스트 테이블(waitlist)** 에 등록해야 한다. | **M** |
+| **REQ-B-B7-4** | Nudge-Service가 대기리스트에 등록된 사용자에게 MVP 2.0 오픈 시 **이메일 알림**을 자동으로 발송해야 한다. | **M** |
+| **REQ-B-B7-5** | 사용자의 대기리스트 등록 상태는 profile 조회 API에서 함께 반환되어야 한다. | **S** |
+
+**수용 기준**:
+
+- "레벨 테스트 완료 후 3초 내 학습 계획 초안이 생성된다."
+- "대기리스트 등록 요청 후 1초 내 확인 응답이 반환된다."
+- "등록된 사용자 정보가 DB에 저장된다."
 
 ---
 
@@ -425,7 +570,16 @@ POST /api/v1/profile/register
   → {user_id: string, profile_id: string, success: boolean}
 
 GET /api/v1/profile/{user_id}
-  → {user_id, email, nickname, dept, created_at, status}
+  → {user_id, email, nickname, dept, created_at, status, badges: [{badge_id, name, category}], points: number, waitlist_registered: boolean}
+
+PUT /api/v1/profile/{user_id}/nickname
+  요청: {nickname: string}
+  → {success: boolean, message: string, updated_at: timestamp}
+
+PUT /api/v1/profile/{user_id}/survey
+  설명: 자기평가 정보 수정
+  요청: {level, years, job_role, duty, interests: [string]}
+  → {survey_id: string, success: boolean, updated_at: timestamp}
 ```
 
 ## Survey-Service
@@ -522,6 +676,93 @@ POST /api/v1/ranking/finalize
   }
 ```
 
+## Test-Autosave-Service
+
+```http
+POST /api/v1/tests/{session_id}/autosave-answer
+  설명: 각 문항 응답 자동 저장 (실시간 Autosave)
+  요청: {
+    question_id: string,
+    user_answer: string,
+    response_time_ms: number
+  }
+  → {saved: boolean, saved_at: timestamp}
+
+GET /api/v1/tests/{session_id}/progress
+  설명: 현재 테스트 진행 상황 조회 (중단 후 재개 시)
+  → {
+    session_id: string,
+    current_round: number,
+    completed_questions: number,
+    total_questions: number,
+    answers: [{question_id, user_answer}],
+    time_elapsed_seconds: number,
+    time_remaining_seconds: number
+  }
+
+POST /api/v1/tests/{session_id}/resume
+  설명: 중단된 테스트 재개
+  요청: {session_id: string}
+  → {success: boolean, resumed_at: timestamp, time_remaining_seconds: number}
+```
+
+## Fun-Mode-Service
+
+```http
+POST /api/v1/fun-mode/generate
+  설명: 재미 모드 문항 생성
+  요청: {user_id: string, category: string}
+  → {
+    session_id: string,
+    category: string,
+    items: [{
+      id: string,
+      type: enum(multiple_choice, true_false),
+      stem: string,
+      choices: [string],
+      difficulty: number
+    }]
+  }
+
+POST /api/v1/fun-mode/{session_id}/submit
+  설명: 재미 모드 채점 및 배지 지급
+  요청: {
+    answers: [{item_id, user_answer}]
+  }
+  → {
+    score: number,
+    total_score: number,
+    per_item: [{item_id, correct: boolean, score: number}],
+    badges_earned: [{badge_id, name, category}],
+    points_earned: number
+  }
+```
+
+## Learning-Plan-Service
+
+```http
+POST /api/v1/learning-plan/preview
+  설명: 학습 일정 예고 초안 생성
+  요청: {user_id: string, attempt_id: string}
+  → {
+    plan_id: string,
+    duration_weeks: number,
+    weekly_hours: number,
+    categories: [{name, resources: [{title, url, type, estimated_hours}]}],
+    created_at: timestamp
+  }
+
+POST /api/v1/waitlist/register
+  설명: MVP 2.0 대기리스트 등록
+  요청: {user_id: string, plan_id: string, email: string}
+  → {success: boolean, registered_at: timestamp, notification_enabled: boolean}
+
+GET /api/v1/waitlist/status
+  설명: 대기리스트 등록 상태 조회
+  요청: {user_id: string}
+  → {registered: boolean, registered_at: timestamp, position: number}
+```
+
 ## History-Service
 
 ```http
@@ -563,7 +804,9 @@ CREATE TABLE users (
   nickname VARCHAR(50) UNIQUE,               -- 별도로 등록 (nullable: 초기 미등록)
   status ENUM('active', 'inactive'),
   created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP,                      -- 프로필 수정 시 갱신
   last_login_id UUID,                        -- login_history와의 Relation (최신 로그인)
+  total_points INT DEFAULT 0,                -- 누적 포인트
   FOREIGN KEY(last_login_id) REFERENCES login_history(id),
   INDEX(knox_id, email, nickname),
   INDEX(created_at)
@@ -600,6 +843,13 @@ CREATE TABLE login_history (
 
 ## user_profile_surveys
 
+> **설명**: 사용자의 자기평가 정보를 시계열로 저장하는 테이블입니다. **재응시할 때마다 새로운 레코드가 생성**되므로, 각 응시(attempts)는 특정 자기평가 스냅샷과 연결됩니다.
+>
+> **설계 원칙**:
+> - 사용자가 닉네임을 수정해도, 자기평가 이력은 유지됨
+> - 재응시 시 자기평가를 수정하면 새 레코드 생성 (이전 레코드는 유지)
+> - 각 attempts는 해당 시점의 survey_id와 연결되어, 어떤 자기평가로 테스트를 봤는지 추적 가능
+
 ```sql
 CREATE TABLE user_profile_surveys (
   id UUID PRIMARY KEY,
@@ -610,11 +860,19 @@ CREATE TABLE user_profile_surveys (
   duty TEXT,
   interests JSON, -- ["LLM", "RAG", ...]
   submitted_at TIMESTAMP NOT NULL,
-  FOREIGN KEY(user_id) REFERENCES users(id)
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  INDEX(user_id, submitted_at DESC)  -- 특정 사용자의 최신 자기평가 조회
 );
 ```
 
 ## question_bank
+
+> **목적**: Item-Gen-Agent가 동적으로 생성한 문제와 메타데이터를 **캐싱하고 분석**하기 위한 테이블입니다.
+> 역할:
+> 1. **생성된 문제 캐싱**: LLM 생성 비용 절감 및 성능 향상
+> 2. **품질 검증 완료 문제 저장**: 정답률 분석 후 검증된 문제만 재사용
+> 3. **LLM 장애 시 대체재**: 캐시된 문제로 서비스 연속성 보장
+> 4. **분석/모니터링**: 문제별 정답률, 난이도 유효성, 카테고리 분포 분석
 
 ```sql
 CREATE TABLE question_bank (
@@ -628,8 +886,14 @@ CREATE TABLE question_bank (
   difficulty INT, -- 1~10
   categories JSON, -- ["LLM", "RAG", ...]
   rag_source_hash VARCHAR(255), -- MVP 2.0: RAG 소스 추적용
+  is_validated BOOLEAN DEFAULT FALSE, -- 품질 검증 완료 여부
+  correct_rate DECIMAL(5,2), -- 사용자별 정답률 (모니터링용)
+  usage_count INT DEFAULT 0, -- 재사용 횟수
   created_at TIMESTAMP,
-  INDEX(difficulty, categories)
+  last_used_at TIMESTAMP,
+  INDEX(difficulty, categories),
+  INDEX(is_validated, usage_count DESC),  -- 품질 검증 완료 & 자주 사용된 문제 조회
+  INDEX(correct_rate)  -- 정답률 분석
 );
 ```
 
@@ -640,16 +904,18 @@ CREATE TABLE attempts (
   id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id),
   survey_id UUID REFERENCES user_profile_surveys(id),
+  test_type ENUM('level_test', 'fun_quiz') DEFAULT 'level_test',  -- 레벨 테스트 vs 재미 모드 구분
   started_at TIMESTAMP NOT NULL,
   finished_at TIMESTAMP,
-  final_grade ENUM('beginner', 'intermediate', 'intermediate_advanced', 'advanced', 'elite'),
+  final_grade ENUM('beginner', 'intermediate', 'intermediate_advanced', 'advanced', 'elite'),  -- fun_quiz는 null 가능
   final_score DECIMAL(5,2),
-  percentile INT,
-  rank INT,
-  total_candidates INT,
+  percentile INT,  -- fun_quiz는 null 가능
+  rank INT,        -- fun_quiz는 null 가능
+  total_candidates INT,  -- fun_quiz는 null 가능
   status ENUM('in_progress', 'completed'),
   FOREIGN KEY(user_id) REFERENCES users(id),
-  INDEX(user_id, finished_at)
+  INDEX(user_id, finished_at),
+  INDEX(test_type, finished_at)  -- 테스트 유형별 조회 최적화
 );
 ```
 
@@ -707,6 +973,93 @@ CREATE TABLE ranking_snapshots (
   total_population INT,
   created_at TIMESTAMP,
   UNIQUE(snapshot_date)
+);
+```
+
+## badges
+
+```sql
+CREATE TABLE badges (
+  id UUID PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,        -- 배지명 (예: "반도체 마스터", "전문가")
+  category VARCHAR(50) NOT NULL,     -- 카테고리 (레벨테스트 등급 / fun-mode 카테고리)
+  description TEXT,
+  icon_url VARCHAR(255),             -- 배지 이미지 URL
+  criteria JSON,                     -- 배지 획득 조건 (예: {type: "category_3times", category: "반도체"})
+  created_at TIMESTAMP NOT NULL,
+  INDEX(category)
+);
+```
+
+## user_badges
+
+```sql
+CREATE TABLE user_badges (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  badge_id UUID NOT NULL REFERENCES badges(id),
+  earned_at TIMESTAMP NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(badge_id) REFERENCES badges(id),
+  INDEX(user_id, earned_at DESC),
+  UNIQUE(user_id, badge_id)  -- 동일 사용자는 같은 배지 중복 획득 안 함
+);
+```
+
+## fun_mode_sessions
+
+> **설명**: 재미 모드 퀴즈 세션을 추적하는 테이블입니다. attempts 테이블의 test_type='fun_quiz'와 연동됩니다.
+
+```sql
+CREATE TABLE fun_mode_sessions (
+  id UUID PRIMARY KEY,
+  attempt_id UUID UNIQUE REFERENCES attempts(id),  -- attempts 테이블과의 1:1 관계
+  user_id UUID NOT NULL REFERENCES users(id),
+  category VARCHAR(50) NOT NULL,     -- 선택한 카테고리 (마케팅, 반도체, 센서, RTL 등)
+  started_at TIMESTAMP NOT NULL,
+  finished_at TIMESTAMP,
+  score DECIMAL(5,2),                -- 100점 만점
+  time_spent_seconds INT,            -- 실제 소요 시간 (시간 제한 없음)
+  status ENUM('in_progress', 'completed'),
+  FOREIGN KEY(attempt_id) REFERENCES attempts(id),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  INDEX(user_id, finished_at DESC),
+  INDEX(category, finished_at DESC)  -- 카테고리별 집계 분석
+);
+```
+
+**비고**: 재미 모드 응답은 attempt_answers 테이블에 저장되며, attempt_rounds는 재미 모드에서는 사용하지 않습니다(라운드 개념 없음).
+
+## learning_plan_previews
+
+```sql
+CREATE TABLE learning_plan_previews (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  attempt_id UUID REFERENCES attempts(id),
+  plan_data JSON,                    -- {duration_weeks, weekly_hours, categories: [...]}
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  INDEX(user_id, created_at DESC)
+);
+```
+
+## waitlist
+
+```sql
+CREATE TABLE waitlist (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  plan_id UUID REFERENCES learning_plan_previews(id),
+  email VARCHAR(255) NOT NULL,
+  registered_at TIMESTAMP NOT NULL,
+  notification_sent BOOLEAN DEFAULT FALSE,
+  notification_sent_at TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(plan_id) REFERENCES learning_plan_previews(id),
+  INDEX(user_id),
+  INDEX(registered_at),
+  UNIQUE(user_id)  -- 한 사용자는 한 번만 등록
 );
 ```
 
@@ -793,11 +1146,15 @@ ELSE IF total_candidates >= 100:
 
 - ✅ REQ-F-A1-1~3, REQ-B-A1-1~4: Samsung AD 로그인 (F/B)
 - ✅ REQ-F-A2-1~5, REQ-B-A2-1~5: 닉네임 등록 (F/B)
+- ✅ **REQ-F-A2-Edit-1~6, REQ-B-A2-Edit-1~4: 프로필 수정 (닉네임/자기평가) (F/B)**
 - ✅ REQ-F-B1-1~3, REQ-B-B1-1~2: 자기평가 입력 (F/B)
-- ✅ REQ-F-B2-1~4, REQ-B-B2-1~6: 문항 생성 및 풀이 (F/B)
+- ✅ REQ-F-B2-1~7, REQ-B-B2-1~6: 문항 생성 및 풀이 (F/B)
+- ✅ **REQ-B-B2-Plus-1~5: 테스트 진행 중 실시간 저장 및 재개 (B)**
 - ✅ REQ-F-B3-1~2, REQ-B-B3-1~4: 채점 및 해설 (F/B)
 - ✅ REQ-F-B4-1, REQ-B-B4-1~4: 등급 및 순위 산출 (F/B)
 - ✅ REQ-F-B5-2, REQ-B-B5-1,3: 이력 저장 및 재응시 (F/B)
+- ✅ **REQ-F-B6-1~6, REQ-B-B6-Plus-1~5: 재미 모드 (F/B)**
+- ✅ **REQ-F-B7-1~4, REQ-B-B7-1~4: 학습 일정 예고 프리뷰 (F/B)**
 - ✅ REQ-B-B6-1~2: 콘텐츠 품질 & 필터링 (B)
 
 ### Should (권장)
@@ -862,32 +1219,38 @@ ELSE IF total_candidates >= 100:
 
 - Samsung AD 로그인/SSO (REQ-B-A1-1~4, REQ-F-A1-1~3)
 - 닉네임 등록 (중복 체크) (REQ-F-A2-1~5, REQ-B-A2-1~5)
+- **프로필 수정 기능 (REQ-F-A2-Edit-1~6, REQ-B-A2-Edit-1~4)**
 - 온보딩 모달 (REQ-F-A3-1)
 
-**완료 기준**: 사용자가 가입을 완료하고 대시보드에 접근 가능
+**완료 기준**: 사용자가 가입을 완료하고 프로필을 수정할 수 있으며 대시보드에 접근 가능
 
 ---
 
-### R2: 자기평가 → 1차 테스트
+### R2: 자기평가 → 1차 테스트 & 저장/재개
 
 - 자기평가 폼 입력 (REQ-F-B1-1~3, REQ-B-B1-1~2)
 - Item-Gen-Agent 1차 문항 생성 (REQ-B-B2-1~2)
+- **20분 제한 타이머 (REQ-F-B2-5, REQ-F-B2-6)**
+- **테스트 진행 중 실시간 저장 및 재개 (REQ-F-B2-6~7, REQ-B-B2-Plus-1~5)**
 - 순차적 문항 풀이 (REQ-F-B2-1~4)
 - Scoring-Agent 채점 (REQ-B-B3-1~2)
+- **20분 초과 시 페널티 적용 (REQ-B-B3-3)**
 - Explain-Agent 해설 생성 (REQ-B-B3-4, REQ-F-B3-1~2)
 
-**완료 기준**: 사용자가 1차 테스트를 완료하고 각 문항의 해설을 확인
+**완료 기준**: 사용자가 1차 테스트를 완료하고 중단 후 재개 가능하며, 각 문항의 해설을 확인
 
 ---
 
-### R3: 적응형 2차 & 최종 결과
+### R3: 적응형 2차 & 최종 결과 & 추가 기능
 
 - 난이도 조정 로직 (REQ-B-B2-4~6)
 - Rank-Service 등급/순위 산출 (REQ-B-B4-1~5)
 - 최종 결과 페이지 (REQ-F-B4-1~4)
+- **학습 일정 예고 프리뷰 (REQ-F-B7-1~5, REQ-B-B7-1~4)**
+- **재미 모드 (카테고리 선택형 퀴즈) (REQ-F-B6-1~7, REQ-B-B6-Plus-1~5)**
 - History-Service 비교 (REQ-F-B5-1, REQ-B-B5-2)
 
-**완료 기준**: 사용자가 최종 등급, 순위, 배지를 확인하고 공유 가능
+**완료 기준**: 사용자가 최종 등급, 순위, 배지를 확인하고 공유 가능하며, 재미 모드에 참여하고 학습 일정을 확인 가능
 
 ---
 
@@ -896,7 +1259,8 @@ ELSE IF total_candidates >= 100:
 - 콘텐츠 필터링 (REQ-B-B6-2)
 - 난이도 모니터링 (REQ-B-B6-4)
 - 문항 신고 및 재생성 (REQ-B-B6-3)
-- 성능 최적화 (≤ 3s 문항 생성, ≤ 1s 채점)
+- 배지 시스템 최적화
+- 성능 최적화 (≤ 3s 문항 생성, ≤ 1s 채점, ≤ 2s 저장)
 - 에러 핸들링 및 로깅
 
 **완료 기준**: 시스템이 99.5% 가용성 유지, 모든 비기능 요구사항 충족
@@ -922,6 +1286,14 @@ ELSE IF total_candidates >= 100:
 - [ ] REQ-F-A2-4: 금칙어 거부 메시지
 - [ ] REQ-F-A2-5: 가입 완료 버튼 활성화
 
+프로필 수정:
+- [ ] REQ-F-A2-Edit-1: 프로필 수정 메뉴
+- [ ] REQ-F-A2-Edit-2: 닉네임 변경 입력 필드
+- [ ] REQ-F-A2-Edit-3: 기존 닉네임 제외 중복 확인
+- [ ] REQ-F-A2-Edit-4: 저장 완료 메시지
+- [ ] REQ-F-A2-Edit-5: 자기평가 정보 수정 폼
+- [ ] REQ-F-A2-Edit-6: 수정 정보 다음 테스트에 반영
+
 온보딩:
 - [ ] REQ-F-A3-1: 웰컴 모달 구현
 - [ ] REQ-F-A3-2: 개인정보 동의 배너
@@ -933,10 +1305,12 @@ ELSE IF total_candidates >= 100:
 
 테스트 화면:
 - [ ] REQ-F-B2-1: 문항 순차 표시
-- [ ] REQ-F-B2-2: 진행률, 타이머, 저장 상태
+- [ ] REQ-F-B2-2: 진행률, 남은 시간 표시
 - [ ] REQ-F-B2-3: 정오답 피드백
 - [ ] REQ-F-B2-4: 부분점수 표시
-- [ ] REQ-F-B2-5: 시간 제한 표시
+- [ ] REQ-F-B2-5: 20분 제한 타이머 (색상 변화: 녹색→주황색→빨간색)
+- [ ] REQ-F-B2-6: 각 응답 자동 저장 & "저장됨" 표시
+- [ ] REQ-F-B2-7: 20분 초과 시 재개 모달
 
 해설 화면:
 - [ ] REQ-F-B3-1: 해설 및 참고 링크 표시
@@ -952,6 +1326,22 @@ ELSE IF total_candidates >= 100:
 - [ ] REQ-F-B5-1: 이전 결과 비교 표시
 - [ ] REQ-F-B5-2: 재응시 버튼
 - [ ] REQ-F-B5-3: 이전 정보 자동 로드
+
+재미 모드:
+- [ ] REQ-F-B6-1: 대시보드에 "재미 모드" 버튼
+- [ ] REQ-F-B6-2: 카테고리 선택 페이지 (마케팅/반도체/센서/RTL/기타)
+- [ ] REQ-F-B6-3: "시작" 버튼 클릭 시 문항 로드
+- [ ] REQ-F-B6-4: 가벼운 형식 (시간 제한 없음)
+- [ ] REQ-F-B6-5: 결과 페이지 (점수, 해설, 링크)
+- [ ] REQ-F-B6-6: 배지 & 포인트 획득 정보 표시
+- [ ] REQ-F-B6-7: "결과 공유" 버튼
+
+학습 일정 예고:
+- [ ] REQ-F-B7-1: 레벨 테스트 결과 페이지에 "학습 일정 초안 보기" 버튼
+- [ ] REQ-F-B7-2: 2~4주 맞춤 학습 계획 초안 표시
+- [ ] REQ-F-B7-3: "관심 있음" 버튼
+- [ ] REQ-F-B7-4: 대기리스트 등록 확인 모달 & 이메일 구독 옵션
+- [ ] REQ-F-B7-5: "다시 보지 않기" 옵션
 ```
 
 ### Backend 팀 체크리스트
@@ -972,6 +1362,12 @@ ELSE IF total_candidates >= 100:
 - [ ] REQ-B-A2-4: 금칙어 필터
 - [ ] REQ-B-A2-5: 사용자 레코드 저장
 
+프로필 수정:
+- [ ] REQ-B-A2-Edit-1: 닉네임 변경 API (기존 닉네임 제외)
+- [ ] REQ-B-A2-Edit-2: 닉네임 업데이트 & updated_at 갱신
+- [ ] REQ-B-A2-Edit-3: 자기평가 정보 수정 API
+- [ ] REQ-B-A2-Edit-4: 1초 내 응답
+
 자기평가:
 - [ ] REQ-B-B1-1: Survey 스키마 API
 - [ ] REQ-B-B1-2: 데이터 저장
@@ -985,10 +1381,17 @@ ELSE IF total_candidates >= 100:
 - [ ] REQ-B-B2-6: 오답 카테고리 강화
 - [ ] REQ-B-B2-7: 3차 이상 제한 로직
 
+테스트 진행 중 저장/재개:
+- [ ] REQ-B-B2-Plus-1: 실시간 응답 자동 저장 API
+- [ ] REQ-B-B2-Plus-2: 20분 초과 시 상태 저장
+- [ ] REQ-B-B2-Plus-3: 재개 기능 구현
+- [ ] REQ-B-B2-Plus-4: 메타데이터 기록 (response_time, saved_at)
+- [ ] REQ-B-B2-Plus-5: 2초 내 저장 완료
+
 채점:
 - [ ] REQ-B-B3-1: Scoring-Agent 채점
 - [ ] REQ-B-B3-2: 채점 로직 (객관식, 주관식)
-- [ ] REQ-B-B3-3: 시간 페널티
+- [ ] REQ-B-B3-3: 20분 초과 시 페널티 로직
 - [ ] REQ-B-B3-4: Explain-Agent 해설 생성
 
 등급:
@@ -1003,12 +1406,27 @@ ELSE IF total_candidates >= 100:
 - [ ] REQ-B-B5-2: 이력 조회 & 비교
 - [ ] REQ-B-B5-3: 재응시 API
 - [ ] REQ-B-B5-4: 이전 정보 로드
+- [ ] REQ-B-B5-5: 재응시 시 새로운 자기평가 레코드 생성 & attempts와 연결
 
 품질:
 - [ ] REQ-B-B6-1: RAG 소스 메타 저장
 - [ ] REQ-B-B6-2: 콘텐츠 필터링
 - [ ] REQ-B-B6-3: 신고 큐 처리
 - [ ] REQ-B-B6-4: 난이도 모니터링
+
+재미 모드:
+- [ ] REQ-B-B6-Plus-1: Fun-Gen-Agent 문항 생성
+- [ ] REQ-B-B6-Plus-2: 가벼운 형식 (시간 제한 없음)
+- [ ] REQ-B-B6-Plus-3: 채점 로직
+- [ ] REQ-B-B6-Plus-4: Badge-Service 배지/포인트 지급
+- [ ] REQ-B-B6-Plus-5: 프로필 API에 배지/포인트 포함
+
+학습 일정 예고:
+- [ ] REQ-B-B7-1: Plan-Preview-Agent 학습 계획 생성
+- [ ] REQ-B-B7-2: 맞춤 학습 계획 데이터 구성
+- [ ] REQ-B-B7-3: 대기리스트 등록 API
+- [ ] REQ-B-B7-4: 이메일 알림 발송
+- [ ] REQ-B-B7-5: 대기리스트 상태 조회 API
 ```
 
 ---
