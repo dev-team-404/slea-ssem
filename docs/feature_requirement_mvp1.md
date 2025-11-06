@@ -243,17 +243,28 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
   ```
 
   **→ 단순함을 위해 knox_id만 포함** (unique하므로 충분)
-- **기존 사용자 처리**: 재로그인 시 last_login 타임스탐프 업데이트
-- **접속 히스토리**: last_login 정보를 통해 사용자의 접속 빈도 및 학습 활동 추적 가능
+- **로그인 히스토리 관리** (SQLModel Relation 구조):
+  - 매 로그인 시 `login_history` 테이블에 레코드 생성
+  - `users` 테이블의 `last_login` 필드는 SQLModel Relation으로 `login_history`의 최신 레코드 참조
+  - 목적: 모든 접속 히스토리 추적 + 성능 최적화 (last_login은 JOIN 없이 빠른 조회)
+- **접속 히스토리 추적**: 모든 로그인 기록을 login_history에 저장하여 사용자 접속 빈도 및 학습 활동 분석 가능
 
 **수용 기준**:
 
 - "Frontend로부터 AD 정보(knox_id, name, email, dept, business_unit) 수신 후 1초 내 JWT 토큰이 발급된다."
 - "JWT 페이로드는 {knox_id, iat, exp}만 포함한다."
-- "신규 사용자 생성 후 users 테이블에 모든 사용자 정보가 저장되고, JWT 토큰 + is_new_user=true로 반환된다."
-- "재로그인 시 새로운 JWT 토큰을 생성하고, last_login이 업데이트되며, is_new_user=false로 반환된다."
+- "신규 사용자 생성 후:"
+  - "users 테이블에 모든 사용자 정보가 저장된다."
+  - "login_history 테이블에 첫 로그인 레코드가 생성된다."
+  - "JWT 토큰 + is_new_user=true로 반환된다."
+- "재로그인 시:"
+  - "새로운 JWT 토큰이 생성된다."
+  - "login_history 테이블에 새로운 로그인 레코드가 추가된다."
+  - "users 테이블의 last_login이 SQLModel Relation으로 최신 login_history 레코드를 참조한다."
+  - "is_new_user=false로 반환된다."
 - "JWT 검증 시 knox_id를 이용해 사용자를 식별할 수 있다."
-- "last_login 조회를 통해 사용자의 접속 히스토리 분석 가능하다."
+- "login_history 조회를 통해 전체 접속 히스토리 분석 가능하다."
+- "users.last_login(SQLModel Relation)을 통해 가장 최근 로그인 정보를 성능 저하 없이 조회 가능하다."
 
 ---
 
@@ -543,16 +554,49 @@ POST /api/v1/history/save
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY,
+  knox_id VARCHAR(100) UNIQUE NOT NULL,      -- Samsung AD 고유 ID
   email VARCHAR(255) UNIQUE NOT NULL,
   emp_no VARCHAR(50) UNIQUE,
+  name VARCHAR(100) NOT NULL,                -- 사용자명
   dept VARCHAR(100),
-  nickname VARCHAR(50) UNIQUE NOT NULL,
-  created_at TIMESTAMP NOT NULL,
-  last_login TIMESTAMP,
+  business_unit VARCHAR(100),                -- 사업부
+  nickname VARCHAR(50) UNIQUE,               -- 별도로 등록 (nullable: 초기 미등록)
   status ENUM('active', 'inactive'),
-  INDEX(email, nickname)
+  created_at TIMESTAMP NOT NULL,
+  last_login_id UUID,                        -- login_history와의 Relation (최신 로그인)
+  FOREIGN KEY(last_login_id) REFERENCES login_history(id),
+  INDEX(knox_id, email, nickname),
+  INDEX(created_at)
 );
 ```
+
+## login_history
+
+> **로그인 히스토리 추적 테이블** (SQLModel Relation으로 users.last_login 관리)
+
+```sql
+CREATE TABLE login_history (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  knox_id VARCHAR(100) NOT NULL,             -- 빠른 조회용 (denormalized)
+  ip_address VARCHAR(45),                    -- 선택: IPv4/IPv6
+  user_agent VARCHAR(500),                   -- 선택: 브라우저 정보
+  login_timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  INDEX(user_id, login_timestamp DESC),
+  INDEX(knox_id, login_timestamp DESC)
+);
+```
+
+**설명**:
+
+- 매 로그인 시마다 새로운 레코드 생성
+- users 테이블의 `last_login_id` 필드로 최신 로그인 레코드 참조 (SQLModel Relation)
+- 모든 접속 히스토리 추적 가능
+- INDEX: (user_id, login_timestamp DESC) → 특정 사용자의 최신 로그인 빠른 조회
+
+---
 
 ## user_profile_surveys
 
