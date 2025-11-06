@@ -1877,7 +1877,7 @@ def score_and_explain(
 | 2 | Tool 2: search_question_templates | 관심분야 O | interests | 검색 결과 없음 → 스킵 (Tool 3으로 진행) |
 | 3 | Tool 3: get_difficulty_keywords | **항상** (필수) | difficulty, category | 실패 → 캐시된 키워드 반환 |
 | 4 | LLM: 문항 생성 | **항상** (필수) | 프롬프트 (Tool 1,2,3 결과 포함) | LLM 응답 오류 → 자동 교정 루프 (최대 3회) |
-| 5 | Tool 4: validate_question_quality | **각 문항마다** | stem, type, choices | 점수 < 0.7 → revise 피드백 후 재생성 (최대 2회) |
+| 5 | Tool 4: validate_question_quality | **각 문항마다** | stem, type, choices | >= 0.85 → pass / 0.70-0.84 → revise (최대 2회) / < 0.70 → reject 폐기 |
 | 6 | Tool 5: save_generated_question | 검증 통과 시만 | 생성된 문항 메타데이터 | 저장 실패 → 메모리 큐 임시 저장 → 배치 재시도 |
 
 ### Mode 2: 자동 채점 (score_and_explain)
@@ -2538,8 +2538,8 @@ class ItemGenAgent:
             question_id: 문항 ID (question_bank의 ID)
             question_type: "multiple_choice" | "true_false" | "short_answer"
             user_answer: 응시자의 답변
-            correct_answer: 정답 (객관식/OX용, 필수)
-            correct_keywords: 정답 키워드 (주관식용, 필수)
+            correct_answer: 정답 (필수 if question_type in ['multiple_choice', 'true_false'], 객관식/OX용)
+            correct_keywords: 정답 키워드 (필수 if question_type == 'short_answer', 주관식용)
             difficulty: 난이도 (LLM 프롬프트 컨텍스트용)
             category: 카테고리 (LLM 프롬프트 컨텍스트용)
 
@@ -2552,10 +2552,14 @@ class ItemGenAgent:
                 "is_correct": True|False,
                 "score": 85,  # 0~100
                 "explanation": "정답 해설: 이것이 정답인 이유는...",
-                "keyword_matches": ["keyword1", "keyword2"],  # 주관식인 경우만
-                "feedback": "더 나은 답변을 위한 피드백 (있을 경우)",  # 부분 정답 시
+                "keyword_matches": ["keyword1", "keyword2"] | null,  # 주관식인 경우만 배열, 아니면 null
+                "feedback": "더 나은 답변을 위한 피드백..." | null,  # 부분 정답 시에만, 아니면 null
                 "graded_at": "2025-11-06T10:35:00Z"
             }
+
+        **반환 필드 조건부 설정**:
+        - keyword_matches: question_type == 'short_answer'일 때만 배열 (다른 타입: null)
+        - feedback: is_correct == False && score >= 70일 때만 값 포함 (완전 오답 시: null)
         """
         # 정답 정보를 안전하게 처리
         correct_value = correct_answer if question_type != "short_answer" else None
@@ -2598,16 +2602,46 @@ class ItemGenAgent:
            - test_responses & attempt_answers에 session_id와 함께 저장
 
         JSON 형식으로 반환하세요 (Tool 6 스키마와 일치):
+
+        **예시 1: 객관식 정답**
         {{
             "attempt_id": "uuid",
             "session_id": "{session_id}",
             "question_id": "{question_id}",
             "user_id": "{user_id}",
-            "is_correct": True|False,
-            "score": 85,
+            "is_correct": True,
+            "score": 100,
             "explanation": "정답 해설: ...",
-            "keyword_matches": ["keyword1", "keyword2"],
-            "feedback": "더 나은 답변을 위한 피드백 (있을 경우)",
+            "keyword_matches": null,  # 객관식이므로 null
+            "feedback": null,  # 정답이므로 null
+            "graded_at": "2025-11-06T10:35:00Z"
+        }}
+
+        **예시 2: 주관식 정답**
+        {{
+            "attempt_id": "uuid",
+            "session_id": "{session_id}",
+            "question_id": "{question_id}",
+            "user_id": "{user_id}",
+            "is_correct": True,
+            "score": 95,
+            "explanation": "정답 해설: ...",
+            "keyword_matches": ["keyword1", "keyword2"],  # 주관식이므로 배열
+            "feedback": null,  # 정답이므로 null
+            "graded_at": "2025-11-06T10:35:00Z"
+        }}
+
+        **예시 3: 주관식 부분 정답**
+        {{
+            "attempt_id": "uuid",
+            "session_id": "{session_id}",
+            "question_id": "{question_id}",
+            "user_id": "{user_id}",
+            "is_correct": False,
+            "score": 75,
+            "explanation": "정답 해설: ...",
+            "keyword_matches": ["keyword1"],  # 주관식이므로 배열 (부분 매칭)
+            "feedback": "더 나은 답변을 위한 피드백 (부분 정답 시에만)",
             "graded_at": "2025-11-06T10:35:00Z"
         }}
         """
