@@ -1743,7 +1743,7 @@ def validate_question_quality(
 # 5개 문항을 한 번에 검증 (효율성 향상)
 validation_results = validate_question_quality(
     stem=[q1, q2, q3, q4, q5],
-    question_type=["mc", "oa", "mc", "tf", "oa"],
+    question_type=["multiple_choice", "short_answer", "multiple_choice", "true_false", "short_answer"],
     batch=True
 )
 # 응답: [result1, result2, result3, result4, result5]
@@ -1751,42 +1751,13 @@ validation_results = validate_question_quality(
 
 ### Tool 5: Save Generated Question
 
-**목적**: 생성된 문항을 question_bank에 저장
+**목적**: 검증 통과한 문항을 question_bank에 저장
 
-```python
-@tool
-def save_generated_question(
-    item_type: str,
-    stem: str,
-    choices: list[str] = None,
-    correct_key: str = None,
-    correct_keywords: list[str] = None,
-    difficulty: int = None,
-    categories: list[str] = None,
-    round_id: str = None
-) -> dict:
-    """
-    생성된 문항을 DB에 저장합니다.
+**스키마 상세**: "배치 처리 & 데이터 계약" 섹션의 **"데이터 계약: save_generated_question 재정의"** (line 2012-2039) 참조
 
-    Args:
-        item_type: "multiple_choice" | "true_false" | "short_answer"
-        stem: 문항 내용
-        choices: 객관식 선택지
-        correct_key: 정답 (객관식/OX)
-        correct_keywords: 정답 키워드 (주관식)
-        difficulty: 난이도 (1~10)
-        categories: 카테고리 (e.g., ["LLM", "RAG"])
-        round_id: 라운드 ID
-
-    Returns:
-        {
-            "question_id": "uuid",
-            "saved_at": "2025-11-06T10:30:00Z",
-            "success": True
-        }
-    """
-    # FastAPI Endpoint: POST /api/v1/tools/save-question
-```
+- **요약**: validation_score, explanation 메타데이터 포함하여 저장
+- **FastAPI Endpoint**: POST /api/v1/tools/save-question
+- **반환값**: question_id, round_id, saved_at, success
 
 ### Tool 6: Score & Generate Explanation
 
@@ -1825,6 +1796,7 @@ def score_and_explain(
 
     Returns:
         {
+            "attempt_id": "uuid",  # Tool 6가 자동 생성 (attempt_answers 저장 시 사용)
             "question_id": "uuid",
             "user_id": "uuid",
             "is_correct": True,
@@ -1844,7 +1816,9 @@ def score_and_explain(
     #    b) is_correct = (score >= 70) 로 판단
     # 3. 해설 생성 (모든 타입):
     #    - 정답 이유, 자주 하는 실수, 관련 개념 설명
-    # 4. test_responses & attempt_answers에 저장
+    # 4. attempt_id 자동 생성 및 test_responses & attempt_answers에 저장
+    #    - attempt_id = uuid.uuid4()
+    #    - attempt_answers.attempt_id에 저장되어 응시 기록 추적에 사용
 ```
 
 **채점 기준**:
@@ -2288,13 +2262,14 @@ class ItemGenAgent:
         self.max_iterations = max_iterations
 
     def _register_tools(self, mcp_server: FastMCPServer) -> list:
-        """FastMCP에서 5개의 도구를 가져옵니다."""
+        """FastMCP에서 6개의 도구를 가져옵니다."""
         return [
             mcp_server.get_tool("get_user_profile"),
             mcp_server.get_tool("search_question_templates"),
             mcp_server.get_tool("get_difficulty_keywords"),
             mcp_server.get_tool("validate_question_quality"),
-            mcp_server.get_tool("save_generated_question")
+            mcp_server.get_tool("save_generated_question"),
+            mcp_server.get_tool("score_and_explain")  # Tool 6: 자동 채점 & 해설
         ]
 
     def _create_agent(self):
@@ -2338,23 +2313,39 @@ class ItemGenAgent:
             생성된 문항 리스트 (검증 통과한 것만)
         """
         input_prompt = f"""
-        사용자 ID: {user_id}
-        라운드: {round_number}
-        필요한 문항 수: {count}개
-        {'이전 점수: ' + str(previous_score) if previous_score else ''}
+        Task: 사용자를 위한 {count}개의 적응형 문항 생성 및 저장
 
-        다음 과정을 따르세요:
-        1. get_user_profile 도구로 사용자 정보를 조회하세요.
-        2. search_question_templates 도구로 관련 템플릿을 검색하세요.
-           (검색된 템플릿은 문항 생성 시 Few-shot 참고 자료로 사용합니다)
-        3. get_difficulty_keywords 도구로 핵심 개념을 파악하세요.
-        4. {count}개의 문항을 생성하세요 (객관식/OX/주관식 혼합).
-           (QUESTION_GENERATION_TEMPLATE 패턴 참고)
-        5. 각 문항에 대해 validate_question_quality 도구로 검증하세요.
-           (점수 >= 0.7인 경우만 진행)
-        6. 검증 통과한 문항을 save_generated_question 도구로 저장하세요.
+        Context:
+        - 사용자 ID: {user_id}
+        - 라운드: {round_number}
+        - 필요한 문항 수: {count}개
+        {'- 이전 라운드 점수: ' + str(previous_score) if previous_score else '- 첫 라운드 기초 평가'}
 
-        최종 결과를 아래의 JSON 형식으로 반환하세요:
+        Tool 호출 규칙 (ReAct 패턴 - 상황에 따라 선택):
+
+        ✓ 필수 (항상 호출):
+          1. get_user_profile: 사용자 정보 조회
+          2. get_difficulty_keywords: 난이도별 핵심 개념 파악
+
+        ⊗ 조건부 (상황에 따라 선택):
+          2.1. search_question_templates: 사용자 관심분야가 있으면 → 검색해서 Few-shot 활용
+          2.2. search_question_templates: 검색 결과 없으면 → 스킵하고 다음 진행
+
+        ✓ 필수 (생성 후):
+          3. LLM으로 {count}개 문항 생성 (배치):
+             - 난이도 분포: {round_number}라운드 규칙 적용
+             - 유형 비율: 객관식 40%, OX 20%, 주관식 40%
+             - 응답 형식: JSON 배열
+
+          4. validate_question_quality: 5개 문항 배치 검증
+             - 통과 (점수 >= 0.85): 즉시 저장
+             - 수정 (점수 0.70~0.84): LLM 피드백 후 재생성 (최대 2회)
+             - 거부 (점수 < 0.70): 폐기하고 다른 문항 생성
+
+          5. save_generated_question: 검증 통과 문항만 저장
+             - validation_score 메타데이터 포함
+
+        최종 결과를 JSON 형식으로 반환하세요:
         {{
             "status": "success" | "partial" | "failed",
             "generated_count": N,
@@ -2464,6 +2455,125 @@ class ItemGenAgent:
         except Exception as e:
             logger.error(f"Unexpected error in _parse_agent_output: {e}")
             return []
+
+    def score_and_explain(
+        self,
+        user_id: str,
+        question_id: str,
+        question_type: str,
+        user_answer: str,
+        correct_answer: str = None,
+        correct_keywords: list[str] = None,
+        difficulty: int = None,
+        category: str = None
+    ) -> dict:
+        """
+        응시자의 답변을 채점하고 해설을 생성합니다. (Mode 2: 채점)
+
+        Args:
+            user_id: 응시자 ID
+            question_id: 문항 ID (question_bank의 ID)
+            question_type: "multiple_choice" | "true_false" | "short_answer"
+            user_answer: 응시자의 답변
+            correct_answer: 정답 (객관식/OX용)
+            correct_keywords: 정답 키워드 (주관식용)
+            difficulty: 난이도 (LLM 프롬프트 컨텍스트용)
+            category: 카테고리 (LLM 프롬프트 컨텍스트용)
+
+        Returns:
+            {
+                "attempt_id": "uuid",  # Tool 6이 자동 생성
+                "question_id": "uuid",
+                "user_id": "uuid",
+                "is_correct": True|False,
+                "score": 85,  # 0~100
+                "explanation": "정답 해설: ...",
+                "feedback": "추가 피드백 (있을 경우)",
+                "graded_at": "2025-11-06T10:35:00Z"
+            }
+        """
+        scoring_prompt = f"""
+        Task: 응시자의 답변을 채점하고 학습용 해설 생성
+
+        Context:
+        - 문항 ID: {question_id}
+        - 문항 유형: {question_type}
+        - 사용자 답변: {user_answer}
+        - 난이도: {difficulty}
+        - 카테고리: {category}
+
+        Action:
+        1. score_and_explain 도구 호출:
+           - 문항 유형에 따라 자동 채점
+           - 객관식/OX: 정답 매칭 (0 or 100)
+           - 주관식: LLM 의미 평가 (0~100)
+
+        2. 결과:
+           - attempt_id는 Tool 6이 자동 생성
+           - 모든 필드가 포함된 채점 결과 반환
+           - test_responses & attempt_answers에 자동 저장
+
+        JSON 형식으로 반환하세요:
+        {{
+            "attempt_id": "uuid",
+            "question_id": "{question_id}",
+            "user_id": "{user_id}",
+            "is_correct": True|False,
+            "score": 85,
+            "explanation": "...",
+            "graded_at": "..."
+        }}
+        """
+
+        from langchain.agents import AgentExecutor
+
+        executor = AgentExecutor(
+            agent=self.agent,
+            tools=self.tools,
+            max_iterations=3,
+            verbose=True
+        )
+
+        result = executor.invoke({"input": scoring_prompt})
+        return self._parse_scoring_output(result)
+
+    def _parse_scoring_output(self, result: dict) -> dict:
+        """
+        채점 에이전트 출력을 파싱합니다.
+
+        Returns: score_and_explain 도구의 반환값
+        """
+        import json
+        import logging
+
+        logger = logging.getLogger("item_gen_agent")
+
+        try:
+            raw_output = result.get("output", "")
+
+            # JSON 추출
+            if "```json" in raw_output:
+                json_start = raw_output.index("```json") + 7
+                json_end = raw_output.index("```", json_start)
+                json_str = raw_output[json_start:json_end].strip()
+            elif "{" in raw_output:
+                json_start = raw_output.index("{")
+                json_end = raw_output.rindex("}") + 1
+                json_str = raw_output[json_start:json_end]
+            else:
+                logger.error("No JSON found in scoring output")
+                return {"is_correct": False, "score": 0, "error": "파싱 실패"}
+
+            parsed = json.loads(json_str)
+            logger.info(f"Scoring result: question={parsed.get('question_id')}, score={parsed.get('score')}")
+            return parsed
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error in scoring: {e}")
+            return {"is_correct": False, "score": 0, "error": str(e)}
+        except Exception as e:
+            logger.error(f"Unexpected error in _parse_scoring_output: {e}")
+            return {"is_correct": False, "score": 0, "error": str(e)}
 ```
 
 ---
