@@ -1549,7 +1549,24 @@ def get_user_profile(user_id: str) -> dict:
 
 ### Tool 2: Search Question Templates
 
-**목적**: 관심분야별 문항 템플릿 검색 (문항 생성의 참고 자료)
+**목적**: 관심분야별 문항 템플릿 검색 → **Few-shot 예시로 에이전트 의사결정 가이드**
+
+**핵심 역할**:
+- 이미 검증된 고품질 문항들을 검색
+- 이 문항들이 **LLM의 프롬프트에 Few-shot 예시로 동적 추가됨**
+- 에이전트가 이 템플릿들을 참고하여 **유사한 구조와 난이도로 새 문항 생성**
+- 결과: 일관된 품질 유지 + 문항 다양성 확보
+
+**데이터 흐름**:
+```
+generate_questions() 호출
+    ↓
+search_question_templates() 실행 (Tool 2)
+    ↓
+[검색된 5개 템플릿] → LLM 프롬프트에 Few-shot 예시로 삽입
+    ↓
+LLM이 템플릿 스타일을 참고하여 새 문항 생성 (Tool 4,5로 검증/저장)
+```
 
 ```python
 @tool
@@ -1559,12 +1576,12 @@ def search_question_templates(
     category: str
 ) -> list[dict]:
     """
-    관심분야와 난이도에 맞는 문항 템플릿을 검색합니다.
-    (이미 검증된 과거 문항을 참고하여 유사한 구조의 문항 생성 시 활용)
+    관심분야와 난이도에 맞는 검증된 문항 템플릿을 검색합니다.
+    (Few-shot 예시로 사용)
 
     Args:
         interests: ["LLM", "RAG", ...] - 관심분야 목록
-        difficulty: 1~10 - 난이도
+        difficulty: 1~10 - 난이도 (±1 범위 허용)
         category: "technical" | "business" | "general"
 
     Returns:
@@ -1573,13 +1590,39 @@ def search_question_templates(
                 "id": "question_id",
                 "stem": "LLM과 RAG의 차이점은?",
                 "type": "short_answer",
-                "correct_rate": 0.75,  # 정답률
-                "usage_count": 5
+                "choices": [...],  # 객관식인 경우
+                "correct_answer": "정답",
+                "correct_rate": 0.75,  # 정답률 (품질 지표)
+                "usage_count": 5,  # 사용 횟수
+                "avg_difficulty_score": 5  # 실제 체감 난이도
             },
             ...
         ]
     """
     # FastAPI Endpoint: POST /api/v1/tools/search-templates
+
+    # 응답 (최대 5개 템플릿)
+    # 품질 순서: correct_rate 높은 순 → usage_count 높은 순
+```
+
+**Few-shot 활용 예시**:
+
+에이전트가 생성 프롬프트에서 다음과 같이 활용:
+
+```
+검색된 Few-shot 템플릿 (이 스타일로 생성하세요):
+
+예시 1 - 주관식 (LLM, 난이도 5):
+Q: "Retrieval-Augmented Generation에서 Augmentation의 역할은?"
+A: "외부 지식베이스에서 검색한 관련 정보를 LLM 프롬프트에 추가"
+정답률: 0.75 (검증됨)
+
+예시 2 - 객관식 (LLM, 난이도 5):
+Q: "LLM의 Context Window 제한을 극복하는 방법?"
+A) Prompt Engineering  B) RAG  C) Fine-tuning  D) 모두 가능
+정답: D) 정답률: 0.82 (검증됨)
+
+...위 스타일을 참고하여 새 문항을 생성하세요...
 ```
 
 ### Tool 3: Get Difficulty Keywords
@@ -1614,7 +1657,23 @@ def get_difficulty_keywords(
 
 ### Tool 4: Validate Question Quality
 
-**목적**: 생성된 문항의 품질 검증
+**목적**: 생성된 문항의 품질 검증 (LLM 의미 검증 + 규칙 기반 검증)
+
+**검증 방식** (2단계 접근):
+
+1. **LLM 기반 의미 검증** (semantic evaluation)
+   - 문항이 명확하고 의도된 학습목표를 평가하는가?
+   - 문항의 난이도가 사용자 수준과 적절한가?
+   - 정답이 객관적이고 검증 가능한가?
+   - 편향이나 부적절한 표현은 없는가?
+   - 점수: 0.0 ~ 1.0
+
+2. **규칙 기반 품질 검증** (rule-based validation)
+   - 문항 길이: 250자 이내 ✓
+   - 선택지 수: 객관식은 4~5개 ✓
+   - 정답 형식: 유효하고 명확한가? ✓
+   - 중복/유사 문항: 기존 문항과 유사도 < 70% ✓
+   - 최소 점수 threshold: 0.7 이상
 
 ```python
 @tool
@@ -1622,26 +1681,50 @@ def validate_question_quality(
     stem: str,
     question_type: str,
     choices: list[str] = None,
-    correct_answer: str = None
-) -> dict:
+    correct_answer: str = None,
+    batch: bool = False  # 배치 처리 지원
+) -> dict | list[dict]:
     """
     생성된 문항이 요구사항을 충족하는지 검증합니다.
+    LLM 기반 의미 검증 + 규칙 기반 품질 검증 조합.
 
     Args:
         stem: 문항 내용
         question_type: "multiple_choice" | "true_false" | "short_answer"
         choices: 객관식 선택지 (해당하는 경우)
         correct_answer: 정답
+        batch: True인 경우 여러 문항을 한 번에 검증 (성능 향상)
 
-    Returns:
+    Returns (단일):
         {
-            "is_valid": True,
-            "score": 0.92,  # 0~1 범위의 품질 점수
+            "is_valid": True,  # LLM 점수 >= 0.7 AND 규칙 검증 통과
+            "score": 0.92,  # LLM 의미 점수 (0~1)
+            "rule_score": 0.95,  # 규칙 기반 점수 (0~1)
+            "final_score": 0.92,  # min(score, rule_score)
             "feedback": "명확하고 적절한 난이도의 문항입니다.",
-            "issues": []  # 발견된 문제점 (있을 경우)
+            "issues": [],  # 발견된 문제점
+            "recommendation": "pass" | "revise" | "reject"
         }
+
+    Returns (배치):
+        [
+            {...single result...},
+            {...single result...}
+        ]
     """
     # FastAPI Endpoint: POST /api/v1/tools/validate-question
+    # Batch 처리 시: POST /api/v1/tools/validate-question/batch
+```
+
+**배치 처리 예시**:
+```python
+# 5개 문항을 한 번에 검증 (효율성 향상)
+validation_results = validate_question_quality(
+    stem=[q1, q2, q3, q4, q5],
+    question_type=["mc", "oa", "mc", "tf", "oa"],
+    batch=True
+)
+# 응답: [result1, result2, result3, result4, result5]
 ```
 
 ### Tool 5: Save Generated Question
@@ -1750,6 +1833,17 @@ class ItemGenAgent:
         """
         문항을 생성합니다.
 
+        실행 흐름:
+        1. 사용자 정보 조회 (get_user_profile)
+        2. 관심분야별 템플릿 검색 (search_question_templates)
+           → 이 템플릿들이 QUESTION_GENERATION_TEMPLATE의 few-shot 예시로 활용됨
+        3. 난이도별 키워드 조회 (get_difficulty_keywords)
+        4. 사용자 정보 + 템플릿 + 키워드를 통합한 프롬프트 구성
+        5. LLM이 문항 생성 (ReAct 루프 시작)
+        6. 각 문항 검증 (validate_question_quality)
+        7. 검증 통과 문항 저장 (save_generated_question)
+        8. 최종 결과를 _parse_agent_output으로 JSON 변환
+
         Args:
             user_id: 사용자 ID
             round_number: 라운드 번호 (1 또는 2)
@@ -1757,7 +1851,7 @@ class ItemGenAgent:
             previous_score: 이전 라운드 점수 (2라운드인 경우)
 
         Returns:
-            생성된 문항 리스트
+            생성된 문항 리스트 (검증 통과한 것만)
         """
         input_prompt = f"""
         사용자 ID: {user_id}
@@ -1768,12 +1862,20 @@ class ItemGenAgent:
         다음 과정을 따르세요:
         1. get_user_profile 도구로 사용자 정보를 조회하세요.
         2. search_question_templates 도구로 관련 템플릿을 검색하세요.
+           (검색된 템플릿은 문항 생성 시 Few-shot 참고 자료로 사용합니다)
         3. get_difficulty_keywords 도구로 핵심 개념을 파악하세요.
         4. {count}개의 문항을 생성하세요 (객관식/OX/주관식 혼합).
+           (QUESTION_GENERATION_TEMPLATE 패턴 참고)
         5. 각 문항에 대해 validate_question_quality 도구로 검증하세요.
+           (점수 >= 0.7인 경우만 진행)
         6. 검증 통과한 문항을 save_generated_question 도구로 저장하세요.
 
-        생성된 모든 문항을 JSON 형식으로 반환하세요.
+        최종 결과를 아래의 JSON 형식으로 반환하세요:
+        {{
+            "status": "success" | "partial" | "failed",
+            "generated_count": N,
+            "questions": [...]
+        }}
         """
 
         from langchain.agents import AgentExecutor
@@ -1789,25 +1891,95 @@ class ItemGenAgent:
         return self._parse_agent_output(result)
 
     def _get_system_prompt(self) -> str:
-        """시스템 프롬프트"""
+        """
+        시스템 프롬프트 (QUESTION_GENERATION_TEMPLATE 포함)
+
+        주의: 이 프롬프트는 generate_questions() 실행 시,
+        search_question_templates()로 검색된 템플릿들이
+        Few-shot 예시로 동적으로 추가됩니다.
+        """
         return """당신은 AI 역량 평가 시스템의 지능형 문항 생성 에이전트입니다.
 
 당신의 역할:
 - 사용자의 경력, 직군, 관심분야에 맞춰진 문항을 동적으로 생성
 - 난이도를 적절히 조정하여 도전적이면서도 공정한 평가 보장
 - 객관식, OX, 주관식을 적절히 혼합
+- search_question_templates에서 검색된 템플릿을 참고하여 유사 구조로 생성
 - 생성된 문항의 품질을 검증한 후 저장
 
 제약사항:
 - 각 문항은 250자 이내
 - 정답은 명확하고 검증 가능해야 함
 - 편향된 표현이나 부적절한 내용 금지
-- 한국어 기본, 명확한 표현 사용"""
+- 한국어 기본, 명확한 표현 사용
+
+생성 규칙:
+- 난이도 1~3: 기본 개념 정의, 단순 적용
+- 난이도 4~6: 개념 이해, 실무 적용
+- 난이도 7~10: 심화 개념, 시스템 설계, 엣지 케이스"""
 
     def _parse_agent_output(self, result: dict) -> list[dict]:
-        """에이전트 출력을 문항 리스트로 파싱"""
-        # 구현 예시
-        pass
+        """
+        에이전트 출력을 문항 리스트로 파싱합니다.
+
+        AgentExecutor의 output 형식:
+        {
+            "output": "최종 응답 텍스트",
+            "intermediate_steps": [...]  # 도구 호출 기록
+        }
+
+        이를 다음 형식으로 변환:
+        [
+            {
+                "question_id": "uuid",
+                "stem": "문항 내용",
+                "type": "multiple_choice|true_false|short_answer",
+                "choices": [...],
+                "correct_answer": "정답",
+                "difficulty": 5,
+                "category": "LLM",
+                "explanation": "해설",
+                "validation_score": 0.92,
+                "saved_at": "2025-11-06T10:30:00Z"
+            },
+            ...
+        ]
+        """
+        import json
+        import logging
+
+        logger = logging.getLogger("item_gen_agent")
+
+        try:
+            # AgentExecutor의 "output" 필드에서 최종 JSON 추출
+            raw_output = result.get("output", "")
+
+            # JSON 블록 찾기 (```json ... ``` 형식)
+            if "```json" in raw_output:
+                json_start = raw_output.index("```json") + 7
+                json_end = raw_output.index("```", json_start)
+                json_str = raw_output[json_start:json_end].strip()
+            elif "{" in raw_output:
+                # JSON 객체 직접 추출
+                json_start = raw_output.index("{")
+                json_end = raw_output.rindex("}") + 1
+                json_str = raw_output[json_start:json_end]
+            else:
+                logger.error("No JSON found in agent output")
+                return []
+
+            parsed = json.loads(json_str)
+            questions = parsed.get("questions", [])
+
+            logger.info(f"Successfully parsed {len(questions)} questions")
+            return questions
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}, raw_output: {raw_output}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error in _parse_agent_output: {e}")
+            return []
 ```
 
 ---
@@ -1876,13 +2048,81 @@ Q: Retrieval-Augmented Generation에서 "Augmentation"은 무엇인가?
 
 ## 에러 처리 & 복원력
 
+### 자동 복구 전략 (Self-Correction Loop)
+
+```python
+# 에러 처리 흐름:
+# 1. 초기 LLM 응답 시도
+# 2. JSON 파싱 실패 시 → 에러 피드백을 프롬프트에 추가하여 LLM에 재요청
+# 3. 재시도 최대 3회
+# 4. 3회 초과 시 → 부분 성공 또는 실패 처리
+```
+
+### 에러별 처리 방식
+
 | 시나리오 | 처리 방식 |
 |---------|---------|
-| **Tool 호출 실패** | 최대 3회 재시도 후, 캐시된 템플릿 반환 |
-| **LLM 응답 형식 오류** | 응답 파싱 실패 시, JSON 구조 강제 변환 |
-| **문항 품질 검증 실패** | 검증 점수 < 0.7일 경우, 프롬프트 개선 후 재생성 |
-| **DB 저장 실패** | 로그 기록 후, 메모리 버퍼에 임시 저장 |
-| **LLM 타임아웃 (>30s)** | 중단 후, 부분 생성된 문항 중 유효한 것 저장 |
+| **Tool 호출 실패** | 최대 3회 재시도. 최종 실패 시 캐시된 템플릿/키워드 반환 (fallback) |
+| **LLM 응답 형식 오류** | ⭐ **자동 교정 루프**: 파싱 에러 메시지를 새 프롬프트에 포함하여 LLM이 자체 수정하도록 유도. 최대 3회 재시도 |
+| **문항 품질 검증 실패** | 검증 점수 < 0.7일 경우, validate_question_quality의 feedback을 LLM에 제공하여 프롬프트 개선 후 재생성 (최대 2회) |
+| **DB 저장 실패** | 로그 기록 후, 메모리 큐에 임시 저장. 다음 배치 처리 시 재시도 |
+| **LLM 타임아웃 (>30s)** | 중단 후, AgentExecutor의 intermediate_steps에서 부분 생성 문항 추출. 유효한 것만 저장 |
+
+### 자동 교정 루프 상세 구현
+
+**예시: JSON 파싱 오류 복구**
+
+```python
+def generate_questions(self, user_id, round_number, count=5, previous_score=None):
+    max_retries = 3
+    attempt = 0
+
+    while attempt < max_retries:
+        result = executor.invoke({"input": input_prompt})
+        questions = self._parse_agent_output(result)
+
+        if questions:  # 파싱 성공
+            return questions
+
+        # 파싱 실패 → 에러 피드백을 새 프롬프트에 추가
+        attempt += 1
+        if attempt < max_retries:
+            last_output = result.get("output", "")
+            correction_prompt = f"""
+            이전 응답에서 JSON 형식 오류가 발생했습니다:
+            {last_output[:200]}...
+
+            다시 시도하세요. 반드시 다음 JSON 형식으로 반환하세요:
+            {{
+                "status": "success|partial|failed",
+                "generated_count": N,
+                "questions": [...]
+            }}
+            """
+            input_prompt = correction_prompt
+        else:
+            logger.error(f"Max retries exceeded for user {user_id}")
+            return []
+
+    return []
+```
+
+**예시: 문항 품질 검증 오류 복구**
+
+```python
+# validate_question_quality에서 점수 < 0.7인 경우
+if validation_score < 0.7:
+    feedback = f"문항 품질 점수: {validation_score:.2f}. 피드백: {feedback_text}"
+
+    # 에이전트에 피드백 제공하여 재생성 유도
+    revision_prompt = f"""
+    생성한 문항의 품질 검증 결과:
+    {feedback}
+
+    위 피드백을 반영하여 문항을 개선해주세요.
+    """
+    # 새로운 문항 생성 요청
+```
 
 ---
 
