@@ -76,6 +76,7 @@ Analyze Round 1 test results (score, wrong-answer categories) and generate Round
 ### **ORM Models**
 
 **TestResult** (`test_results` table)
+
 - `id` (UUID, PK): Result identifier
 - `session_id` (FK): Links to test_sessions
 - `round` (1-3): Which test round
@@ -87,6 +88,7 @@ Analyze Round 1 test results (score, wrong-answer categories) and generate Round
 - `created_at`: Recording timestamp
 
 **AttemptAnswer** (`attempt_answers` table)
+
 - `id` (UUID, PK): Answer identifier
 - `session_id` (FK): Links to test_sessions
 - `question_id` (FK): Links to questions
@@ -99,6 +101,7 @@ Analyze Round 1 test results (score, wrong-answer categories) and generate Round
 ### **Service Layer**
 
 **ScoringService**
+
 ```python
 def calculate_round_score(session_id: str, round_num: int) -> dict
     # Returns: score, total_points, correct_count, total_count, wrong_categories
@@ -108,6 +111,7 @@ def save_round_result(session_id: str, round_num: int) -> TestResult
 ```
 
 **AdaptiveDifficultyService**
+
 ```python
 def get_difficulty_tier(score: float) -> str
     # Maps score → tier ("low", "medium", "high")
@@ -126,6 +130,7 @@ def get_adaptive_generation_params(session_id: str) -> dict[str, Any]
 ```
 
 **QuestionGenerationService** (extended)
+
 ```python
 def generate_questions_adaptive(
     user_id: int, session_id: str, round_num: int = 2
@@ -139,6 +144,7 @@ def generate_questions_adaptive(
 ### **API Endpoints**
 
 **POST /questions/score** (200 OK)
+
 ```json
 Request:
   ?session_id=uuid
@@ -156,6 +162,7 @@ Response:
 ```
 
 **POST /questions/generate-adaptive** (201 Created)
+
 ```json
 Request:
 {
@@ -184,6 +191,7 @@ Response:
 ## 🧪 Test Coverage (41 tests, 100% pass rate)
 
 ### **Difficulty Tier Mapping** (5 tests)
+
 - Score 0-40% → "low" tier
 - Score 40-70% → "medium" tier
 - Score 70%+ → "high" tier
@@ -191,24 +199,28 @@ Response:
 - Boundary conditions verified
 
 ### **Difficulty Adjustment** (5 tests)
+
 - Low tier: decrease by 1 (min 1.0)
 - Medium tier: increase by 0.5
 - High tier: increase by 2 (max 10.0)
 - Clamping at min/max verified
 
 ### **Weak Category Extraction** (4 tests)
+
 - Single weak category extraction
 - Multiple weak categories
 - No weak categories (all correct)
 - Missing Round 1 result error handling
 
 ### **Category Prioritization** (4 tests)
+
 - Single category gets ≥50% (3 of 5 questions)
 - Multiple categories distributed fairly
 - No categories returns empty ratio
 - Ratio sums correctly
 
 ### **Scoring Service** (9 tests)
+
 - All correct: 100% score
 - Partial correct: proper calculation
 - All wrong: 0% score
@@ -218,6 +230,7 @@ Response:
 - Query from database
 
 ### **API Endpoints** (11 tests)
+
 - Score endpoint success with weak category detection
 - Invalid session handling
 - Generate adaptive success
@@ -236,6 +249,7 @@ Response:
 ## 🔄 Integration Points
 
 ### **Dependencies**
+
 - `TestSession`, `Question` models (from REQ-B-B2-Gen)
 - `User`, `UserProfileSurvey` models (from REQ-B-A1, REQ-B-B1)
 - `AttemptAnswer` model (new, pairs questions with responses)
@@ -259,6 +273,7 @@ Round 2:
 ```
 
 ### **Future Enhancements**
+
 - Implement actual round_avg_difficulty calculation from Question records
 - Add dynamic category constraints per user
 - Support 3-round testing with cumulative adaptation
