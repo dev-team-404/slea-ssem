@@ -1,0 +1,7 @@
+# This directory holds individual REQ progress files
+# Each developer creates REQ-X-Y.md when starting a new requirement
+#
+# Example:
+# - REQ-B-A2-Edit-1.md (created by bwyoon)
+# - REQ-F-1-Login.md (created by lavine)
+# - REQ-A-1-ItemGen.md (created by <person>)
