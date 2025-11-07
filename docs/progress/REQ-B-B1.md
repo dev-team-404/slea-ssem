@@ -46,6 +46,7 @@ tests/backend/
 **Total Tests**: 14 (7 Unit + 7 Integration)
 
 #### **Unit Tests - Survey Schema (6 tests)**
+
 - ✅ Get schema structure
 - ✅ Schema contains all fields
 - ✅ Field metadata validation
@@ -54,14 +55,17 @@ tests/backend/
 - ✅ interests choices validation
 
 #### **Unit Tests - Survey Submit (1 test)**
+
 - ✅ Submit with valid data
 
 #### **Integration Tests - GET /survey/schema (3 tests)**
+
 - ✅ Schema success with fields
 - ✅ Field structure validation
 - ✅ Interests field choices
 
 #### **Integration Tests - POST /survey/submit (4 tests)**
+
 - ✅ Submit success (201 Created)
 - ✅ Invalid self_level (400)
 - ✅ Invalid interests (400)
@@ -91,10 +95,10 @@ tests/backend/
 
 ### Files Modified (2 files)
 
-1. **src/backend/services/__init__.py**
+1. **src/backend/services/**init**.py**
    - Added SurveyService export
 
-2. **src/backend/api/__init__.py**
+2. **src/backend/api/**init**.py**
    - Added survey_router export
 
 3. **tests/conftest.py**

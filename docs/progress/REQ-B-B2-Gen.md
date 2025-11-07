@@ -11,6 +11,7 @@
 Generate 5 test questions based on user proficiency level and interests from survey data. Return questions within 3 seconds with complete metadata (type, stem, choices, answer schema, difficulty, category).
 
 **REQ Components**:
+
 - REQ-B-B2-Gen-1: Generate 5 questions and persist in database
 - REQ-B-B2-Gen-2: Match questions to user interests from survey
 - REQ-B-B2-Gen-3: Return complete question metadata in response
@@ -24,6 +25,7 @@ Generate 5 test questions based on user proficiency level and interests from sur
 This phase implements question generation using **mock data** to enable immediate testing and integration without external LLM dependencies. The architecture is designed to be easily replaced with actual LLM integration later during the Agent implementation phase.
 
 **Why Mock?**
+
 - Unblocks frontend/API development
 - Allows full integration testing
 - Provides realistic test data
@@ -61,6 +63,7 @@ This phase implements question generation using **mock data** to enable immediat
 ### **ORM Models**
 
 **TestSession** (`test_sessions` table)
+
 - `id` (UUID, PK): Session identifier
 - `user_id` (FK): Links to user
 - `survey_id` (FK): Links to user's survey profile
@@ -69,6 +72,7 @@ This phase implements question generation using **mock data** to enable immediat
 - `created_at`, `updated_at`: Timestamps
 
 **Question** (`questions` table)
+
 - `id` (UUID, PK): Question identifier
 - `session_id` (FK): Links to test session
 - `item_type` (enum): Type - multiple_choice, true_false, short_answer
@@ -83,12 +87,14 @@ This phase implements question generation using **mock data** to enable immediat
 ### **Service Layer**
 
 **QuestionGenerationService**
+
 ```python
 def __init__(self, session: Session)
 def generate_questions(user_id: int, survey_id: str, round_num: int) -> dict
 ```
 
 **Flow**:
+
 1. Query UserProfileSurvey to get user interests
 2. Create TestSession record
 3. Select 5 questions from MOCK_QUESTIONS based on interests
@@ -98,6 +104,7 @@ def generate_questions(user_id: int, survey_id: str, round_num: int) -> dict
 ### **API Endpoints**
 
 **POST /questions/generate** (201 Created)
+
 ```json
 Request:
 {
@@ -193,11 +200,13 @@ Response:
 ## 🔄 Integration Points
 
 ### **Current Dependencies**
+
 - `UserProfileSurvey` model (from REQ-B-B1)
 - `User` model (from REQ-B-A1)
 - FastAPI/SQLAlchemy ORM
 
 ### **Future LLM Integration** (for Agent phase)
+
 ```python
 # Current (Mock):
 question = self.MOCK_QUESTIONS[category][index]
@@ -267,4 +276,3 @@ question = self.llm_service.generate_question(
 - **Commit SHA**: (pending - will be set after merge)
 - **Message**: `feat: Implement REQ-B-B2-Gen Mock question generation with full testing`
 - **Files Changed**: 9 files (+786 lines, -0 lines)
-
