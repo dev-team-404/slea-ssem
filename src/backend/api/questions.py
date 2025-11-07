@@ -1,7 +1,7 @@
 """
 Questions API endpoints for generating test questions.
 
-REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3, REQ-B-B2-Adapt, REQ-B-B2-Plus, REQ-B-B3-Score
+REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3, REQ-B-B2-Adapt, REQ-B-B2-Plus, REQ-B-B3-Score, REQ-B-B3-Explain
 """
 
 import logging
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.database import get_db
 from src.backend.services.autosave_service import AutosaveService
+from src.backend.services.explain_service import ExplainService
 from src.backend.services.question_gen_service import QuestionGenerationService
 from src.backend.services.scoring_service import ScoringService
 
@@ -213,6 +214,56 @@ class ScoringResponse(BaseModel):
     time_penalty_applied: bool = Field(..., description="Penalty applied flag")
     final_score: float = Field(..., description="Final score after penalty")
     scored_at: str = Field(..., description="Scoring timestamp (ISO format)")
+
+
+class GenerateExplanationRequest(BaseModel):
+    """
+    Request model for generating explanation.
+
+    REQ: REQ-B-B3-Explain-1
+
+    Attributes:
+        question_id: Question ID to explain
+        user_answer: User's submitted answer
+        is_correct: Whether user's answer is correct
+        attempt_answer_id: Optional FK to attempt_answers
+
+    """
+
+    question_id: str = Field(..., description="Question ID")
+    user_answer: str | dict[str, Any] = Field(..., description="User's submitted answer")
+    is_correct: bool = Field(..., description="Answer correctness")
+    attempt_answer_id: str | None = Field(default=None, description="Attempt answer ID (optional)")
+
+
+class ExplanationResponse(BaseModel):
+    """
+    Response model for explanation generation.
+
+    REQ: REQ-B-B3-Explain-1
+
+    Attributes:
+        id: Explanation ID
+        question_id: Question ID
+        attempt_answer_id: Attempt answer ID (if provided)
+        explanation_text: Generated explanation (≥500 chars)
+        reference_links: Reference links with title and url (≥3)
+        is_correct: Whether this is for correct/incorrect answer
+        created_at: Timestamp when explanation was generated
+        is_fallback: Whether fallback explanation was used
+        error_message: Error details if fallback used
+
+    """
+
+    id: str = Field(..., description="Explanation ID")
+    question_id: str = Field(..., description="Question ID")
+    attempt_answer_id: str | None = Field(..., description="Attempt answer ID")
+    explanation_text: str = Field(..., description="Generated explanation (≥500 chars)")
+    reference_links: list[dict[str, str]] = Field(..., description="Reference links (≥3)")
+    is_correct: bool | None = Field(..., description="Answer correctness context")
+    created_at: str = Field(..., description="Creation timestamp (ISO format)")
+    is_fallback: bool = Field(..., description="Fallback flag (timeout/error)")
+    error_message: str | None = Field(..., description="Error details if fallback")
 
 
 @router.post(
@@ -620,3 +671,57 @@ def check_time_status(
     except Exception as e:
         logger.exception("Error checking time status")
         raise HTTPException(status_code=500, detail="Failed to check time status") from e
+
+
+@router.post(
+    "/explanations",
+    response_model=ExplanationResponse,
+    status_code=201,
+    summary="Generate Question Explanation",
+    description="Generate explanation with reference links for a test question",
+)
+def generate_explanation(
+    request: GenerateExplanationRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Generate explanation for a question answer.
+
+    REQ: REQ-B-B3-Explain-1
+
+    Generates explanation with reference links after answer is scored.
+    Supports both correct and incorrect answers with contextual explanations.
+
+    Performance requirement: Complete within 2 seconds.
+
+    Args:
+        request: GenerateExplanationRequest with question, answer, correctness
+        db: Database session
+
+    Returns:
+        ExplanationResponse with explanation_text and reference_links (≥3)
+
+    Raises:
+        HTTPException 400: If validation fails
+        HTTPException 404: If question not found
+        HTTPException 500: If explanation generation fails
+
+    """
+    try:
+        explain_service = ExplainService(db)
+        explanation = explain_service.generate_explanation(
+            question_id=request.question_id,
+            user_answer=request.user_answer,
+            is_correct=request.is_correct,
+            attempt_answer_id=request.attempt_answer_id,
+        )
+        return explanation
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=error_msg) from e
+        else:
+            raise HTTPException(status_code=400, detail=error_msg) from e
+    except Exception as e:
+        logger.exception("Error generating explanation")
+        raise HTTPException(status_code=500, detail="Failed to generate explanation") from e
