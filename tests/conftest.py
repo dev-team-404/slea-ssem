@@ -291,3 +291,34 @@ def attempt_answers_for_session(db_session: Session, test_session_round1_fixture
 
     db_session.commit()
     return answers
+
+
+@pytest.fixture(scope="function")
+def test_session_in_progress(
+    db_session: Session, user_fixture: User, user_profile_survey_fixture: UserProfileSurvey
+) -> TestSession:
+    """
+    Create an in-progress test session for autosave testing.
+
+    Args:
+        db_session: Database session
+        user_fixture: User fixture
+        user_profile_survey_fixture: Survey fixture
+
+    Returns:
+        TestSession record with status='in_progress'
+
+    """
+    from uuid import uuid4
+
+    session = TestSession(
+        id=str(uuid4()),
+        user_id=user_fixture.id,
+        survey_id=user_profile_survey_fixture.id,
+        round=1,
+        status="in_progress",
+    )
+    db_session.add(session)
+    db_session.commit()
+    db_session.refresh(session)
+    return session

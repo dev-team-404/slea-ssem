@@ -1,7 +1,7 @@
 """
 Questions API endpoints for generating test questions.
 
-REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3, REQ-B-B2-Adapt
+REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3, REQ-B-B2-Adapt, REQ-B-B2-Plus
 """
 
 import logging
@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.backend.database import get_db
+from src.backend.services.autosave_service import AutosaveService
 from src.backend.services.question_gen_service import QuestionGenerationService
 from src.backend.services.scoring_service import ScoringService
 
@@ -100,6 +101,72 @@ class GenerateAdaptiveQuestionsResponse(BaseModel):
     session_id: str = Field(..., description="New TestSession ID")
     questions: list[QuestionResponse] = Field(..., description="Adaptive questions")
     adaptive_params: dict[str, Any] = Field(..., description="Difficulty adjustment parameters")
+
+
+class AutosaveRequest(BaseModel):
+    """
+    Request model for auto-saving an answer.
+
+    REQ: REQ-B-B2-Plus-1
+
+    Attributes:
+        session_id: TestSession ID
+        question_id: Question ID being answered
+        user_answer: User's response (JSON format)
+        response_time_ms: Time taken to answer in milliseconds
+
+    """
+
+    session_id: str = Field(..., description="TestSession ID")
+    question_id: str = Field(..., description="Question ID")
+    user_answer: dict[str, Any] = Field(..., description="User's answer (JSON)")
+    response_time_ms: int = Field(..., ge=0, description="Response time in milliseconds")
+
+
+class AutosaveResponse(BaseModel):
+    """
+    Response model for autosave operation.
+
+    Attributes:
+        saved: Whether save was successful
+        session_id: TestSession ID
+        question_id: Question ID
+        saved_at: Timestamp when saved (ISO format)
+
+    """
+
+    saved: bool = Field(..., description="Save success")
+    session_id: str = Field(..., description="TestSession ID")
+    question_id: str = Field(..., description="Question ID")
+    saved_at: str = Field(..., description="Save timestamp (ISO format)")
+
+
+class ResumeSessionResponse(BaseModel):
+    """
+    Response model for resuming a session.
+
+    REQ: REQ-B-B2-Plus-3
+
+    Attributes:
+        session_id: TestSession ID
+        status: Session status
+        round: Current round
+        answered_count: Number of answered questions
+        total_questions: Total questions in session
+        next_question_index: Index of next unanswered question
+        previous_answers: List of previously saved answers
+        time_status: Time limit status info
+
+    """
+
+    session_id: str = Field(..., description="TestSession ID")
+    status: str = Field(..., description="Session status")
+    round: int = Field(..., description="Round number")
+    answered_count: int = Field(..., description="Number answered")
+    total_questions: int = Field(..., description="Total questions")
+    next_question_index: int = Field(..., description="Next question index")
+    previous_answers: list[dict[str, Any]] = Field(..., description="Previous answers with metadata")
+    time_status: dict[str, Any] = Field(..., description="Time limit status")
 
 
 @router.post(
@@ -254,3 +321,215 @@ def generate_adaptive_questions(
             raise HTTPException(status_code=404, detail=str(e)) from e
         logger.exception("Error generating adaptive questions")
         raise HTTPException(status_code=500, detail="Failed to generate adaptive questions") from e
+
+
+@router.post(
+    "/autosave",
+    response_model=AutosaveResponse,
+    status_code=200,
+    summary="Auto-save Answer",
+    description="Save user's answer in real-time (< 2 seconds)",
+)
+def autosave_answer(
+    request: AutosaveRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Auto-save user's answer to a question in real-time.
+
+    REQ: REQ-B-B2-Plus-1, REQ-B-B2-Plus-4, REQ-B-B2-Plus-5
+
+    Performance requirement: Complete within 2 seconds.
+
+    Args:
+        request: Autosave request with session_id, question_id, user_answer, response_time_ms
+        db: Database session
+
+    Returns:
+        Response with saved status and timestamp
+
+    Raises:
+        HTTPException: If session/question not found or save fails
+
+    """
+    try:
+        autosave_service = AutosaveService(db)
+        answer = autosave_service.save_answer(
+            session_id=request.session_id,
+            question_id=request.question_id,
+            user_answer=request.user_answer,
+            response_time_ms=request.response_time_ms,
+        )
+
+        # Check if time limit exceeded
+        time_status = autosave_service.check_time_limit(request.session_id)
+        if time_status["exceeded"]:
+            # Auto-pause session
+            autosave_service.pause_session(request.session_id, reason="time_limit")
+
+        return {
+            "saved": True,
+            "session_id": answer.session_id,
+            "question_id": answer.question_id,
+            "saved_at": answer.saved_at.isoformat() if answer.saved_at else "",
+        }
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        if "completed" in str(e).lower():
+            raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Error auto-saving answer")
+        raise HTTPException(status_code=500, detail="Failed to autosave answer") from e
+
+
+@router.get(
+    "/resume",
+    response_model=ResumeSessionResponse,
+    status_code=200,
+    summary="Resume Test Session",
+    description="Get session state for resuming after pause/timeout",
+)
+def resume_session(
+    session_id: str,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Resume a paused test session.
+
+    REQ: REQ-B-B2-Plus-3
+
+    Retrieves complete session state including:
+    - Previous answers with metadata
+    - Next unanswered question index
+    - Time status
+
+    Args:
+        session_id: TestSession ID to resume
+        db: Database session
+
+    Returns:
+        Complete session state for resumption
+
+    Raises:
+        HTTPException: If session not found or not resumable
+
+    """
+    try:
+        autosave_service = AutosaveService(db)
+
+        # Get session state
+        state = autosave_service.get_session_state(session_id)
+
+        # If session is paused, resume it
+        from src.backend.models.test_session import TestSession
+
+        test_session = db.query(TestSession).filter_by(id=session_id).first()
+        if test_session and test_session.status == "paused":
+            autosave_service.resume_session(session_id)
+            state["status"] = "in_progress"
+
+        return state
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Error resuming session")
+        raise HTTPException(status_code=500, detail="Failed to resume session") from e
+
+
+@router.put(
+    "/session/{session_id}/status",
+    status_code=200,
+    summary="Update Session Status",
+    description="Pause or resume a test session manually",
+)
+def update_session_status(
+    session_id: str,
+    status: str,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Update test session status (pause/resume).
+
+    REQ: REQ-B-B2-Plus-2
+
+    Args:
+        session_id: TestSession ID
+        status: New status (paused or in_progress)
+        db: Database session
+
+    Returns:
+        Updated session status
+
+    Raises:
+        HTTPException: If session not found or invalid status
+
+    """
+    if status not in ["paused", "in_progress"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status: {status}. Must be 'paused' or 'in_progress'",
+        )
+
+    try:
+        autosave_service = AutosaveService(db)
+
+        if status == "paused":
+            test_session = autosave_service.pause_session(session_id, reason="manual")
+        else:  # in_progress
+            test_session = autosave_service.resume_session(session_id)
+
+        return {
+            "session_id": test_session.id,
+            "status": test_session.status,
+            "paused_at": test_session.paused_at.isoformat() if test_session.paused_at else None,
+        }
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        if "completed" in str(e).lower() or "not paused" in str(e).lower():
+            raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Error updating session status")
+        raise HTTPException(status_code=500, detail="Failed to update session status") from e
+
+
+@router.get(
+    "/session/{session_id}/time-status",
+    status_code=200,
+    summary="Check Time Status",
+    description="Check if session has exceeded time limit",
+)
+def check_time_status(
+    session_id: str,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Check time limit status for a session.
+
+    REQ: REQ-B-B2-Plus-2
+
+    Args:
+        session_id: TestSession ID
+        db: Database session
+
+    Returns:
+        Time status with exceeded flag, elapsed time, remaining time
+
+    Raises:
+        HTTPException: If session not found
+
+    """
+    try:
+        autosave_service = AutosaveService(db)
+        time_status = autosave_service.check_time_limit(session_id)
+        return time_status
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Error checking time status")
+        raise HTTPException(status_code=500, detail="Failed to check time status") from e
