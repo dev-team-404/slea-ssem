@@ -322,3 +322,121 @@ def test_session_in_progress(
     db_session.commit()
     db_session.refresh(session)
     return session
+
+
+# ============================================================================
+# RANKING SERVICE TEST FIXTURES (REQ-B-B4)
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def create_multiple_users(db_session: Session) -> callable:
+    """
+    Fixture factory to create multiple test users.
+
+    Returns:
+        Callable that creates n users and returns them
+
+    """
+    from datetime import datetime
+
+    def _create_users(count: int) -> list[User]:
+        users = []
+        for i in range(count):
+            user = User(
+                knox_id=f"test_user_{i:03d}",
+                name=f"User {i}",
+                dept="Test Dept",
+                business_unit="Test BU",
+                email=f"user{i}@samsung.com",
+                nickname=f"user_{i:03d}",
+                last_login=datetime.utcnow(),
+            )
+            db_session.add(user)
+            users.append(user)
+
+        db_session.commit()
+        return users
+
+    return _create_users
+
+
+@pytest.fixture(scope="function")
+def create_survey_for_user(db_session: Session) -> callable:
+    """
+    Fixture factory to create survey for a user.
+
+    Returns:
+        Callable that creates survey for a given user
+
+    """
+    from datetime import datetime
+    from uuid import uuid4
+
+    def _create_survey(user_id: int) -> UserProfileSurvey:
+        survey = UserProfileSurvey(
+            id=str(uuid4()),
+            user_id=user_id,
+            self_level="intermediate",
+            years_experience=3,
+            job_role="Engineer",
+            duty="Development",
+            interests=["LLM", "RAG"],
+            submitted_at=datetime.utcnow(),
+        )
+        db_session.add(survey)
+        db_session.commit()
+        db_session.refresh(survey)
+        return survey
+
+    return _create_survey
+
+
+@pytest.fixture(scope="function")
+def create_test_session_with_result(db_session: Session) -> callable:
+    """
+    Fixture factory to create test session with result.
+
+    Returns:
+        Callable that creates session+result with given parameters
+
+    """
+    from datetime import datetime, timedelta
+    from uuid import uuid4
+
+    def _create_session(
+        user_id: int, survey_id: str, score: float, round_num: int = 1, days_ago: int = 0
+    ) -> tuple[TestSession, TestResult]:
+        session_created_at = datetime.utcnow() - timedelta(days=days_ago)
+
+        session = TestSession(
+            id=str(uuid4()),
+            user_id=user_id,
+            survey_id=survey_id,
+            round=round_num,
+            status="completed",
+            created_at=session_created_at,
+        )
+        db_session.add(session)
+        db_session.flush()
+
+        # Calculate correct count based on score
+        correct_count = int((score / 100.0) * 5)
+        total_count = 5
+
+        result = TestResult(
+            session_id=session.id,
+            round=round_num,
+            score=score,
+            total_points=int(score),
+            correct_count=correct_count,
+            total_count=total_count,
+            wrong_categories={"RAG": max(0, total_count - correct_count)},
+            created_at=session_created_at,
+        )
+        db_session.add(result)
+        db_session.commit()
+
+        return session, result
+
+    return _create_session
