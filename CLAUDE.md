@@ -34,6 +34,17 @@ tox -e py311                   # Test on Python 3.11
 tox -e style                   # Full format/lint pipeline
 ```
 
+### Package Management
+
+**When installing new packages during development**:
+
+```bash
+uv add <package-name>          # Add to [project] dependencies
+uv add --dev <package-name>    # Add to dev dependencies
+```
+
+This automatically updates `pyproject.toml` and `uv.lock`. **Do NOT manually edit pyproject.toml for dependencies** — always use `uv add`.
+
 ## Testing
 
 ```bash
