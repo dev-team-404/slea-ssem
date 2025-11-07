@@ -10,7 +10,15 @@ version = "0.1.0"
 name = "slea-ssem"
 description = "An AI-driven learning platform designed to guide S.LSI employees from beginner to expert in AI."
 authors = [{ name = "deitey719", email = "deity719@github.com" }]
-dependencies = ["pydantic", "PyYAML"]
+dependencies = [
+    "fastapi>=0.121.0",
+    "pydantic",
+    "pyjwt>=2.10.1",
+    "python-dotenv>=1.2.1",
+    "PyYAML",
+    "sqlalchemy>=2.0.44",
+    "sqlalchemy-utils>=0.42.0",
+]
 
 
 # --- mypy 타입 스터브 ---
@@ -134,5 +142,10 @@ ignore = [
 ]
 
 [tool.ruff.format]
+
+[dependency-groups]
+dev = [
+    "pytest-httpx>=0.35.0",
+]
 # 포맷터 관련 설정 (라인 길이는 전역 설정을 따름)
 # quote-style = "double"
