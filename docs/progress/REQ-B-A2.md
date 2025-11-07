@@ -49,6 +49,7 @@ tests/backend/
 ### Test Suite: `tests/backend/test_*.py`
 
 **Unit Tests - Validator (7 tests)**:
+
 - ✅ Valid nickname format (3-30 chars, alphanumeric + underscore)
 - ✅ Too short (<3 chars)
 - ✅ Too long (>30 chars)
@@ -58,6 +59,7 @@ tests/backend/
 - ✅ Error message helper function
 
 **Unit Tests - Service (10 tests)**:
+
 - ✅ Check available nickname (returns empty suggestions)
 - ✅ Check duplicate nickname (returns 3 suggestions)
 - ✅ Invalid nickname raises error
@@ -70,6 +72,7 @@ tests/backend/
 - ✅ User not found error
 
 **Integration Tests - Endpoints (6 tests)**:
+
 - ✅ POST /profile/nickname/check - available
 - ✅ POST /profile/nickname/check - taken with suggestions
 - ✅ POST /profile/nickname/check - invalid format
@@ -102,6 +105,7 @@ tests/backend/
 ### Files Created (6 files)
 
 **Core Implementation**:
+
 1. `src/backend/validators/nickname.py` - NicknameValidator class with:
    - `validate()` classmethod: returns (bool, str | None) tuple
    - `get_validation_error()` classmethod: returns error message or None

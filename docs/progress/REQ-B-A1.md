@@ -43,6 +43,7 @@ src/backend/
 ### Test Suite: `tests/backend/test_auth_*.py`
 
 **Unit Tests (7 tests)**:
+
 - ✅ New user registration with JWT generation
 - ✅ Existing user re-login with last_login update
 - ✅ JWT payload validation (only knox_id, iat, exp)
@@ -52,6 +53,7 @@ src/backend/
 - ✅ Invalid JWT decoding error handling
 
 **Integration Tests (4 tests)**:
+
 - ✅ POST /auth/login with new user (201 Created)
 - ✅ POST /auth/login with existing user (200 OK)
 - ✅ Missing required field validation (422)
@@ -66,6 +68,7 @@ src/backend/
 ### Files Created (9 files)
 
 **Core Implementation**:
+
 1. `src/backend/models/user.py` - User model with all required fields
 2. `src/backend/services/auth_service.py` - JWT & auth logic
 3. `src/backend/api/auth.py` - FastAPI endpoint
