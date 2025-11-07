@@ -76,6 +76,7 @@ Implement real-time auto-save functionality during test-taking with ability to r
 ### **ORM Model Changes**
 
 **TestSession** (extended fields):
+
 ```python
 time_limit_ms: int = 1200000  # Default 20 minutes
 started_at: Optional[datetime] = None  # Set on first answer
@@ -85,6 +86,7 @@ paused_at: Optional[datetime] = None  # Set when paused
 ### **Service Layer**
 
 **AutosaveService**
+
 ```python
 def save_answer(session_id, question_id, user_answer, response_time_ms) -> AttemptAnswer
     # Saves answer, sets started_at, checks time limit, auto-pauses if needed
@@ -108,6 +110,7 @@ def resume_session(session_id) -> TestSession
 ### **API Endpoints**
 
 **POST /questions/autosave** (200 OK)
+
 ```json
 Request:
 {
@@ -127,6 +130,7 @@ Response:
 ```
 
 **GET /questions/resume** (200 OK)
+
 ```json
 Response:
 {
@@ -157,6 +161,7 @@ Response:
 ```
 
 **PUT /questions/session/{session_id}/status** (200 OK)
+
 ```
 Request parameter: status=paused|in_progress
 
@@ -169,6 +174,7 @@ Response:
 ```
 
 **GET /questions/session/{session_id}/time-status** (200 OK)
+
 ```json
 Response:
 {
@@ -184,6 +190,7 @@ Response:
 ## 🧪 Test Coverage (33 tests, 100% pass rate)
 
 ### **Autosave Functionality** (7 tests)
+
 - Save single answer successfully
 - Sets started_at on first answer
 - Idempotent saves (update existing)
@@ -192,20 +199,24 @@ Response:
 - Cannot save to completed session (409)
 
 ### **Time Limit Checking** (3 tests)
+
 - Within time limit (not exceeded)
 - Time limit exceeded (> 20 min)
 - Session not started yet (no elapsed time)
 
 ### **Pause/Resume** (4 tests)
+
 - Pause session successfully
 - Cannot pause completed session
 - Resume paused session
 - Cannot resume non-paused session
 
 ### **Session State** (1 test)
+
 - Get session state with partial answers
 
 ### **API Endpoints** (18 tests)
+
 - Autosave: success, MC/TF/short answer types, validation, timeout trigger
 - Resume: success, with previous answers, invalid session, next question index
 - Status: pause, resume, invalid status (422), resume non-paused (409)
@@ -218,11 +229,13 @@ Response:
 ## 🔄 Integration Points
 
 ### **Dependencies**
+
 - `TestSession`, `Question`, `AttemptAnswer` models
 - `User`, `UserProfileSurvey` models (from earlier REQs)
 - FastAPI/SQLAlchemy ORM
 
 ### **Data Flow**
+
 ```
 User answers question
   ↓
