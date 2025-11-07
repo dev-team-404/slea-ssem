@@ -12,8 +12,10 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from src.backend.models.question import Question
+from src.backend.models.test_result import TestResult
 from src.backend.models.test_session import TestSession
 from src.backend.models.user_profile import UserProfileSurvey
+from src.backend.services.adaptive_difficulty_service import AdaptiveDifficultyService
 
 
 class QuestionGenerationService:
@@ -338,4 +340,168 @@ class QuestionGenerationService:
                 }
                 for q in questions_list
             ],
+        }
+
+    def generate_questions_adaptive(
+        self,
+        user_id: int,
+        session_id: str,
+        round_num: int = 2,
+    ) -> dict[str, Any]:
+        """
+        Generate Round 2+ questions with adaptive difficulty.
+
+        REQ: REQ-B-B2-Adapt-1, REQ-B-B2-Adapt-2, REQ-B-B2-Adapt-3
+
+        Analyzes previous round results and generates questions with:
+        - Adjusted difficulty based on score
+        - Prioritized weak categories (≥50%)
+
+        Args:
+            user_id: User ID
+            session_id: Previous TestSession ID (Round N-1)
+            round_num: Target round number (2, 3, etc.)
+
+        Returns:
+            Dictionary with:
+                - session_id (str): New TestSession UUID for this round
+                - questions (list): List of 5 adaptive questions
+                - adaptive_params (dict): Difficulty tier, weak categories
+
+        Raises:
+            ValueError: If previous round results not found
+
+        """
+        # Get previous round result
+        prev_round = round_num - 1
+        prev_result = (
+            self.session.query(TestResult)
+            .join(TestSession, TestSession.id == TestResult.session_id)
+            .filter(TestSession.user_id == user_id, TestResult.round == prev_round)
+            .order_by(TestResult.created_at.desc())
+            .first()
+        )
+
+        if not prev_result:
+            raise ValueError(
+                f"Round {prev_round} results not found for user {user_id}. "
+                "Cannot generate adaptive Round {round_num}."
+            )
+
+        # Get adaptive difficulty parameters
+        adaptive_service = AdaptiveDifficultyService(self.session)
+        params = adaptive_service.get_adaptive_generation_params(prev_result.session_id)
+
+        # Get the survey_id from the previous session
+        prev_session = self.session.query(TestSession).filter_by(id=prev_result.session_id).first()
+        if not prev_session:
+            raise ValueError(f"Previous TestSession {prev_result.session_id} not found")
+
+        # Create new test session for this round
+        new_session_id = str(uuid4())
+        test_session = TestSession(
+            id=new_session_id,
+            user_id=user_id,
+            survey_id=prev_session.survey_id,  # Use same survey from previous session
+            round=round_num,
+            status="in_progress",
+        )
+        self.session.add(test_session)
+        self.session.commit()
+
+        # Get weak categories to prioritize
+        priority_ratio = params["priority_ratio"]
+        adjusted_difficulty = params["adjusted_difficulty"]
+
+        questions_list = []
+
+        # Get all available categories
+        all_categories = list(self.MOCK_QUESTIONS.keys())
+
+        # Build question selection strategy
+        questions_allocated = {}
+
+        # Step 1: Allocate from weak categories (if any)
+        weak_total = 0
+        for weak_cat in priority_ratio:
+            count = int(priority_ratio[weak_cat])
+            questions_allocated[weak_cat] = count
+            weak_total += count
+
+        # Step 2: Fill remaining slots with other categories (from all available)
+        remaining_needed = 5 - weak_total
+        other_categories = [c for c in all_categories if c not in questions_allocated]
+
+        if remaining_needed > 0:
+            if other_categories:
+                # Distribute remaining among other categories fairly
+                per_category = remaining_needed // len(other_categories)
+                remainder = remaining_needed % len(other_categories)
+
+                for idx, cat in enumerate(other_categories):
+                    count = per_category + (1 if idx < remainder else 0)
+                    if count > 0:
+                        questions_allocated[cat] = count
+            else:
+                # No other categories, add back to weak categories
+                # Distribute remaining among weak categories
+                weak_cats = list(questions_allocated.keys())
+                if weak_cats:
+                    per_category = remaining_needed // len(weak_cats)
+                    remainder = remaining_needed % len(weak_cats)
+                    for idx, cat in enumerate(weak_cats):
+                        questions_allocated[cat] += per_category + (1 if idx < remainder else 0)
+
+        # Step 3: Select questions from each category
+        question_idx = 0
+        for category, count in questions_allocated.items():
+            mock_questions = self.MOCK_QUESTIONS.get(category, [])
+
+            for _ in range(count):
+                if not mock_questions:
+                    continue
+
+                # Select question (use index to vary)
+                mock_q = mock_questions[question_idx % len(mock_questions)]
+                question_idx += 1
+
+                # Adjust difficulty based on adaptive parameters
+                # Round difficulty to nearest integer for mock data
+                adjusted_diff_int = int(round(adjusted_difficulty))
+                # Clamp to 1-10
+                final_difficulty = max(1, min(10, adjusted_diff_int))
+
+                # Create Question record
+                question = Question(
+                    id=str(uuid4()),
+                    session_id=new_session_id,
+                    item_type=mock_q["item_type"],
+                    stem=mock_q["stem"],
+                    choices=mock_q.get("choices"),
+                    answer_schema=mock_q["answer_schema"],
+                    difficulty=final_difficulty,
+                    category=category,
+                    round=round_num,
+                )
+                self.session.add(question)
+                questions_list.append(question)
+
+        self.session.commit()
+
+        # Format response
+        return {
+            "session_id": new_session_id,
+            "questions": [
+                {
+                    "id": q.id,
+                    "item_type": q.item_type,
+                    "stem": q.stem,
+                    "choices": q.choices,
+                    "answer_schema": q.answer_schema,
+                    "difficulty": q.difficulty,
+                    "category": q.category,
+                }
+                for q in questions_list
+            ],
+            "adaptive_params": params,
         }

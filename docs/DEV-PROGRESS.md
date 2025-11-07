@@ -30,6 +30,8 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-A2-Edit | 프로필 수정 | 4 | ✅ Done | 28 tests (100%), Commit: fdb3896 |
 | REQ-B-B1 | 자기평가 데이터 수집 & 저장 | 4 | ✅ Done | 14 tests (100%), Commit: (pending) |
 | REQ-B-B2-Gen | 1차 문항 생성 | 4 | ✅ Done | 12 tests (100%), Mock data, Commit: (pending) |
+| REQ-B-B2-Adapt | 2차 적응형 난이도 조정 | 4 | ✅ Done | 41 tests (100%), Commit: (pending) |
+| REQ-B-B3-Score | 채점 (정오답 판정) | 1 | 📝 Spec | Specification ready, awaiting review |
 | REQ-B-B4 | 최종 등급 & 순위 산출 | 0 | ⏳ Backlog | 5개 sub-tasks |
 | REQ-B-B4-Plus | 등급 기반 배지 부여 | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-B-B5 | 응시 이력 저장 & 조회 | 0 | ⏳ Backlog | 5개 sub-tasks |
@@ -41,8 +43,6 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ ID | Feature | Phase | Status | Notes |
 |--------|---------|-------|--------|-------|
 | REQ-B-B2-Plus | 실시간 저장 & 재개 | 0 | ⏳ Backlog | 5개 sub-tasks |
-| REQ-B-B2-Adapt | 2차 적응형 난이도 조정 | 0 | ⏳ Backlog | 4개 sub-tasks |
-| REQ-B-B3-Score | 채점 (정오답 판정) | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-B-B3-Explain | 해설 생성 | 0 | ⏳ Backlog | 1개 sub-task |
 | REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | ⏳ Backlog | 3개 sub-tasks (MVP 1.0) |
 

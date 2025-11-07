@@ -15,6 +15,10 @@ from src.backend.api.profile import router as profile_router
 from src.backend.api.questions import router as questions_router
 from src.backend.api.survey import router as survey_router
 from src.backend.database import get_db
+from src.backend.models.attempt_answer import AttemptAnswer
+from src.backend.models.question import Question
+from src.backend.models.test_result import TestResult
+from src.backend.models.test_session import TestSession
 from src.backend.models.user import Base, User
 from src.backend.models.user_profile import UserProfileSurvey
 
@@ -155,3 +159,135 @@ def user_profile_survey_fixture(db_session: Session, user_fixture: User) -> User
     db_session.commit()
     db_session.refresh(survey)
     return survey
+
+
+@pytest.fixture(scope="function")
+def test_session_round1_fixture(
+    db_session: Session, user_fixture: User, user_profile_survey_fixture: UserProfileSurvey
+) -> TestSession:
+    """
+    Create a Round 1 test session for testing adaptive logic.
+
+    Args:
+        db_session: Database session
+        user_fixture: User fixture
+        user_profile_survey_fixture: Survey fixture
+
+    Returns:
+        TestSession record for Round 1
+
+    """
+    from uuid import uuid4
+
+    session = TestSession(
+        id=str(uuid4()),
+        user_id=user_fixture.id,
+        survey_id=user_profile_survey_fixture.id,
+        round=1,
+        status="completed",
+    )
+    db_session.add(session)
+    db_session.commit()
+    db_session.refresh(session)
+    return session
+
+
+@pytest.fixture(scope="function")
+def test_result_low_score(db_session: Session, test_session_round1_fixture: TestSession) -> TestResult:
+    """Create TestResult with low score (30%) and weak categories."""
+    result = TestResult(
+        session_id=test_session_round1_fixture.id,
+        round=1,
+        score=30.0,
+        total_points=30,
+        correct_count=1,
+        total_count=5,
+        wrong_categories={"RAG": 2, "Robotics": 1, "LLM": 1},
+    )
+    db_session.add(result)
+    db_session.commit()
+    return result
+
+
+@pytest.fixture(scope="function")
+def test_result_medium_score(db_session: Session, test_session_round1_fixture: TestSession) -> TestResult:
+    """Create TestResult with medium score (55%) and some weak categories."""
+    result = TestResult(
+        session_id=test_session_round1_fixture.id,
+        round=1,
+        score=55.0,
+        total_points=55,
+        correct_count=3,
+        total_count=5,
+        wrong_categories={"RAG": 2},
+    )
+    db_session.add(result)
+    db_session.commit()
+    return result
+
+
+@pytest.fixture(scope="function")
+def test_result_high_score(db_session: Session, test_session_round1_fixture: TestSession) -> TestResult:
+    """Create TestResult with high score (80%) and minimal weak areas."""
+    result = TestResult(
+        session_id=test_session_round1_fixture.id,
+        round=1,
+        score=80.0,
+        total_points=80,
+        correct_count=4,
+        total_count=5,
+        wrong_categories={"Robotics": 1},
+    )
+    db_session.add(result)
+    db_session.commit()
+    return result
+
+
+@pytest.fixture(scope="function")
+def attempt_answers_for_session(db_session: Session, test_session_round1_fixture: TestSession) -> list[AttemptAnswer]:
+    """Create attempt answer records for a test session."""
+    from uuid import uuid4
+
+    # Create 5 questions for the session
+    questions = []
+    for idx in range(5):
+        q = Question(
+            id=str(uuid4()),
+            session_id=test_session_round1_fixture.id,
+            item_type="multiple_choice",
+            stem=f"Test question {idx + 1}",
+            choices=["A", "B", "C", "D"],
+            answer_schema={"correct_key": "A", "explanation": "Test"},
+            difficulty=5,
+            category=["LLM", "RAG", "Robotics"][idx % 3],
+            round=1,
+        )
+        db_session.add(q)
+        questions.append(q)
+
+    db_session.commit()
+
+    # Create attempt answers: 1 correct (LLM), 4 wrong (RAG, RAG, Robotics, LLM)
+    answers = []
+    answer_data = [
+        (questions[0], True, 100),  # LLM: correct
+        (questions[1], False, 0),  # RAG: wrong
+        (questions[2], False, 0),  # Robotics: wrong
+        (questions[3], False, 0),  # LLM: wrong
+        (questions[4], False, 0),  # RAG: wrong
+    ]
+
+    for question, is_correct, score in answer_data:
+        answer = AttemptAnswer(
+            session_id=test_session_round1_fixture.id,
+            question_id=question.id,
+            user_answer="A",
+            is_correct=is_correct,
+            score=score,
+            response_time_ms=5000,
+        )
+        db_session.add(answer)
+        answers.append(answer)
+
+    db_session.commit()
+    return answers

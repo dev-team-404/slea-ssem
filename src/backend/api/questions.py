@@ -1,7 +1,7 @@
 """
 Questions API endpoints for generating test questions.
 
-REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3
+REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3, REQ-B-B2-Adapt
 """
 
 import logging
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.database import get_db
 from src.backend.services.question_gen_service import QuestionGenerationService
+from src.backend.services.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,36 @@ class GenerateQuestionsResponse(BaseModel):
     questions: list[QuestionResponse] = Field(..., description="Generated questions")
 
 
+class GenerateAdaptiveQuestionsRequest(BaseModel):
+    """
+    Request model for generating adaptive Round 2+ questions.
+
+    Attributes:
+        previous_session_id: Previous round TestSession ID (from Round 1)
+        round: Target round number (2 or 3)
+
+    """
+
+    previous_session_id: str = Field(..., description="Previous TestSession ID")
+    round: int = Field(default=2, ge=2, le=3, description="Target round (2 or 3)")
+
+
+class GenerateAdaptiveQuestionsResponse(BaseModel):
+    """
+    Response model for adaptive question generation.
+
+    Attributes:
+        session_id: New TestSession UUID for this round
+        questions: List of adaptive questions
+        adaptive_params: Difficulty tier and weak categories info
+
+    """
+
+    session_id: str = Field(..., description="New TestSession ID")
+    questions: list[QuestionResponse] = Field(..., description="Adaptive questions")
+    adaptive_params: dict[str, Any] = Field(..., description="Difficulty adjustment parameters")
+
+
 @router.post(
     "/generate",
     response_model=GenerateQuestionsResponse,
@@ -117,3 +148,109 @@ def generate_questions(
             raise HTTPException(status_code=404, detail=str(e)) from e
         logger.exception("Error generating questions")
         raise HTTPException(status_code=500, detail="Failed to generate questions") from e
+
+
+@router.post(
+    "/score",
+    status_code=200,
+    summary="Calculate Round Score",
+    description="Calculate and save test result for completed round",
+)
+def calculate_round_score(
+    session_id: str,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Calculate and save test result for completed round.
+
+    REQ: REQ-B-B3-Score, REQ-B-B2-Adapt
+
+    Calculates score from all attempt answers in session:
+    - Multiple choice / True-False: exact match
+    - Short answer: keyword-based scoring
+    - Identifies weak categories for adaptive Round 2
+
+    Args:
+        session_id: TestSession ID to score
+        db: Database session
+
+    Returns:
+        TestResult with score, correct count, weak categories
+
+    Raises:
+        HTTPException: If session not found or no answers
+
+    """
+    try:
+        scoring_service = ScoringService(db)
+        # Get the round number from TestSession
+        from src.backend.models.test_session import TestSession
+
+        test_session = db.query(TestSession).filter_by(id=session_id).first()
+        if not test_session:
+            raise ValueError(f"TestSession {session_id} not found")
+
+        result = scoring_service.save_round_result(session_id, test_session.round)
+
+        return {
+            "session_id": result.session_id,
+            "round": result.round,
+            "score": result.score,
+            "correct_count": result.correct_count,
+            "total_count": result.total_count,
+            "wrong_categories": result.wrong_categories,
+        }
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        logger.exception("Error calculating round score")
+        raise HTTPException(status_code=500, detail="Failed to calculate score") from e
+
+
+@router.post(
+    "/generate-adaptive",
+    response_model=GenerateAdaptiveQuestionsResponse,
+    status_code=201,
+    summary="Generate Adaptive Round 2+ Questions",
+    description="Generate questions with adaptive difficulty based on previous round results",
+)
+def generate_adaptive_questions(
+    request: GenerateAdaptiveQuestionsRequest,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Generate Round 2+ questions with adaptive difficulty.
+
+    REQ: REQ-B-B2-Adapt-1, REQ-B-B2-Adapt-2, REQ-B-B2-Adapt-3
+
+    Analyzes previous round results and generates questions with:
+    - Adjusted difficulty based on score
+    - Prioritized weak categories (≥50%)
+
+    Args:
+        request: Adaptive generation request with previous_session_id and round
+        db: Database session
+
+    Returns:
+        Response with new session_id, adaptive questions, and parameters
+
+    Raises:
+        HTTPException: If previous round not found or score unavailable
+
+    """
+    # TODO: Extract user_id from JWT token in production
+    user_id = 1  # Placeholder - should come from JWT
+
+    try:
+        question_service = QuestionGenerationService(db)
+        result = question_service.generate_questions_adaptive(
+            user_id=user_id,
+            session_id=request.previous_session_id,
+            round_num=request.round,
+        )
+        return result
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        logger.exception("Error generating adaptive questions")
+        raise HTTPException(status_code=500, detail="Failed to generate adaptive questions") from e
