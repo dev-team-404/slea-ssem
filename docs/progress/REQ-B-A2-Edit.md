@@ -51,6 +51,7 @@ tests/backend/
 **Total Tests**: 28 (18 Unit + 10 Integration)
 
 #### **Unit Tests - Nickname Edit (8 tests)**
+
 - ✅ Check nickname available for edit (self allowed)
 - ✅ Check nickname taken by others (get suggestions)
 - ✅ Check new nickname available
@@ -61,6 +62,7 @@ tests/backend/
 - ✅ Edit user not found
 
 #### **Unit Tests - Survey Edit (10 tests)**
+
 - ✅ Create new survey record
 - ✅ Survey with all fields
 - ✅ Survey with partial fields
@@ -73,12 +75,14 @@ tests/backend/
 - ✅ Survey user not found
 
 #### **Integration Tests - Nickname Endpoint (4 tests)**
+
 - ✅ PUT /profile/nickname - success (200)
 - ✅ PUT /profile/nickname - self allowed
 - ✅ PUT /profile/nickname - duplicate rejected
 - ✅ PUT /profile/nickname - invalid format
 
 #### **Integration Tests - Survey Endpoint (6 tests)**
+
 - ✅ PUT /profile/survey - success (201)
 - ✅ PUT /profile/survey - partial fields
 - ✅ PUT /profile/survey - invalid level
@@ -111,7 +115,7 @@ tests/backend/
 
 ### Files Modified (5 files)
 
-1. **src/backend/models/__init__.py**
+1. **src/backend/models/**init**.py**
    - Added UserProfileSurvey export
 
 2. **src/backend/services/profile_service.py** - Added 3 methods
