@@ -14,6 +14,7 @@ from src.backend.api.auth import router as auth_router
 from src.backend.api.profile import router as profile_router
 from src.backend.database import get_db
 from src.backend.models.user import Base, User
+from src.backend.models.user_profile import UserProfileSurvey
 
 
 @pytest.fixture(scope="function")
@@ -119,3 +120,34 @@ def user_fixture(db_session: Session) -> User:
     db_session.commit()
     db_session.refresh(user)
     return user
+
+
+@pytest.fixture(scope="function")
+def user_profile_survey_fixture(db_session: Session, user_fixture: User) -> UserProfileSurvey:
+    """
+    Create a test user profile survey record.
+
+    Args:
+        db_session: Database session
+        user_fixture: User fixture
+
+    Returns:
+        UserProfileSurvey instance
+
+    """
+    from datetime import datetime
+
+    survey = UserProfileSurvey(
+        id="survey_001",
+        user_id=user_fixture.id,
+        self_level="intermediate",
+        years_experience=3,
+        job_role="Senior Engineer",
+        duty="ML Model Development",
+        interests=["LLM", "RAG"],
+        submitted_at=datetime.utcnow(),
+    )
+    db_session.add(survey)
+    db_session.commit()
+    db_session.refresh(survey)
+    return survey
