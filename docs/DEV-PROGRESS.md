@@ -25,7 +25,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 
 | REQ ID | Feature | Phase | Status | Notes |
 |--------|---------|-------|--------|-------|
-| REQ-B-A1 | Samsung AD 인증 & 세션 관리 | 0 | ⏳ Backlog | 4개 sub-tasks |
+| REQ-B-A1 | Samsung AD 인증 & 세션 관리 | 4 | ✅ Done | Commit: f5412e9 |
 | REQ-B-A2 | 닉네임 등록 | 0 | ⏳ Backlog | 5개 sub-tasks |
 | REQ-B-A2-Edit | 프로필 수정 | 0 | ⏳ Backlog | 4개 sub-tasks |
 | REQ-B-B1 | 자기평가 데이터 수집 & 저장 | 0 | ⏳ Backlog | 2개 sub-tasks |
@@ -97,7 +97,7 @@ After each phase completion:
 
 **Start Date**: 2025-11-07
 **Target Date**: 2025-12-31
-**Team**: Backend (bwyoon) / Frontend (lavine) / Agent (TBD)
+**Team**: Backend (bwyoon) / Frontend (lavine) / Agent (bwyoon)
 
 **Key Milestones**:
 
