@@ -19,7 +19,7 @@ REQ: REQ-A-ItemGen
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
@@ -336,7 +336,7 @@ Return: is_correct, score, explanation, feedback
                 is_correct=False,
                 score=0,
                 explanation=f"채점 중 오류 발생: {str(e)}",
-                graded_at=datetime.utcnow().isoformat(),
+                graded_at=datetime.now(UTC).isoformat(),
             )
 
     def _parse_agent_output_generate(self, result: dict, num_questions: int) -> GenerateQuestionsResponse:
@@ -396,7 +396,7 @@ Return: is_correct, score, explanation, feedback
             is_correct=False,
             score=0,
             explanation="설명",
-            graded_at=datetime.utcnow().isoformat(),
+            graded_at=datetime.now(UTC).isoformat(),
         )
 
 

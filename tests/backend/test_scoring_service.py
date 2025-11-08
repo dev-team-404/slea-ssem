@@ -4,7 +4,7 @@ Tests for scoring service.
 REQ: REQ-B-B3-Score, REQ-B-B2-Adapt
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.orm import Session
@@ -216,7 +216,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -249,7 +249,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"selected_key": "B"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -281,7 +281,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"wrong_field": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -311,7 +311,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"selected_key": "Z"},  # Invalid
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -343,7 +343,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"selected_key": "a"},  # Lowercase
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -374,7 +374,7 @@ class TestScoringMultipleChoice:
             question_id=question.id,
             user_answer={"selected_key": "  A  "},  # With spaces
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -408,7 +408,7 @@ class TestScoringTrueFalse:
             question_id=question.id,
             user_answer={"answer": "true"},
             response_time_ms=3000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -439,7 +439,7 @@ class TestScoringTrueFalse:
             question_id=question.id,
             user_answer={"answer": "false"},
             response_time_ms=3000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -470,7 +470,7 @@ class TestScoringTrueFalse:
             question_id=question.id,
             user_answer={"answer": "false"},
             response_time_ms=3000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -501,7 +501,7 @@ class TestScoringTrueFalse:
             question_id=question.id,
             user_answer={"answer": "maybe"},  # Invalid
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -530,7 +530,7 @@ class TestScoringTrueFalse:
             question_id=question.id,
             user_answer={"answer": "TRUE"},  # Uppercase
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -566,7 +566,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "Semiconductor is made of silicon"},
             response_time_ms=10000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -599,7 +599,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "Made of silicon"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -630,7 +630,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "Made of metal"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -663,7 +663,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "SILICON and SEMICONDUCTOR"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -696,7 +696,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": ""},
             response_time_ms=100,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -728,7 +728,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "Silicon is important"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -761,7 +761,7 @@ class TestScoringShortAnswer:
             question_id=question.id,
             user_answer={"text": "semiconductor industry"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -782,7 +782,7 @@ class TestTimePenalty:
         service = ScoringService(db_session)
 
         # Set started_at to 10 minutes ago
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=10)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=10)
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
 
@@ -804,7 +804,7 @@ class TestTimePenalty:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -821,8 +821,8 @@ class TestTimePenalty:
         service = ScoringService(db_session)
 
         # Set started_at to 25 minutes ago, mark paused
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=25)
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=25)
+        test_session_in_progress.paused_at = datetime.now(UTC)
         test_session_in_progress.status = "paused"
         test_session_in_progress.time_limit_ms = 1200000  # 20 minutes
         db_session.commit()
@@ -845,7 +845,7 @@ class TestTimePenalty:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -863,8 +863,8 @@ class TestTimePenalty:
         service = ScoringService(db_session)
 
         # Set started_at to 30 minutes ago
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=30)
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=30)
+        test_session_in_progress.paused_at = datetime.now(UTC)
         test_session_in_progress.status = "paused"
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
@@ -887,7 +887,7 @@ class TestTimePenalty:
             question_id=question.id,
             user_answer={"answer": "false"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -925,7 +925,7 @@ class TestTimePenalty:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -940,7 +940,7 @@ class TestTimePenalty:
         service = ScoringService(db_session)
 
         # Set started_at to 25 minutes ago but status is still in_progress
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=25)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=25)
         test_session_in_progress.status = "in_progress"  # Not paused
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
@@ -963,7 +963,7 @@ class TestTimePenalty:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -1003,7 +1003,7 @@ class TestFullScoringFlow:
             is_correct=False,  # Initially false
             score=0.0,  # Initially 0
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -1021,8 +1021,8 @@ class TestFullScoringFlow:
         service = ScoringService(db_session)
 
         # Set time exceeded
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=25)
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=25)
+        test_session_in_progress.paused_at = datetime.now(UTC)
         test_session_in_progress.status = "paused"
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
@@ -1044,7 +1044,7 @@ class TestFullScoringFlow:
             question_id=question.id,
             user_answer={"text": "silicon"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -1078,7 +1078,7 @@ class TestFullScoringFlow:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()

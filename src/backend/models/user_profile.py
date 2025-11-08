@@ -1,6 +1,6 @@
 """User profile survey model for self-assessment data."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, func
@@ -53,7 +53,7 @@ class UserProfileSurvey(Base):
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

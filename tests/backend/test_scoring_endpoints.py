@@ -4,7 +4,7 @@ Tests for scoring API endpoints.
 REQ: REQ-B-B3-Score
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -39,7 +39,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -76,7 +76,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"answer": "true"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -112,7 +112,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"text": "Made of silicon"},
             response_time_ms=5000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -152,8 +152,8 @@ class TestScoringEndpoint:
     ) -> None:
         """POST /questions/score includes time_penalty_applied flag."""
         # Set time exceeded
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=25)
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=25)
+        test_session_in_progress.paused_at = datetime.now(UTC)
         test_session_in_progress.status = "paused"
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
@@ -176,7 +176,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -213,7 +213,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -250,7 +250,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -314,7 +314,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "A"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()
@@ -349,7 +349,7 @@ class TestScoringEndpoint:
             question_id=question.id,
             user_answer={"selected_key": "B"},
             response_time_ms=1000,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         db_session.add(answer)
         db_session.commit()

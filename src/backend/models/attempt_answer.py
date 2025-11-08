@@ -4,7 +4,7 @@ Attempt answer model for storing user responses to questions.
 REQ: REQ-B-B2-Plus, REQ-B-B3-Score
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, func
@@ -58,11 +58,11 @@ class AttemptAnswer(Base):
     is_correct: Mapped[bool] = mapped_column(default=False, nullable=False)
     score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # 0-100
     response_time_ms: Mapped[int] = mapped_column(Integer, nullable=True)  # Optional
-    saved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # For autosave
+    saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  # For autosave
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

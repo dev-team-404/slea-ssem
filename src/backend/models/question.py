@@ -4,7 +4,7 @@ Question model for managing test questions.
 REQ: REQ-B-B2-Gen, REQ-B-B2-Adapt, REQ-B-B3-Score
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, func
@@ -59,9 +59,9 @@ class Question(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     round: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

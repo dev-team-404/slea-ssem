@@ -4,7 +4,7 @@ Autosave service for real-time answer saving and session resumption.
 REQ: REQ-B-B2-Plus
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -82,7 +82,7 @@ class AutosaveService:
 
         # Set started_at on first answer if not already set
         if not test_session.started_at:
-            test_session.started_at = datetime.utcnow()
+            test_session.started_at = datetime.now(UTC)
             self.session.commit()
 
         # Check if answer already exists (idempotent update)
@@ -92,7 +92,7 @@ class AutosaveService:
             # Update existing answer
             existing.user_answer = user_answer
             existing.response_time_ms = response_time_ms
-            existing.saved_at = datetime.utcnow()
+            existing.saved_at = datetime.now(UTC)
             self.session.commit()
             self.session.refresh(existing)
             return existing
@@ -105,7 +105,7 @@ class AutosaveService:
             is_correct=False,  # Will be set by scoring service
             score=0.0,  # Will be set by scoring service
             response_time_ms=response_time_ms,
-            saved_at=datetime.utcnow(),
+            saved_at=datetime.now(UTC),
         )
         self.session.add(answer)
         self.session.commit()
@@ -145,9 +145,13 @@ class AutosaveService:
                 "status": test_session.status,
             }
 
+        started_at = test_session.started_at
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=UTC)
+
         # Calculate elapsed time
-        now = datetime.utcnow()
-        elapsed = now - test_session.started_at
+        now = datetime.now(UTC)
+        elapsed = now - started_at
         elapsed_ms = int(elapsed.total_seconds() * 1000)
 
         exceeded = elapsed_ms > test_session.time_limit_ms
@@ -185,7 +189,7 @@ class AutosaveService:
             raise ValueError(f"Cannot pause completed session {session_id}")
 
         test_session.status = "paused"
-        test_session.paused_at = datetime.utcnow()
+        test_session.paused_at = datetime.now(UTC)
         self.session.commit()
         self.session.refresh(test_session)
         return test_session

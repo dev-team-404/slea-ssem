@@ -4,7 +4,7 @@ Scoring service for calculating test results and identifying weak areas.
 REQ: REQ-B-B3-Score, REQ-B-B2-Adapt
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -109,7 +109,7 @@ class ScoringService:
         # Generate feedback
         feedback = "정답입니다!" if is_correct else "오답입니다."
 
-        scored_at = datetime.utcnow()
+        scored_at = datetime.now(UTC)
 
         return {
             "scored": True,
@@ -290,7 +290,7 @@ class ScoringService:
             return False, base_score
 
         # Calculate elapsed time
-        paused_at = test_session.paused_at or datetime.utcnow()
+        paused_at = test_session.paused_at or datetime.now(UTC)
         elapsed = paused_at - test_session.started_at
         elapsed_ms = int(elapsed.total_seconds() * 1000)
 

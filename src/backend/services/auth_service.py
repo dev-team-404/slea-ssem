@@ -4,7 +4,7 @@ Authentication service for Samsung AD user authentication and JWT management.
 REQ: REQ-B-A1-1, REQ-B-A1-2, REQ-B-A1-3, REQ-B-A1-4
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -71,7 +71,7 @@ class AuthService:
 
         if existing_user:
             # REQ-B-A1-4: Existing user - update last_login and generate new JWT
-            existing_user.last_login = datetime.utcnow()
+            existing_user.last_login = datetime.now(UTC)
             self.session.commit()
             jwt_token = self._generate_jwt(knox_id)
             return jwt_token, False
@@ -83,7 +83,7 @@ class AuthService:
             dept=user_data["dept"],
             business_unit=user_data["business_unit"],
             email=user_data["email"],
-            last_login=datetime.utcnow(),
+            last_login=datetime.now(UTC),
         )
         self.session.add(new_user)
         self.session.commit()
@@ -104,7 +104,7 @@ class AuthService:
             Encoded JWT token as string
 
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         expiration = now + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
 
         payload: dict[str, Any] = {

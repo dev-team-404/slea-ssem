@@ -1,8 +1,10 @@
 """Pytest configuration and shared fixtures."""
 
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -115,8 +117,6 @@ def user_fixture(db_session: Session) -> User:
         User instance
 
     """
-    from datetime import datetime
-
     user = User(
         knox_id="test_user_001",
         name="Test User",
@@ -124,7 +124,7 @@ def user_fixture(db_session: Session) -> User:
         business_unit="Test BU",
         email="test@samsung.com",
         nickname="alice_test",
-        last_login=datetime.utcnow(),
+        last_login=datetime.now(UTC),
     )
     db_session.add(user)
     db_session.commit()
@@ -145,8 +145,6 @@ def user_profile_survey_fixture(db_session: Session, user_fixture: User) -> User
         UserProfileSurvey instance
 
     """
-    from datetime import datetime
-
     survey = UserProfileSurvey(
         id="survey_001",
         user_id=user_fixture.id,
@@ -155,7 +153,7 @@ def user_profile_survey_fixture(db_session: Session, user_fixture: User) -> User
         job_role="Senior Engineer",
         duty="ML Model Development",
         interests=["LLM", "RAG"],
-        submitted_at=datetime.utcnow(),
+        submitted_at=datetime.now(UTC),
     )
     db_session.add(survey)
     db_session.commit()
@@ -179,8 +177,6 @@ def test_session_round1_fixture(
         TestSession record for Round 1
 
     """
-    from uuid import uuid4
-
     session = TestSession(
         id=str(uuid4()),
         user_id=user_fixture.id,
@@ -248,8 +244,6 @@ def test_result_high_score(db_session: Session, test_session_round1_fixture: Tes
 @pytest.fixture(scope="function")
 def attempt_answers_for_session(db_session: Session, test_session_round1_fixture: TestSession) -> list[AttemptAnswer]:
     """Create attempt answer records for a test session."""
-    from uuid import uuid4
-
     # Create 5 questions for the session
     questions = []
     for idx in range(5):
@@ -311,8 +305,6 @@ def test_session_in_progress(
         TestSession record with status='in_progress'
 
     """
-    from uuid import uuid4
-
     session = TestSession(
         id=str(uuid4()),
         user_id=user_fixture.id,
@@ -340,7 +332,6 @@ def create_multiple_users(db_session: Session) -> callable:
         Callable that creates n users and returns them
 
     """
-    from datetime import datetime
 
     def _create_users(count: int) -> list[User]:
         users = []
@@ -352,7 +343,7 @@ def create_multiple_users(db_session: Session) -> callable:
                 business_unit="Test BU",
                 email=f"user{i}@samsung.com",
                 nickname=f"user_{i:03d}",
-                last_login=datetime.utcnow(),
+                last_login=datetime.now(UTC),
             )
             db_session.add(user)
             users.append(user)
@@ -372,8 +363,6 @@ def create_survey_for_user(db_session: Session) -> callable:
         Callable that creates survey for a given user
 
     """
-    from datetime import datetime
-    from uuid import uuid4
 
     def _create_survey(user_id: int) -> UserProfileSurvey:
         survey = UserProfileSurvey(
@@ -384,7 +373,7 @@ def create_survey_for_user(db_session: Session) -> callable:
             job_role="Engineer",
             duty="Development",
             interests=["LLM", "RAG"],
-            submitted_at=datetime.utcnow(),
+            submitted_at=datetime.now(UTC),
         )
         db_session.add(survey)
         db_session.commit()
@@ -403,13 +392,11 @@ def create_test_session_with_result(db_session: Session) -> callable:
         Callable that creates session+result with given parameters
 
     """
-    from datetime import datetime, timedelta
-    from uuid import uuid4
 
     def _create_session(
         user_id: int, survey_id: str, score: float, round_num: int = 1, days_ago: int = 0
     ) -> tuple[TestSession, TestResult]:
-        session_created_at = datetime.utcnow() - timedelta(days=days_ago)
+        session_created_at = datetime.now(UTC) - timedelta(days=days_ago)
 
         session = TestSession(
             id=str(uuid4()),
@@ -452,8 +439,6 @@ def create_attempt(db_session: Session) -> callable:
     Returns:
         Callable that creates Attempt with given parameters
     """
-    from datetime import datetime, timedelta
-    from uuid import uuid4
 
     def _create(
         user_id: int,
@@ -464,7 +449,7 @@ def create_attempt(db_session: Session) -> callable:
         final_score: float = 65.0,
         days_ago: int = 0,
     ) -> Attempt:
-        started_at = datetime.utcnow() - timedelta(days=days_ago)
+        started_at = datetime.now(UTC) - timedelta(days=days_ago)
         finished_at = started_at + timedelta(minutes=30)
 
         attempt = Attempt(
@@ -496,7 +481,6 @@ def create_attempt_round(db_session: Session) -> callable:
     Returns:
         Callable that creates AttemptRound with given parameters
     """
-    from uuid import uuid4
 
     def _create(
         attempt_id: str,
@@ -531,7 +515,6 @@ def question_factory(db_session: Session, test_session_round1_fixture: TestSessi
     Returns:
         Callable that creates Question with given parameters
     """
-    from uuid import uuid4
 
     def _create(
         stem: str = "What is AI?",

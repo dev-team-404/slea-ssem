@@ -4,7 +4,7 @@ Tests for autosave service.
 REQ: REQ-B-B2-Plus
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.orm import Session
@@ -194,7 +194,7 @@ class TestTimeLimitCheck:
         service = AutosaveService(db_session)
 
         # Set started_at to 10 minutes ago
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=10)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=10)
         test_session_in_progress.time_limit_ms = 1200000  # 20 minutes
         db_session.commit()
 
@@ -209,7 +209,7 @@ class TestTimeLimitCheck:
         service = AutosaveService(db_session)
 
         # Set started_at to 21 minutes ago
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=21)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=21)
         test_session_in_progress.time_limit_ms = 1200000  # 20 minutes
         db_session.commit()
 
@@ -310,7 +310,7 @@ class TestResumeSession:
 
         # Pause first
         test_session_in_progress.status = "paused"
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.paused_at = datetime.now(UTC)
         db_session.commit()
 
         # Resume

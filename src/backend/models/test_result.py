@@ -4,7 +4,7 @@ Test result model for storing round scores and analysis.
 REQ: REQ-B-B2-Adapt, REQ-B-B3-Score
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, func
@@ -56,7 +56,7 @@ class TestResult(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

@@ -4,7 +4,7 @@ Tests for autosave API endpoints.
 REQ: REQ-B-B2-Plus
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -208,8 +208,7 @@ class TestAutosaveEndpoint:
         self, client: TestClient, db_session: Session, test_session_in_progress: TestSession
     ) -> None:
         """Autosave auto-pauses session when time limit exceeded."""
-        # Set session to exceed time limit
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=21)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=21)
         test_session_in_progress.time_limit_ms = 1200000  # 20 minutes
         db_session.commit()
 
@@ -253,7 +252,7 @@ class TestResumeEndpoint:
         """GET /questions/resume - Resume paused session."""
         # Pause session
         test_session_in_progress.status = "paused"
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.paused_at = datetime.now(UTC)
         db_session.commit()
 
         # Create questions
@@ -387,7 +386,7 @@ class TestSessionStatusEndpoint:
         """PUT /questions/session/{id}/status - Resume session."""
         # Pause first
         test_session_in_progress.status = "paused"
-        test_session_in_progress.paused_at = datetime.utcnow()
+        test_session_in_progress.paused_at = datetime.now(UTC)
         db_session.commit()
 
         response = client.put(
@@ -423,7 +422,7 @@ class TestTimeStatusEndpoint:
         self, client: TestClient, db_session: Session, test_session_in_progress: TestSession
     ) -> None:
         """Check time status within limit."""
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=10)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=10)
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
 
@@ -438,7 +437,7 @@ class TestTimeStatusEndpoint:
         self, client: TestClient, db_session: Session, test_session_in_progress: TestSession
     ) -> None:
         """Check time status exceeded."""
-        test_session_in_progress.started_at = datetime.utcnow() - timedelta(minutes=21)
+        test_session_in_progress.started_at = datetime.now(UTC) - timedelta(minutes=21)
         test_session_in_progress.time_limit_ms = 1200000
         db_session.commit()
 

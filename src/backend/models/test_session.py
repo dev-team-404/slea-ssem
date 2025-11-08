@@ -4,7 +4,7 @@ Test session model for managing test attempts and rounds.
 REQ: REQ-B-B2-Gen, REQ-B-B2-Adapt, REQ-B-B2-Plus, REQ-B-B3-Score
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
@@ -14,6 +14,7 @@ from src.backend.models.user import Base
 
 
 class TestSession(Base):
+    __test__ = False
     """
     Test session model for managing user test attempts.
 
@@ -65,26 +66,26 @@ class TestSession(Base):
         default=1200000,  # 20 minutes in milliseconds
     )
     started_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True,
         default=None,
     )
     paused_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True,
         default=None,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

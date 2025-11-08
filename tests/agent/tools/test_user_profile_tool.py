@@ -5,7 +5,7 @@ Tests for _get_user_profile_impl() function that retrieves user self-assessment 
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -53,7 +53,7 @@ def mock_profile_model(valid_profile_data: dict[str, Any]) -> MagicMock:
     profile.duty = valid_profile_data["duty"]
     profile.interests = valid_profile_data["interests"]
     profile.previous_score = valid_profile_data["previous_score"]
-    profile.submitted_at = datetime.utcnow()
+    profile.submitted_at = datetime.now(UTC)
     return profile
 
 
@@ -128,7 +128,7 @@ class TestGetUserProfileHappyPath:
         partial_profile.job_role = None  # NULL
         partial_profile.duty = None  # NULL
         partial_profile.interests = None  # NULL
-        partial_profile.submitted_at = datetime.utcnow()
+        partial_profile.submitted_at = datetime.now(UTC)
 
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -172,7 +172,7 @@ class TestGetUserProfileHappyPath:
         profile.job_role = "Staff Engineer"
         profile.duty = "Architecture"
         profile.interests = interests
-        profile.submitted_at = datetime.utcnow()
+        profile.submitted_at = datetime.now(UTC)
 
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -411,7 +411,7 @@ class TestGetUserProfileEdgeCases:
         latest_profile.job_role = "Principal Engineer"
         latest_profile.duty = "Leadership"
         latest_profile.interests = ["AI", "ML"]
-        latest_profile.submitted_at = datetime.utcnow()
+        latest_profile.submitted_at = datetime.now(UTC)
 
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -449,7 +449,7 @@ class TestGetUserProfileEdgeCases:
         sparse_profile.job_role = None
         sparse_profile.duty = None
         sparse_profile.interests = None
-        sparse_profile.submitted_at = datetime.utcnow()
+        sparse_profile.submitted_at = datetime.now(UTC)
 
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
@@ -491,7 +491,7 @@ class TestGetUserProfileEdgeCases:
         unicode_profile.job_role = "데이터 엔지니어"  # Korean
         unicode_profile.duty = "분석 및 모델 개발"  # Korean
         unicode_profile.interests = ["머신러닝", "데이터베이스"]  # Korean
-        unicode_profile.submitted_at = datetime.utcnow()
+        unicode_profile.submitted_at = datetime.now(UTC)
 
         mock_query = MagicMock()
         mock_db.query.return_value = mock_query
