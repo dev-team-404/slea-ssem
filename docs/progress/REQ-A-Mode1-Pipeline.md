@@ -22,6 +22,7 @@
 Orchestrate Tools 1-5 for generating adaptive questions using the ReAct pattern.
 
 This pipeline implements the complete Mode 1 question generation workflow, orchestrating:
+
 1. Tool 1: Get User Profile (with retry logic)
 2. Tool 2: Search Question Templates (conditional - only if interests exist)
 3. Tool 3: Get Difficulty Keywords (with error fallback)
@@ -78,6 +79,7 @@ response = pipeline.generate_questions(
 ```
 
 **Status Values**:
+
 - `"success"`: All generated questions saved (generated_count == total_attempted)
 - `"partial"`: Some questions saved (0 < generated_count < total_attempted)
 - `"failed"`: No questions saved (generated_count == 0)
@@ -117,6 +119,7 @@ response = pipeline.generate_questions(
 ### Round 2: Adaptive
 
 Same flow as Round 1, but:
+
 - Difficulty adjusted based on previous_score:
   - score >= 80: difficulty = 7 (increase)
   - score >= 60: difficulty = 5 (keep same)
@@ -184,11 +187,13 @@ Track questions through the pipeline with session and round information.
 ### Difficulty Calculation
 
 **Round 1** (based on self_level):
+
 - beginner → 2
 - intermediate → 5
 - advanced → 8
 
 **Round 2** (based on previous_score):
+
 - score >= 80 → 7 (increase)
 - score >= 60 → 5 (keep same)
 - score < 60 → 3 (decrease)
@@ -201,11 +206,13 @@ Track questions through the pipeline with session and round information.
 ### Tool 1: Get User Profile
 
 **Flow**:
+
 1. Call get_user_profile(user_id)
 2. On exception: Retry up to 3 times
 3. On all failures: Return default profile with beginner level
 
 **Default Profile**:
+
 ```python
 {
     "user_id": user_id,
@@ -221,6 +228,7 @@ Track questions through the pipeline with session and round information.
 ### Tool 2: Search Templates
 
 **Flow**:
+
 1. Check if interests non-empty
 2. If empty: Skip, return []
 3. If non-empty: Call search_question_templates()
@@ -231,10 +239,12 @@ Track questions through the pipeline with session and round information.
 ### Tool 3: Get Keywords
 
 **Flow**:
+
 1. Call get_difficulty_keywords(difficulty, category)
 2. On exception: Return default keywords
 
 **Default Keywords**:
+
 ```python
 {
     "difficulty": difficulty,
@@ -248,11 +258,13 @@ Track questions through the pipeline with session and round information.
 ### Tool 4: Batch Validation
 
 **Flow**:
+
 1. Collect all generated questions
 2. Call batch validate with all questions
 3. On exception: Return default (reject all) with score 0.5
 
 **Default Validation**:
+
 ```python
 {
     "is_valid": False,
@@ -268,6 +280,7 @@ Track questions through the pipeline with session and round information.
 ### Tool 5: Save Questions
 
 **Flow**:
+
 1. For each question with recommendation="pass":
    - Call save_generated_question()
    - On success: Add to saved_questions
@@ -494,6 +507,7 @@ Mode 1 pipeline is now **100% complete**:
 - ✅ Orchestrator: Mode1-Pipeline
 
 **Remaining in MVP 1.0**:
+
 - ⏳ Tool 6: Score & Generate Explanation (Mode 2)
 - ⏳ Integration: FastAPI endpoint for question generation
 - ⏳ Integration: LangChain agent replacement for LLM placeholder
