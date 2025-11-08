@@ -36,6 +36,7 @@ Implementation of automatic badge assignment system for grade-based recognition.
 **Intent**: Automatically assign badges to users based on their final grade, providing visual recognition and achievement celebration for different skill levels.
 
 **Constraints**:
+
 - Badges must be assigned immediately upon grade calculation
 - No duplicate badges for same user
 - Elite users must receive 2+ badges (grade + specialist)
@@ -43,6 +44,7 @@ Implementation of automatic badge assignment system for grade-based recognition.
 - Badges must be retrievable via profile API
 
 **Performance Goals**:
+
 - Badge assignment: <100ms per user
 - Query badges: <50ms per user
 - No N+1 queries in profile API
@@ -75,6 +77,7 @@ class UserBadge(Base):
 ### Behavior & Logic
 
 **Badge Mapping**:
+
 ```python
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
@@ -86,6 +89,7 @@ GRADE_BADGES = {
 ```
 
 **Assignment Logic**:
+
 1. For any grade: Assign corresponding grade badge (REQ-B-B4-Plus-1)
 2. For Elite grade: Additionally assign "Agent Specialist 배지" (REQ-B-B4-Plus-2)
 3. Check for duplicates before assigning
@@ -93,6 +97,7 @@ GRADE_BADGES = {
 5. Return list of assigned badges
 
 **Dependencies**:
+
 - TestResult model (for score validation)
 - TestSession model (for session context)
 - User model (for user_id validation)
@@ -473,6 +478,7 @@ def get_user_badges(self, user_id: int) -> list[dict]:
 **Coverage**: All REQ-B-B4-Plus requirements fully covered
 
 **REQ-B-B4-Plus Specific Tests**:
+
 - ✅ test_badge_assignment_for_all_grades
 - ✅ test_elite_user_specialist_badge
 - ✅ test_badges_stored_in_user_badges_table

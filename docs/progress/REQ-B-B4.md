@@ -56,9 +56,10 @@ class UserBadge(Base):
 
 **File**: `src/backend/services/ranking_service.py` (NEW)
 
-#### Key Components:
+#### Key Components
 
 **Grade Cutoffs**:
+
 ```python
 GRADE_CUTOFFS = {
     "Beginner": 0,
@@ -70,6 +71,7 @@ GRADE_CUTOFFS = {
 ```
 
 **Grade-to-Badge Mapping**:
+
 ```python
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
@@ -80,7 +82,7 @@ GRADE_BADGES = {
 }
 ```
 
-#### Core Methods:
+#### Core Methods
 
 | Method | Purpose | REQ Traceability |
 |--------|---------|------------------|
@@ -92,7 +94,8 @@ GRADE_BADGES = {
 | `assign_badges()` | Award grade badges + specialist badges for Elite | REQ-B-B4-Plus-1,2 |
 | `get_user_badges()` | Retrieve badges for user profile API | REQ-B-B4-Plus-3 |
 
-#### GradeResult Dataclass:
+#### GradeResult Dataclass
+
 ```python
 @dataclass
 class GradeResult:
@@ -111,9 +114,10 @@ class GradeResult:
 **File**: `tests/backend/test_ranking_service.py` (NEW)
 **Total Tests**: 21 (100% pass rate)
 
-#### Test Classes & Cases:
+#### Test Classes & Cases
 
 **TestGradeCalculation** (5 tests):
+
 - ✅ `test_single_round_score_to_beginner_grade` — 30% → Beginner
 - ✅ `test_single_round_score_to_advanced_grade` — 80% → Advanced
 - ✅ `test_multi_round_aggregate_score` — Round 1+2 aggregation
@@ -121,6 +125,7 @@ class GradeResult:
 - ✅ `test_difficulty_weighted_score_adjustment` — Difficulty bonus
 
 **TestRankAndPercentile** (5 tests):
+
 - ✅ `test_rank_calculation_for_90day_cohort` — Rank in 90-day window
 - ✅ `test_percentile_calculation` — Percentile formula verification
 - ✅ `test_percentile_confidence_medium_for_small_cohort` — <100 users
@@ -128,17 +133,20 @@ class GradeResult:
 - ✅ `test_exclude_users_outside_90day_window` — 90-day filtering
 
 **TestBadgeAssignment** (4 tests):
+
 - ✅ `test_badge_assignment_for_all_grades` — 5 badges for 5 grades
 - ✅ `test_elite_user_specialist_badge` — Elite gets 2+ badges
 - ✅ `test_badges_stored_in_user_badges_table` — DB persistence
 - ✅ `test_badges_included_in_profile_api` — API response format
 
 **TestInputValidationAndErrors** (3 tests):
+
 - ✅ `test_invalid_user_id_raises_error` — ValueError on missing user
 - ✅ `test_user_with_no_test_results` — Returns None
 - ✅ `test_incomplete_test_session_excluded` — Only completed sessions count
 
 **TestAcceptanceCriteria** (4 tests):
+
 - ✅ `test_acceptance_score_80_equals_advanced_grade` — 80 = Advanced
 - ✅ `test_acceptance_rank_and_percentile_accuracy` — Rank/percentile correctness
 - ✅ `test_acceptance_badges_auto_saved_on_grade_calculation` — Auto-save
@@ -149,6 +157,7 @@ class GradeResult:
 **File**: `tests/conftest.py`
 
 New factory fixtures for ranking tests:
+
 - `create_multiple_users(count)` → Create N test users
 - `create_survey_for_user(user_id)` → Create survey for user
 - `create_test_session_with_result()` → Create session+result with score
@@ -169,19 +178,23 @@ New factory fixtures for ranking tests:
 ## Code Quality
 
 ### Type Hints
+
 - ✅ All public methods have type hints
 - ✅ mypy strict mode compliant
 - ✅ Return types: `GradeResult | None`, `list[UserBadge]`, etc.
 
 ### Docstrings
+
 - ✅ All public functions documented
 - ✅ REQ traceability in docstrings
 - ✅ Parameter/return descriptions
 
 ### Line Length
+
 - ✅ Max 120 characters per project standard
 
 ### Testing
+
 - ✅ 21/21 tests passing
 - ✅ 100% code path coverage for core logic
 - ✅ Edge cases tested (empty results, small cohorts, outside 90-day window)
@@ -193,6 +206,7 @@ New factory fixtures for ranking tests:
 ### 1. Composite Score Calculation (REQ-B-B4-3)
 
 **Formula**:
+
 ```
 composite_score = Σ(adjusted_score_i × weight_i) / Σ(weight_i)
 
@@ -201,6 +215,7 @@ weight_round1 = 1.0, weight_round2 = 2.0
 ```
 
 **Example**: Round 1 score=60% (3/5 correct), Round 2 score=85% (4/5 correct)
+
 ```
 Round 1: 60 + (3/5 * 5) = 63 points, weight=1
 Round 2: 85 + (4/5 * 5) = 89 points, weight=2
@@ -210,12 +225,14 @@ Final: (63 + 89*2) / 3 ≈ 80.33 → Advanced grade
 ### 2. Ranking Within 90-Day Cohort (REQ-B-B4-4)
 
 **Process**:
+
 1. Filter: `test_session.created_at >= datetime.utcnow() - timedelta(days=90)`
 2. Group by user, aggregate average scores
 3. Count users with score > target score → rank = count + 1
 4. Percentile = (total - rank + 1) / total * 100
 
 **Example**: 10 users with scores [90, 85, 80, 75, 70, 65, 60, 55, 50, 45]
+
 - User with 80: rank=3 (90, 85 are higher)
 - Percentile = (10-3+1)/10 * 100 = 80%
 - Description: "상위 20%" (100 - 80 = 20)
@@ -223,6 +240,7 @@ Final: (63 + 89*2) / 3 ≈ 80.33 → Advanced grade
 ### 3. Badge Assignment (REQ-B-B4-Plus-1,2)
 
 **Logic**:
+
 - All users: Grade badge (1 per grade tier)
 - Elite users additionally: Specialist badge
 - Check for duplicates before awarding
@@ -256,34 +274,42 @@ else:
 ## Traceability Matrix
 
 ### REQ-B-B4-1: Aggregate Scores
+
 - Implementation: `RankingService.calculate_final_grade()`, `_calculate_composite_score()`
 - Tests: `test_single_round_score_to_*`, `test_multi_round_aggregate_score`, `test_incomplete_test_session_excluded`
 
 ### REQ-B-B4-2: 5-Grade System
+
 - Implementation: `GRADE_CUTOFFS`, `_determine_grade()`
 - Tests: `test_all_five_grade_tiers`, acceptance criteria test
 
 ### REQ-B-B4-3: Grade Calculation Logic
+
 - Implementation: Difficulty weighting in `_calculate_composite_score()`
 - Tests: `test_difficulty_weighted_score_adjustment`, `test_multi_round_aggregate_score`
 
 ### REQ-B-B4-4: Ranking & Percentile
+
 - Implementation: `_calculate_rank()`, `_calculate_percentile()`
 - Tests: `test_rank_calculation_for_90day_cohort`, `test_percentile_calculation`, `test_exclude_users_outside_90day_window`, acceptance criteria test
 
 ### REQ-B-B4-5: Confidence Levels
+
 - Implementation: Conditional in `calculate_final_grade()`
 - Tests: `test_percentile_confidence_medium_for_small_cohort`, `test_percentile_confidence_high_for_large_cohort`
 
 ### REQ-B-B4-Plus-1: Grade Badges
+
 - Implementation: `assign_badges()`, `GRADE_BADGES` mapping
 - Tests: `test_badge_assignment_for_all_grades`, `test_acceptance_badges_auto_saved_on_grade_calculation`
 
 ### REQ-B-B4-Plus-2: Specialist Badges
+
 - Implementation: Elite check + specialist badge award in `assign_badges()`
 - Tests: `test_elite_user_specialist_badge`, `test_acceptance_elite_gets_two_plus_badges`
 
 ### REQ-B-B4-Plus-3: Profile API
+
 - Implementation: `get_user_badges()` returns badge dicts
 - Tests: `test_badges_stored_in_user_badges_table`, `test_badges_included_in_profile_api`
 
@@ -292,6 +318,7 @@ else:
 ## Git Commit
 
 **Commit Message**:
+
 ```
 feat: Implement REQ-B-B4 Grade & Ranking System with Badge Assignment
 
@@ -340,13 +367,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Next Steps
 
-### For Integration:
+### For Integration
+
 1. Create API endpoint `/ranking` or enhance `/profile` to include grade + badges
 2. Add migration: Alembic script to create `user_badges` table
 3. Update ProfileService to call `RankingService.calculate_final_grade()`
 4. Update profile response to include `grade`, `rank`, `percentile`, `badges`
 
-### For Future Enhancement (MVP 2.0):
+### For Future Enhancement (MVP 2.0)
+
 - [ ] Bayesian smoothing for cutoff updates
 - [ ] Category-specific specialist badges (top 5% per category)
 - [ ] Real-time rank updates (cache + webhook)
