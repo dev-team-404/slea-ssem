@@ -13,6 +13,7 @@
 **Mode 2 - Auto-Scoring Pipeline**
 
 Orchestrates the complete workflow for auto-scoring user test answers and generating detailed explanations. Coordinates:
+
 - Request validation
 - Tool 6 execution (score_and_explain)
 - Error handling & graceful degradation
@@ -39,6 +40,7 @@ Orchestrates the complete workflow for auto-scoring user test answers and genera
 **Spec Location**: `docs/AGENT-REQ-ID-ASSIGNMENT.md` (lines 104-108)
 
 **Key Specifications**:
+
 - Entry point for Mode 2 orchestration
 - Wraps Tool 6 execution (score_and_explain)
 - Single request → single response workflow
@@ -82,6 +84,7 @@ Orchestrates the complete workflow for auto-scoring user test answers and genera
 **Lines of Code**: 370 (including docstrings and logging)
 
 **Quality Metrics**:
+
 - ✅ Type hints on all functions (mypy strict)
 - ✅ Comprehensive docstrings (Google style)
 - ✅ Line length ≤ 120 chars
@@ -105,6 +108,7 @@ Orchestrates the complete workflow for auto-scoring user test answers and genera
 **Integration**:
 
 1. **Pipeline Registration** (`src/agent/pipeline/__init__.py`):
+
    ```python
    from src.agent.pipeline.mode2_pipeline import Mode2Pipeline
 
@@ -378,6 +382,7 @@ results = pipeline.score_answers_batch(answers)
 **Commit**: To be created
 **Message Format**: Conventional Commits (feat)
 **Files Modified**:
+
 1. `src/agent/pipeline/mode2_pipeline.py` (NEW)
 2. `src/agent/pipeline/__init__.py` (MODIFIED)
 3. `tests/agent/test_mode2_pipeline.py` (NEW)
@@ -404,6 +409,7 @@ results = pipeline.score_answers_batch(answers)
 ## 🎉 Summary
 
 **REQ-A-Mode2-Pipeline** is fully implemented and tested with:
+
 - **34 passing tests** covering all acceptance criteria
 - **370 lines** of production code with full type hints
 - **Zero code quality issues** (ruff, black, mypy strict)
@@ -413,6 +419,7 @@ results = pipeline.score_answers_batch(answers)
 **Status**: Ready for FastAPI endpoint integration and user acceptance testing
 
 **Next Steps**:
+
 - Integrate Mode2Pipeline into FastAPI endpoint (src/backend/api/scoring.py)
 - Create Mode 2 integration tests (Tool 6 ↔ Pipeline ↔ FastAPI)
 - Update FastMCP server to register Tool 6 properly
