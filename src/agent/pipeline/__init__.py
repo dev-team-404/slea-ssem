@@ -5,5 +5,6 @@ REQ: REQ-A-Mode1-Pipeline, REQ-A-Mode2-Pipeline
 """
 
 from src.agent.pipeline.mode1_pipeline import Mode1Pipeline
+from src.agent.pipeline.mode2_pipeline import Mode2Pipeline
 
-__all__ = ["Mode1Pipeline"]
+__all__ = ["Mode1Pipeline", "Mode2Pipeline"]

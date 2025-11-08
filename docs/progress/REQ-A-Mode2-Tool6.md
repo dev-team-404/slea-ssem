@@ -13,6 +13,7 @@
 **Tool 6 - Score & Generate Explanation**
 
 Automatically scores user answers and generates explanations for test responses across three question types:
+
 - **Multiple Choice (MC)**: Exact string match (case-insensitive)
 - **True/False (OX)**: Exact string match (case-insensitive)
 - **Short Answer (SA)**: LLM-based semantic evaluation with keyword matching
@@ -38,6 +39,7 @@ Automatically scores user answers and generates explanations for test responses 
 **Spec Location**: `docs/AGENT-REQ-ID-ASSIGNMENT.md` (lines 110-120)
 
 **Key Specifications**:
+
 - Input: session_id, user_id, question_id, question_type, user_answer, correct_answer, correct_keywords, difficulty, category
 - Output: attempt_id, session_id, question_id, user_id, is_correct, score (0-100), explanation, keyword_matches, feedback, graded_at
 - Scoring thresholds:
@@ -88,6 +90,7 @@ Automatically scores user answers and generates explanations for test responses 
 **Lines of Code**: 618 (including docstrings and comments)
 
 **Quality Metrics**:
+
 - ✅ Type hints on all functions (mypy strict)
 - ✅ Comprehensive docstrings (Google style)
 - ✅ Line length ≤ 120 chars
@@ -112,6 +115,7 @@ Automatically scores user answers and generates explanations for test responses 
 **Integration**:
 
 1. **Tool Registration** (`src/agent/tools/__init__.py`):
+
    ```python
    from src.agent.tools.score_and_explain_tool import score_and_explain
 
@@ -264,6 +268,7 @@ score = 95
 ## 🛠️ API Response Example
 
 **Request**:
+
 ```json
 {
   "session_id": "sess_001",
@@ -278,6 +283,7 @@ score = 95
 ```
 
 **Response**:
+
 ```json
 {
   "attempt_id": "att_9f3d4a1b",
@@ -368,6 +374,7 @@ score = 95
 **Commit**: To be created in Phase 4
 **Message Format**: Conventional Commits (feat, fix, chore)
 **Files Modified**:
+
 1. `src/agent/tools/score_and_explain_tool.py` (NEW)
 2. `src/agent/tools/__init__.py` (MODIFIED)
 3. `tests/agent/tools/test_score_and_explain_tool.py` (NEW)
@@ -394,6 +401,7 @@ score = 95
 ## 🎉 Summary
 
 **REQ-A-Mode2-Tool6** is fully implemented and tested with:
+
 - **36 passing tests** covering all acceptance criteria
 - **618 lines** of production code with full type hints
 - **Zero code quality issues** (ruff, black, mypy strict)
