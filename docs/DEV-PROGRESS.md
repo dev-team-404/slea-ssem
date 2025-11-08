@@ -54,6 +54,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-A-Mode2-Tool6 | Score & Generate Explanation | 4 | ✅ Done | 36 tests (100%), Commit: (pending), Progress: docs/progress/REQ-A-Mode2-Tool6.md |
 | REQ-A-Mode2-Pipeline | Auto-Scoring Pipeline | 4 | ✅ Done | 34 tests (100%), Commit: (pending), Progress: docs/progress/REQ-A-Mode2-Pipeline.md |
 | REQ-A-Mode1-Test | Mode 1 통합 테스트 | 4 | ✅ Done | 26 tests (100%), Commit: (pending), Progress: docs/progress/REQ-A-Mode1-Test.md |
+| REQ-A-Mode2-Test | Mode 2 통합 테스트 | 4 | ✅ Done | 19 tests (100%), Commit: (pending), Progress: docs/progress/REQ-A-Mode2-Test.md |
 | REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | ⏳ Backlog | 3개 sub-tasks (MVP 1.0) |
 
 ---

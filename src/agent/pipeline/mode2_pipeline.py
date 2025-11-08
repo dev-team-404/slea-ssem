@@ -6,9 +6,11 @@ Pipeline for Mode 2: Auto-score user answers and generate explanations.
 """
 
 import logging
+import uuid
+from datetime import UTC, datetime
 from typing import Any
 
-from src.agent.tools.score_and_explain_tool import score_and_explain
+from src.agent.tools.score_and_explain_tool import _score_and_explain_impl
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +138,7 @@ def _score_answer_impl(
     try:
         logger.info(f"Mode 2 Pipeline: Calling Tool 6 for question {question_id}")
 
-        result = score_and_explain(
+        result = _score_and_explain_impl(
             session_id=session_id,
             user_id=user_id,
             question_id=question_id,
@@ -170,7 +172,7 @@ def _score_answer_impl(
         )
 
         result = {
-            "attempt_id": None,  # Will be set by caller
+            "attempt_id": str(uuid.uuid4()),
             "session_id": session_id,
             "question_id": question_id,
             "user_id": user_id,
@@ -179,7 +181,7 @@ def _score_answer_impl(
             "explanation": fallback_explanation,
             "keyword_matches": ([] if question_type == "short_answer" else []),
             "feedback": "LLM service temporarily unavailable. Score based on basic validation.",
-            "graded_at": None,  # Will be set by caller
+            "graded_at": datetime.now(UTC).isoformat(),
         }
 
         logger.warning(f"Mode 2 Pipeline: Returned fallback score {score} for {question_type}")
