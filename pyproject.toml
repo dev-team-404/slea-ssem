@@ -54,6 +54,10 @@ exclude = ["asset*", "config*", "tests*"] # 패키지로 인식하고 싶지 않
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:langgraph.*",
+    "ignore:AgentStatePydantic has been moved:DeprecationWarning",
+]
 
 
 [tool.black]

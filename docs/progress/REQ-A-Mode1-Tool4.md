@@ -20,6 +20,7 @@
 ## 🎯 Purpose
 
 Validate the quality of AI-generated questions using a 2-stage validation approach:
+
 1. **LLM-based semantic validation** - Evaluates clarity, appropriateness, correctness, and bias
 2. **Rule-based quality validation** - Checks format, length, choices count, and structure
 
@@ -40,6 +41,7 @@ validate_question_quality(
 ```
 
 **Parameters**:
+
 - `stem`: Question stem text or list of stems (for batch)
 - `question_type`: Type of question or list of types
 - `choices`: Answer choices list or None (for short answer/true-false)
@@ -71,6 +73,7 @@ validate_question_quality(
 ### 🤖 LLM Semantic Validation (0.0-1.0)
 
 Uses Google Gemini LLM to evaluate:
+
 - **Clarity**: Is the question clear and unambiguous?
 - **Appropriateness**: Is the difficulty level suitable?
 - **Correctness**: Is the correct answer objective and verifiable?
@@ -105,6 +108,7 @@ Uses Google Gemini LLM to evaluate:
 ## 🗂️ Implementation Details
 
 ### File Location
+
 - **Implementation**: `src/agent/tools/validate_question_tool.py`
 - **Tests**: `tests/agent/tools/test_validate_question_tool.py`
 
@@ -134,12 +138,14 @@ Uses Google Gemini LLM to evaluate:
 ### Test Classes (23 tests total)
 
 #### 1️⃣ TestInputValidation (4 tests)
+
 - ✅ Empty stem validation
 - ✅ Invalid question type detection
 - ✅ Missing choices for multiple_choice
 - ✅ Missing correct_answer detection
 
 #### 2️⃣ TestRuleBasedValidation (6 tests)
+
 - ✅ Valid stem length (≤ 250 chars)
 - ✅ Invalid long stem (> 250 chars)
 - ✅ Valid choice count (4-5 items)
@@ -148,24 +154,29 @@ Uses Google Gemini LLM to evaluate:
 - ✅ Answer not in choices
 
 #### 3️⃣ TestSingleValidationHappyPath (3 tests)
+
 - ✅ High-quality multiple choice question
 - ✅ High-quality true/false question
 - ✅ High-quality short answer question
 
 #### 4️⃣ TestRecommendationLogic (3 tests)
+
 - ✅ Recommendation "pass" (score ≥ 0.85)
 - ✅ Recommendation "revise" (0.70 ≤ score < 0.85)
 - ✅ Recommendation "reject" (score < 0.70)
 
 #### 5️⃣ TestBatchValidation (2 tests)
+
 - ✅ Batch returns list of results
 - ✅ Each batch result has required fields
 
 #### 6️⃣ TestEdgeCasesAndErrorHandling (2 tests)
+
 - ✅ Special characters in question
 - ✅ LLM service failure handling
 
 #### 7️⃣ TestResponseStructure (3 tests)
+
 - ✅ Single result has all required fields
 - ✅ Score values in valid range [0.0, 1.0]
 - ✅ final_score = min(LLM_score, rule_score)
@@ -229,6 +240,7 @@ validate_question_quality()
 **Commit SHA**: (to be created during Phase 4)
 
 **Commit Message Format**:
+
 ```
 chore: Update progress tracking for REQ-A-Mode1-Tool4 completion
 
@@ -267,6 +279,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ## 🚀 Next Steps (REQ-A-Mode1-Tool5)
 
 The next tool in the pipeline is **REQ-A-Mode1-Tool5: Save Generated Question**, which will:
+
 - Save validated questions to the question_bank
 - Store validation scores as metadata
 - Handle batch saving with error recovery
