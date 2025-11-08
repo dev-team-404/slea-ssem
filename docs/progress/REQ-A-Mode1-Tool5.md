@@ -44,6 +44,7 @@ save_generated_question(
 ```
 
 **Parameters**:
+
 - `item_type`: Question type (must match QUESTION_TYPES)
 - `stem`: Question text/stem (required, non-empty)
 - `choices`: Answer choices (required for MC/TF, None for short_answer)
@@ -71,12 +72,14 @@ save_generated_question(
 ```
 
 **For successful save (success=True)**:
+
 - `question_id`: UUID string
 - `saved_at`: Timestamp
 - `error`: None
 - `queued_for_retry`: False
 
 **For failed save (success=False)**:
+
 - `question_id`: None
 - `error`: Exception message
 - `queued_for_retry`: True (added to SAVE_RETRY_QUEUE)
@@ -101,6 +104,7 @@ save_generated_question(
 | `created_at` | Auto-set | DateTime | Current timestamp |
 
 **Answer Schema Structure**:
+
 ```python
 {
     "correct_key": "...",           # For MC/TF
@@ -115,6 +119,7 @@ save_generated_question(
 ## ✅ Validation Rules
 
 ### Input Validation
+
 - `item_type`: Must be in {"multiple_choice", "true_false", "short_answer"}
 - `stem`: Non-empty string, max 2000 chars
 - `difficulty`: Integer 1-10
@@ -126,7 +131,9 @@ save_generated_question(
   - SA: correct_keywords must be non-empty list of strings
 
 ### Round ID Parsing
+
 Format: `"{session_id}_{round_number}_{timestamp}"`
+
 - Example: `"sess_abc123_1_2025-11-09T10:30:00Z"`
 - Extraction:
   - `session_id`: First part (parts[0])
@@ -134,6 +141,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
   - Defaults to round 1 if parsing fails
 
 ### Category Handling
+
 - Primary category: First item from categories list
 - Additional categories can be stored in answer_schema for future use
 - Defaults to "general" if not provided
@@ -143,6 +151,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 ## 📊 Error Handling & Recovery
 
 ### Success Path
+
 1. Validate inputs
 2. Build answer_schema
 3. Create Question instance
@@ -150,6 +159,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 5. Return success response with question_id
 
 ### Failure Path
+
 1. Database error caught
 2. Rollback transaction
 3. Add to SAVE_RETRY_QUEUE (memory queue)
@@ -157,6 +167,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 5. **Batch retry** can be executed later by processing SAVE_RETRY_QUEUE
 
 ### Memory Queue Management
+
 - `get_retry_queue()`: Return copy of queued items
 - `clear_retry_queue()`: Clear queue after successful batch save
 - Max queue size: Configurable (currently unlimited)
@@ -168,6 +179,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 ### Test Classes (15 tests total)
 
 #### 1️⃣ TestInputValidation (5 tests)
+
 - ✅ Empty stem validation
 - ✅ Invalid item_type detection
 - ✅ Invalid difficulty out of range
@@ -175,22 +187,27 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 - ✅ Empty round_id validation
 
 #### 2️⃣ TestAnswerSchemaValidation (2 tests)
+
 - ✅ Answer schema for multiple_choice (correct_key)
 - ✅ Answer schema for short_answer (correct_keywords)
 
 #### 3️⃣ TestSaveQuestionHappyPath (3 tests)
+
 - ✅ Save multiple_choice question
 - ✅ Save true_false question
 - ✅ Save short_answer question
 
 #### 4️⃣ TestResponseStructure (2 tests)
+
 - ✅ Response has all required fields (question_id, round_id, saved_at, success)
 - ✅ Response round_id matches input round_id
 
 #### 5️⃣ TestErrorHandling (1 test)
+
 - ✅ Database error → fallback to memory queue
 
 #### 6️⃣ TestMetadataStorage (2 tests)
+
 - ✅ validation_score stored in answer_schema
 - ✅ Explanation stored in answer_schema
 
@@ -218,6 +235,7 @@ Format: `"{session_id}_{round_number}_{timestamp}"`
 ## 🔄 Implementation Details
 
 ### File Locations
+
 - **Implementation**: `src/agent/tools/save_question_tool.py` (416 lines)
 - **Tests**: `tests/agent/tools/test_save_question_tool.py` (15 tests)
 
@@ -263,14 +281,17 @@ save_generated_question()
 ## 🚀 Integration Points
 
 ### Upstream (Tool 4: Validate Question Quality)
+
 - Input: validation_score and recommendation from Tool 4
 - Constraint: Only save if recommendation="pass" (score >= 0.85)
 
 ### Downstream (Mode 1 Pipeline Orchestration)
+
 - Output: question_id used for response building
 - Feedback: success flag indicates save status
 
 ### Database Schema
+
 - Maps to `questions` table
 - Links to `test_sessions` via session_id (extracted from round_id)
 - answer_schema stores flexible JSON data
@@ -282,6 +303,7 @@ save_generated_question()
 **Commit SHA**: (to be created during Phase 4)
 
 **Commit Message Format**:
+
 ```
 feat(agent): Implement REQ-A-Mode1-Tool5 Save Generated Question tool
 
@@ -322,6 +344,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ## 🚀 Next Steps
 
 The Mode 1 pipeline is now 80% complete:
+
 - ✅ Tool 1: Get User Profile
 - ✅ Tool 2: Search Question Templates
 - ✅ Tool 3: Get Difficulty Keywords
