@@ -40,10 +40,17 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-B6-2 | 콘텐츠 필터링 (비속어/편향/저작권) | 4 | ✅ Done | 26 tests (100%), Commit: (pending), Progress: docs/progress/REQ-B-B6-2.md |
 | REQ-B-B6-Plus | 재미 모드 (Backend) | 0 | ⏳ Backlog | 5개 sub-tasks |
 
-### Agent (TBD - person 필요)
+### Agent (Claude Code)
 
 | REQ ID | Feature | Phase | Status | Notes |
 |--------|---------|-------|--------|-------|
+| REQ-A-ItemGen | Item-Gen-Agent (통합) | 4 | ✅ Done | 24 tests (100%), Commit: a9b1597, Progress: docs/progress/REQ-A-ItemGen.md |
+| REQ-A-Mode1-Tool1 | Get User Profile | 4 | ✅ Done | 13 tests (100%), Commit: (pending), Progress: docs/progress/REQ-A-Mode1-Tool1.md |
+| REQ-A-Mode1-Tool2 | Search Question Templates | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-A-Mode1-Tool3 | Get Difficulty Keywords | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-A-Mode1-Tool4 | Validate Question Quality | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-A-Mode1-Tool5 | Save Generated Question | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-A-Mode2-Tool6 | Score & Generate Explanation | 0 | ⏳ Backlog | 5개 sub-tasks |
 | REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | ⏳ Backlog | 3개 sub-tasks (MVP 1.0) |
 
 ---
