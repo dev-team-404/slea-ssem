@@ -13,6 +13,7 @@
 **Mode 1 - 문항 생성 통합 테스트 (Question Generation E2E Tests)**
 
 End-to-end integration tests for the complete Mode 1 question generation pipeline:
+
 - Pipeline orchestration (Tools 1-5 sequencing)
 - Tool success & failure scenarios
 - Validation pass/fail handling
@@ -36,11 +37,13 @@ End-to-end integration tests for the complete Mode 1 question generation pipelin
 ## 📁 Implementation Details
 
 ### Phase 1: Specification ✅
+
 - Requirement definition complete
 - 5 acceptance criteria defined
 - Test scope clearly identified
 
 ### Phase 2: Test Design ✅
+
 **Test File**: `tests/agent/test_mode1_pipeline_integration.py`
 
 **Test Coverage**: 26 comprehensive integration tests across 7 test classes
@@ -58,9 +61,11 @@ End-to-end integration tests for the complete Mode 1 question generation pipelin
 **Test Results**: ✅ 26/26 PASSED (1.90s)
 
 ### Phase 3: Implementation ✅
+
 **Implementation**: 26 integration tests using mocks and fixtures
 
 **Key Test Scenarios**:
+
 - ✅ Happy path: Response structure validation
 - ✅ Tool failures: Retry logic, fallback behavior
 - ✅ Validation: Pass (≥0.85), Revise (0.70-0.84), Reject (<0.70)
@@ -72,6 +77,7 @@ End-to-end integration tests for the complete Mode 1 question generation pipelin
 ### Phase 4: Code Quality & Integration ✅
 
 **Code Quality Checks**:
+
 ```bash
 ✅ ruff format         → Code formatted
 ✅ ruff check          → All checks passed
@@ -190,6 +196,7 @@ TOTAL: 26/26 PASSED ✅
 **Commit**: To be created
 **Message Format**: Conventional Commits (test)
 **Files**:
+
 1. `tests/agent/test_mode1_pipeline_integration.py` (NEW)
 2. `docs/progress/REQ-A-Mode1-Test.md` (NEW)
 3. `docs/DEV-PROGRESS.md` (UPDATED)
@@ -211,6 +218,7 @@ TOTAL: 26/26 PASSED ✅
 ## 🎉 Summary
 
 **REQ-A-Mode1-Test** is fully implemented with:
+
 - **26 passing tests** covering all acceptance criteria
 - **7 test classes** covering all scenarios
 - **100% AC coverage** (AC1-AC5)
