@@ -1,4 +1,5 @@
-"""Agent pipeline orchestrators for Mode 1 and Mode 2.
+"""
+Agent pipeline orchestrators for Mode 1 and Mode 2.
 
 REQ: REQ-A-Mode1-Pipeline, REQ-A-Mode2-Pipeline
 """
