@@ -26,12 +26,14 @@
 ### 1.2 Scope
 
 **In Scope**:
+
 - Three filter categories: profanity (비속어), bias (편향), copyright concerns (저작권 의심)
 - Question validation at stem, choices, and explanation fields
 - Automatic blocking of inappropriate content
 - Regeneration trigger for blocked questions
 
 **Out of Scope (MVP 2.0)**:
+
 - RAG source metadata tracking (REQ-B-B6-1)
 - User reporting queue (REQ-B-B6-3)
 - Difficulty balance monitoring (REQ-B-B6-4)
@@ -39,6 +41,7 @@
 ### 1.3 Design Architecture
 
 **Pattern**: Follows existing `NicknameValidator` pattern
+
 - Single responsibility: Content validation
 - Return type: `tuple[bool, str | None]` (is_valid, error_message)
 - Reusable, stateless validator class
@@ -47,6 +50,7 @@
 **Implementation Location**: `src/backend/validators/question_content_validator.py`
 
 **Class Structure**:
+
 ```python
 class QuestionContentValidator:
     PROFANITY_WORDS = {set of English profanity keywords}
@@ -103,6 +107,7 @@ class QuestionContentValidator:
 ### 2.2 Test Coverage
 
 **Profanity Tests**:
+
 - ✅ Valid question without profanity (happy path)
 - ✅ Profanity in stem
 - ✅ Profanity in choices
@@ -110,6 +115,7 @@ class QuestionContentValidator:
 - ✅ Multiple profanity matches
 
 **Bias Tests**:
+
 - ✅ Valid neutral question (happy path)
 - ✅ Gender bias detection
 - ✅ Age bias detection
@@ -117,17 +123,20 @@ class QuestionContentValidator:
 - ✅ Ethnic bias detection
 
 **Copyright Tests**:
+
 - ✅ Valid question with proper attribution
 - ✅ Direct quote without attribution (rejected)
 - ✅ Plagiarized content pattern
 - ✅ Suspicious source pattern
 
 **Acceptance Criteria**:
+
 - ✅ AC1: Filtering applied after generation
 - ✅ AC2: Regeneration trigger on invalid question
 - ✅ All fields validated (stem, choices, explanation)
 
 **Edge Cases**:
+
 - ✅ Empty question stem
 - ✅ Null choices (for short_answer type)
 - ✅ Very long question stem (2000+ chars)
@@ -135,6 +144,7 @@ class QuestionContentValidator:
 - ✅ Mixed valid and invalid content
 
 **Validator Methods**:
+
 - ✅ _check_profanity() direct testing
 - ✅ _check_bias() direct testing
 - ✅ _check_copyright() direct testing
@@ -166,6 +176,7 @@ class QuestionContentValidator:
 **QuestionContentValidator Class** (`src/backend/validators/question_content_validator.py`)
 
 **Keyword Definitions**:
+
 ```python
 PROFANITY_WORDS = {
     "damn", "hell", "crap", "piss", "bollocks", "arse",
@@ -211,14 +222,17 @@ BIAS_PATTERNS = [
 ### 3.3 Validation Logic
 
 **Question Text Fields Checked**:
+
 1. Stem (question text)
 2. Choices (answer options) - if present
 3. Answer explanation - if present
 
 **Filter Order** (stops at first violation):
+
 1. Profanity → Bias → Copyright
 
 **Error Messages**:
+
 - Profanity: "Question contains inappropriate language. Please revise."
 - Bias: "Question contains biased, stereotyped, or discriminatory language..."
 - Copyright: "Question contains direct quotes without proper source attribution..."
@@ -226,6 +240,7 @@ BIAS_PATTERNS = [
 ### 3.4 Test Fixture Addition
 
 **conftest.py - question_factory fixture**:
+
 ```python
 @pytest.fixture
 def question_factory(db_session, test_session_round1_fixture) -> callable:
@@ -274,6 +289,7 @@ tox -e ruff: OK (0.05 seconds)
 **Requirement**: "문항 생성 후, 콘텐츠 필터링이 적용되어 부정확한 문항이 차단된다."
 
 **Verification**:
+
 - ✅ test_ac1_filtering_applied_after_generation: Questions with profanity blocked
 - ✅ test_question_with_profanity_in_stem: PASSED
 - ✅ test_question_with_gender_bias: PASSED
@@ -286,6 +302,7 @@ tox -e ruff: OK (0.05 seconds)
 **Requirement**: "필터링된 문항은 자동으로 재생성 요청이 발생한다."
 
 **Verification**:
+
 - ✅ test_ac2_regeneration_trigger: Confirms (is_valid=False) signals regeneration
 - ✅ Error message returned for all violations
 - ✅ Integration point identified (QuestionGenerationService)
@@ -378,6 +395,7 @@ tox -e ruff: OK (0.05 seconds)
 **Format**: `feat: Implement REQ-B-B6-2 Content Filtering Validator`
 
 **Files Changed**:
+
 - `src/backend/validators/question_content_validator.py` (NEW, 246 lines)
 - `src/backend/validators/__init__.py` (MODIFIED, +2 lines)
 - `tests/backend/test_question_content_validator.py` (NEW, 480 lines)
@@ -388,6 +406,7 @@ tox -e ruff: OK (0.05 seconds)
 **Test Results**: 26/26 passing
 
 **References**:
+
 - REQ-B-B6-2: Content Quality Filter
 - AC1: Content filtering applied after generation
 - AC2: Filtered questions auto-regenerate
@@ -398,11 +417,13 @@ tox -e ruff: OK (0.05 seconds)
 ## 📞 HANDOFF
 
 This implementation is **production-ready** and can be:
+
 1. Committed to main branch
 2. Integrated into QuestionGenerationService (separate PR)
 3. Deployed with API endpoints in subsequent MVP 1.0 release
 
 **Future Enhancement Points**:
+
 - Korean profanity list expansion
 - Semantic bias detection with LLM
 - Plagiarism API integration (Turnitin, CopyLeaks)
