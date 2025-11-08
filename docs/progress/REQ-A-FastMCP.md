@@ -15,6 +15,7 @@
 Implements a FastMCP (Model Context Protocol) server that registers 6 backend tools as LangChain `@tool` functions for agent execution with integrated error handling and resilience.
 
 **Key Details**:
+
 - **Purpose**: Register 6 backend API tools as FastMCP @tool functions for LangChain agent
 - **Scope**: Tool 1-6 FastMCP wrappers, ErrorHandler integration, timeout management
 - **Location**: `src/agent/fastmcp_server.py`
@@ -321,6 +322,7 @@ LangChain Agent
 ### Integration Points
 
 **Mode 1 Pipeline (Tools 1-5)**:
+
 - Tool 1 retrieves user profile for context
 - Tool 2 searches for question templates
 - Tool 3 fetches difficulty keywords
@@ -328,6 +330,7 @@ LangChain Agent
 - Tool 5 saves validated question to database
 
 **Mode 2 Pipeline (Tool 6)**:
+
 - Tool 6 auto-scores user responses and generates explanations
 - Handles MC/OX (exact match) and SA (LLM-based) scoring
 - Timeout fallback for LLM availability
@@ -337,12 +340,14 @@ LangChain Agent
 ## 🚀 Next Steps
 
 **Ready for**:
+
 1. ✅ LangChain Agent Orchestrator (REQ-A-LangChain)
 2. ✅ Backend API Integration (update mock implementations)
 3. ✅ LLM Integration (Tools 4 & 6)
 4. ✅ Production Deployment
 
 **Future Enhancements**:
+
 - Add batch processing support for Tool 4
 - Implement actual database persistence
 - Add monitoring/metrics collection

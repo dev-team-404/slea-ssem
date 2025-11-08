@@ -75,6 +75,7 @@ Implements unique Round ID generation and parsing for identifying test rounds in
 **Core Components**:
 
 1. **`RoundID` dataclass** (frozen=True):
+
    ```python
    @dataclass(frozen=True)
    class RoundID:
@@ -82,6 +83,7 @@ Implements unique Round ID generation and parsing for identifying test rounds in
        round_number: int
        timestamp: datetime
    ```
+
    - Immutable Round ID with frozen dataclass
    - String representation via `__str__()` method
 
@@ -329,6 +331,7 @@ Extract: RoundID(session_id, round_number, timestamp)
 ### Why This Implementation
 
 **Design Choice: Regex Parsing**
+
 - **Problem**: Session IDs contain underscores (e.g., "sess_abc123"), breaking simple split() parsing
 - **Solution**: Use regex pattern `r"^(.+)_([1-2])_(\d{4}-\d{2}-\d{2}T.+)$"` with:
   - Greedy matching for session_id (captures everything before round number)
@@ -337,11 +340,13 @@ Extract: RoundID(session_id, round_number, timestamp)
 - **Result**: Robust parsing that handles arbitrary session_id formats
 
 **Design Choice: Frozen Dataclass**
+
 - Immutability guarantee via Python dataclass frozen=True
 - Type-safe attribute access
 - Clear API contract
 
 **Design Choice: Simple String Generation**
+
 - `generate()` returns string directly (easier for pipeline usage)
 - `parse()` method available for component extraction
 - Dual interface for different use cases
@@ -351,16 +356,19 @@ Extract: RoundID(session_id, round_number, timestamp)
 ## 🚀 Integration Points
 
 **Mode 1 Pipeline (Question Generation)**:
+
 - Call `RoundIDGenerator.generate()` at round start
 - Attach Round ID to generated questions
 - Use for tracking question provenance
 
 **Mode 2 Pipeline (Auto-Scoring)**:
+
 - Call `RoundIDGenerator.generate()` at round start
 - Attach Round ID to scoring results
 - Use for tracking scoring session
 
 **Future Enhancements**:
+
 - Add RoundID to question database schema
 - Add RoundID to response tracking
 - Use for filtering questions/responses by round
