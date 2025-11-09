@@ -13,7 +13,6 @@ Tools:
 - Tool 6: Score & Generate Explanation
 """
 
-
 from pydantic import BaseModel, Field, field_validator
 
 # ============================================================================

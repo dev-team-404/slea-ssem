@@ -457,10 +457,7 @@ Return: is_correct, score, explanation, feedback
                 error_message=error_msg,
             )
 
-            logger.info(
-                f"✅ 파싱 완료: 성공={len(questions)}, 실패={failed_count}, "
-                f"agent_steps={agent_steps}"
-            )
+            logger.info(f"✅ 파싱 완료: 성공={len(questions)}, 실패={failed_count}, agent_steps={agent_steps}")
             return response
 
         except Exception as e:
@@ -576,10 +573,7 @@ Return: is_correct, score, explanation, feedback
                 graded_at=tool_output.get("graded_at", datetime.now(UTC).isoformat()),
             )
 
-            logger.info(
-                f"✅ 채점 파싱 완료: "
-                f"is_correct={response.is_correct}, score={response.score}"
-            )
+            logger.info(f"✅ 채점 파싱 완료: is_correct={response.is_correct}, score={response.score}")
             return response
 
         except Exception as e:

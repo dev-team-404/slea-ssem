@@ -14,6 +14,7 @@
 **범위**: 에이전트 메시지 처리, Tool 결과 파싱, 데이터 추출
 
 ### 목표
+
 LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지 포맷을 파싱하여 Tool 1-6 출력을 구조화된 응답으로 변환하는 로직 구현.
 
 ---
@@ -25,12 +26,14 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
 **위치**: `src/agent/llm_agent.py:343-472`
 
 **기능**:
+
 - LangGraph 메시지 배열에서 "tool" 타입 메시지 추출
 - `save_generated_question` 도구 결과를 JSON으로 파싱
 - 각 질문을 `GeneratedQuestion` 객체로 변환
 - 성공/실패 개수 집계
 
 **핵심 로직**:
+
 1. `result.get("messages", [])` → LangGraph 메시지 배열 추출
 2. `type == "tool"` 필터링 → Tool 호출 카운팅
 3. `name == "save_generated_question"` 필터링 → 질문 저장 도구만 처리
@@ -39,12 +42,14 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
 6. `GeneratedQuestion(...)` 객체 생성 → 결과 리스트 작성
 
 **에러 처리**:
+
 - JSON 파싱 실패 → 로그 경고 + `failed_count` 증가
 - `success=False` 또는 `error` 존재 → 실패로 취급
 - 필수 필드 누락 → 기본값 제공 (예: `question_id`, `saved_at`)
 - 메시지 없음 → 빈 응답 반환
 
 **테스트 커버리지**:
+
 - ✅ JSON 파싱 성공 (Tool 6 스코어 필드)
 - ✅ 다중 질문 파싱 (5개 save_generated_question)
 - ✅ 부분 실패 처리 (일부만 저장됨)
@@ -57,12 +62,14 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
 **위치**: `src/agent/llm_agent.py:474-591`
 
 **기능**:
+
 - `score_and_explain` 도구 결과 파싱
 - `is_correct`, `score`, `explanation` 추출
 - `keyword_matches`, `feedback` 매핑
 - `ScoreAnswerResponse` 객체 생성
 
 **핵심 로직**:
+
 1. 메시지 배열 검색 → `type == "tool"` and `name == "score_and_explain"` 찾기
 2. Tool 메시지의 `content` 필드 JSON 파싱
 3. 필드 매핑:
@@ -75,11 +82,13 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
    - `graded_at` → 채점 시간
 
 **에러 처리**:
+
 - Tool 메시지 없음 → 기본값 반환 (`score=0`, `is_correct=False`)
 - JSON 파싱 실패 → 에러 메시지 포함
 - 필드 누락 → 기본값 제공
 
 **테스트 커버리지**:
+
 - ✅ Tool 6 JSON 파싱 (모든 필드)
 - ✅ 키워드 매칭 추출
 - ✅ 선택사항 필드 처리 (missing feedback)
@@ -91,6 +100,7 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
 ### Phase 3: Test Design (REQ-A-LangChain 전용)
 
 추가된 테스트 클래스:
+
 - **`TestParseAgentOutputGenerate`**: 8개 테스트
   - `test_parse_tool_output_with_json_content` ✅
   - `test_parse_multiple_saved_questions` ✅
@@ -114,12 +124,14 @@ LangGraph의 `create_react_agent()`로 생성된 CompiledStateGraph의 메시지
 ```
 
 변화:
+
 - **이전**: 626 passed (4 failed) ❌
 - **현재**: 629 passed (0 failed) ✅
 
 ### 개별 테스트 수정
 
 기존 테스트 3개 업데이트 (REQ-A-ItemGen 호환성):
+
 - `test_generate_questions_single_question`: JSON mock 추가
 - `test_generate_questions_multiple_questions`: 5개 질문 JSON 생성
 - `test_full_question_generation_flow`: realistic 메시지 포맷
@@ -229,6 +241,7 @@ _parse_agent_output_score() 처리:
 ### JSON 파싱 전략
 
 **Tool 5 (save_generated_question) 결과 예시**:
+
 ```json
 {
   "question_id": "q_abc123",
@@ -243,6 +256,7 @@ _parse_agent_output_score() 처리:
 ```
 
 **Tool 6 (score_and_explain) 결과 예시**:
+
 ```json
 {
   "attempt_id": "att_xyz789",
