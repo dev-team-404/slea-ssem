@@ -59,6 +59,11 @@ case "$cmd" in
     fi
     ;;
 
+  cli)
+    echo "🖥️  Starting interactive CLI..."
+    $PY_RUN python run.py
+    ;;
+
   *)
     cat <<'HELP'
 Usage: ./tools/dev.sh <command>
@@ -68,6 +73,7 @@ Commands:
   test         Run test suite (pytest)
   format       Format + lint code (tox -e ruff)
   shell        Enter project shell
+  cli          Start interactive CLI
 
 Tips:
   - Override dataset: DATASET=/path ./tools/dev.sh up
