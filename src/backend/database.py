@@ -39,6 +39,8 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     """Initialize database and create all tables."""
-    from src.backend.models.user import Base
+    # Import all models to register them with SQLAlchemy
+    import src.backend.models  # noqa: F401
+    from src.backend.models.user import Base  # noqa: F401
 
     Base.metadata.create_all(bind=engine)

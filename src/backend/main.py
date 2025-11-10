@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.backend.api import auth, profile, questions, survey
+from src.backend.database import init_db
 
 app = FastAPI(
     title="SLEA-SSEM",
@@ -19,6 +20,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def startup_event() -> None:
+    """Initialize database on startup."""
+    init_db()
+
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])

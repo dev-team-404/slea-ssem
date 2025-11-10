@@ -44,12 +44,16 @@ class LoginResponse(BaseModel):
     Response model for authentication.
 
     Attributes:
-        jwt_token: Signed JWT token
+        access_token: Signed JWT token
+        token_type: Token type (bearer)
+        user_id: User's unique identifier
         is_new_user: True if new user account was created
 
     """
 
-    jwt_token: str = Field(..., description="JWT token")
+    access_token: str = Field(..., description="JWT token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user_id: str = Field(..., description="User ID")
     is_new_user: bool = Field(..., description="True if new user created")
 
 
@@ -91,7 +95,9 @@ def login(
         return JSONResponse(
             status_code=status_code,
             content={
-                "jwt_token": jwt_token,
+                "access_token": jwt_token,
+                "token_type": "bearer",
+                "user_id": request.knox_id,
                 "is_new_user": is_new_user,
             },
         )
