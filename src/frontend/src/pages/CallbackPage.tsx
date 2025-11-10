@@ -31,18 +31,25 @@ const CallbackPage: React.FC = () => {
         // Check for mock mode
         const isMock = searchParams.get('mock') === 'true'
 
-        let userData: UserData
+        let data: LoginResponse
 
         if (isMock) {
-          // Use mock data for development/testing
-          userData = {
-            knox_id: 'test_user_001',
-            name: '테스트 사용자',
-            dept: '개발팀',
-            business_unit: 'S.LSI',
-            email: 'test@samsung.com',
+          // Mock mode: 백엔드 없이 프론트엔드만 테스트할 때 사용
+          // 실제 API 호출 없이 mock 응답 반환
+          console.log('🎭 Mock mode: 백엔드 API 호출 생략')
+
+          // Mock 응답 생성 (신규 사용자로 시뮬레이션)
+          data = {
+            access_token: 'mock_jwt_token_' + Date.now(),
+            token_type: 'bearer',
+            user_id: 'test_user_001',
+            is_new_user: true, // 신규 사용자 시뮬레이션 (false로 변경하면 기존 사용자)
           }
+
+          // 실제 API 호출처럼 약간의 딜레이 추가
+          await new Promise((resolve) => setTimeout(resolve, 500))
         } else {
+          // 실제 모드: 백엔드 API 호출
           // Extract user data from URL parameters
           const knox_id = searchParams.get('knox_id')
           const name = searchParams.get('name')
@@ -57,30 +64,30 @@ const CallbackPage: React.FC = () => {
             return
           }
 
-          userData = {
+          const userData: UserData = {
             knox_id,
             name,
             dept,
             business_unit,
             email,
           }
+
+          // Call backend authentication API
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.detail || '로그인에 실패했습니다.')
+          }
+
+          data = await response.json()
         }
-
-        // Call backend authentication API
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(userData),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.detail || '로그인에 실패했습니다.')
-        }
-
-        const data: LoginResponse = await response.json()
 
         // Save JWT token to localStorage
         saveToken(data.access_token)

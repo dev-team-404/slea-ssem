@@ -193,35 +193,23 @@ describe('CallbackPage - REQ-F-A1-2', () => {
   })
 
   // Test 5: Acceptance Criteria - Mock 모드
-  it('should use mock user data when mock=true parameter is present', async () => {
-    const mockResponse = {
-      access_token: 'mock_token_789',
-      token_type: 'bearer',
-      user_id: 'test_user_001',
-      is_new_user: true,
-    }
-
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => mockResponse,
-    })
-
+  it('should use mock response without API call when mock=true', async () => {
     render(
       <MemoryRouter initialEntries={['/auth/callback?mock=true']}>
         <CallbackPage />
       </MemoryRouter>
     )
 
-    // Mock 데이터로 API 호출 확인
+    // Mock 모드에서는 API 호출이 발생하지 않아야 함
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/auth/login'),
-        expect.objectContaining({
-          body: expect.stringContaining('test_user_001'),
-        })
-      )
+      expect(mockNavigate).toHaveBeenCalledWith('/signup')
     })
+
+    // fetch가 호출되지 않았는지 확인
+    expect(global.fetch).not.toHaveBeenCalled()
+
+    // 토큰이 저장되었는지 확인
+    expect(localStorageMock.getItem('slea_ssem_token')).toMatch(/^mock_jwt_token_/)
   })
 
   // Test 6: Performance - 3초 이내 리다이렉트
