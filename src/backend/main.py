@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 env_file = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_file)
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from src.backend.api import auth, profile, questions, survey
-from src.backend.database import init_db
+from src.backend.api import auth, profile, questions, survey  # noqa: E402
+from src.backend.database import init_db  # noqa: E402
 
 app = FastAPI(
     title="SLEA-SSEM",
