@@ -11,6 +11,7 @@
 ### 1️⃣ 서버 시작
 
 터미널 1:
+
 ```bash
 ./tools/dev.sh up
 # Starting dev server on localhost:8000...
@@ -20,6 +21,7 @@
 ### 2️⃣ CLI 시작
 
 터미널 2:
+
 ```bash
 ./tools/dev.sh cli
 # Welcome to the SLEA-SSEM CLI!
@@ -74,6 +76,7 @@ auth login [username]              # 로그인 (JWT 토큰 발급)
 ```
 
 **예시**:
+
 ```bash
 > auth login bwyoon
 ✓ Successfully logged in as 'bwyoon'
@@ -87,6 +90,7 @@ survey submit [level] [career] [interests]  # Survey 데이터 제출
 ```
 
 **예시**:
+
 ```bash
 > survey schema
 ✓ Survey schema retrieved
@@ -108,6 +112,7 @@ profile update_survey [level] [career] [interests]  # Survey 업데이트
 ```
 
 **예시**:
+
 ```bash
 > profile nickname check coolname
 ✓ Nickname 'coolname' is available
@@ -150,6 +155,7 @@ questions explanation generate [question_id]  # 문제 해설 생성
 ```
 
 **예시 - 전체 테스트 플로우**:
+
 ```bash
 # 1. 문항 생성
 > questions generate
@@ -223,6 +229,7 @@ context.session:
 ### 에러 처리
 
 **예시 - 미인증 상태에서 보호된 명령어 사용**:
+
 ```bash
 > survey submit intermediate "5years" "AI,ML"
 ✗ Not authenticated
@@ -230,6 +237,7 @@ Please login first: auth login [username]
 ```
 
 **예시 - 서버 미응답**:
+
 ```bash
 > auth login bwyoon
 Logging in as 'bwyoon'...
@@ -333,11 +341,12 @@ Logging in as 'bwyoon'...
 
 ## 🐛 일반적인 문제 해결
 
-### Q1: "Failed to connect to http://localhost:8000"
+### Q1: "Failed to connect to <http://localhost:8000>"
 
 **원인**: FastAPI 서버가 실행 중이지 않음
 
 **해결**:
+
 ```bash
 # 다른 터미널에서 서버 시작
 ./tools/dev.sh up
@@ -348,6 +357,7 @@ Logging in as 'bwyoon'...
 **원인**: 로그인하지 않음 또는 토큰 만료
 
 **해결**:
+
 ```bash
 > auth login [username]
 ```
@@ -357,6 +367,7 @@ Logging in as 'bwyoon'...
 **원인**: 명령어 인자 누락
 
 **해결**:
+
 ```bash
 > auth login bwyoon  # username 추가
 ```
@@ -366,6 +377,7 @@ Logging in as 'bwyoon'...
 **원인**: 닉네임 이미 사용 중
 
 **해결**:
+
 ```bash
 > profile nickname check xxx
 ✗ Nickname 'xxx' is not available

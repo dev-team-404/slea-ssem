@@ -15,6 +15,7 @@
 ### Description
 
 사용자가 `auth login [username]` 명령어로 FastAPI 서버에 로그인하면:
+
 1. 서버에서 JWT 토큰을 받음
 2. 토큰을 CLI 세션에 저장 (context.session.token)
 3. 이후 모든 인증 필요 엔드포인트에 자동으로 토큰을 Authorization 헤더에 포함
@@ -104,6 +105,7 @@ def login(context: CLIContext, *args: str) -> None:
 **Endpoint**: `POST /auth/login`
 
 **Request**:
+
 ```json
 {
   "knox_id": "bwyoon",
@@ -115,6 +117,7 @@ def login(context: CLIContext, *args: str) -> None:
 ```
 
 **Response (Success)**:
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -125,6 +128,7 @@ def login(context: CLIContext, *args: str) -> None:
 ```
 
 **Response (Error)**:
+
 ```json
 {
   "detail": "Invalid credentials"
@@ -177,6 +181,7 @@ def test_login_new_vs_returning_user():
 **선택**: APIClient를 CLIContext에 주입
 
 **이유**:
+
 - 모든 API 호출이 일관된 토큰 관리
 - 테스트 시 mock 교체 용이
 - 향후 middleware 추가 가능 (retry, rate limit 등)
@@ -186,6 +191,7 @@ def test_login_new_vs_returning_user():
 **선택**: 별도 SessionState 데이터클래스
 
 **이유**:
+
 - 세션 상태를 명확히 정의
 - 타입 안정성 (mypy strict mode 준수)
 - 향후 파일 저장/복구 용이 (직렬화)
@@ -195,6 +201,7 @@ def test_login_new_vs_returning_user():
 **선택**: 토큰을 client, session 모두에 저장
 
 **이유**:
+
 - client.token: API 요청 시 자동 포함
 - session.token: 세션 저장/복구, 상태 추적
 
@@ -203,6 +210,7 @@ def test_login_new_vs_returning_user():
 **선택**: 에러 시 상세 메시지 표시
 
 **이유**:
+
 - 사용자가 문제 파악 용이
 - 디버깅 시 도움
 - 전문성 향상
@@ -245,12 +253,13 @@ API 요청 → 서버에서 토큰 검증
 ### 환경 설정
 
 **로컬 개발**:
+
 ```bash
 ./tools/dev.sh up  # FastAPI 서버 시작 (localhost:8000)
 ./tools/dev.sh cli # CLI 시작
 ```
 
-**API 서버 URL**: http://localhost:8000 (하드코딩, 향후 설정화 가능)
+**API 서버 URL**: <http://localhost:8000> (하드코딩, 향후 설정화 가능)
 
 ### Security Considerations
 
@@ -309,6 +318,7 @@ if time.time() > token_exp:
 **Date**: 2025-11-10
 
 **Commit Message**:
+
 ```
 feat(cli): Implement REQ-CLI-AUTH-1 - Login with JWT token storage
 

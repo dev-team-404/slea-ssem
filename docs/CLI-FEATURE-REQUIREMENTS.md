@@ -28,6 +28,7 @@
 사용자가 `auth login [username]` 명령어로 FastAPI 서버에 로그인하면 JWT 토큰을 받아 세션에 저장하고, 이후 모든 인증 필요 엔드포인트에 자동으로 토큰을 헤더에 포함시킨다.
 
 **사용 예**:
+
 ```bash
 > auth login bwyoon
 Logging in as 'bwyoon'...
@@ -38,16 +39,19 @@ Logging in as 'bwyoon'...
 ```
 
 **기대 출력**:
+
 - 로그인 성공: `✓ Successfully logged in as [username]`
 - 사용자 ID, 토큰 미리보기 표시
 - 신규/기존 사용자 구분
 
 **에러 케이스**:
-- 서버 미응답: "Failed to connect to http://localhost:8000: ..."
+
+- 서버 미응답: "Failed to connect to <http://localhost:8000>: ..."
 - 로그인 실패: "✗ Login failed"
 - 인자 없음: Usage 가이드 표시
 
 **Acceptance Criteria**:
+
 - [x] `auth login [username]` 명령어 작동
 - [x] JWT 토큰이 context.session.token에 저장
 - [x] JWT 토큰이 이후 모든 요청 헤더에 포함
@@ -66,6 +70,7 @@ Logging in as 'bwyoon'...
 JWT 토큰이 만료되면 자동으로 새 토큰을 발급받는다. (선택사항: refresh token 사용)
 
 **사용 예**:
+
 ```bash
 > questions generate
 Token expired. Attempting to refresh...
@@ -74,13 +79,16 @@ Token expired. Attempting to refresh...
 ```
 
 **기대 출력**:
+
 - 토큰 갱신 자동 수행
 - 사용자에게 투명한 경험 제공
 
 **에러 케이스**:
+
 - Refresh token 만료: "Session expired. Please login again."
 
 **Acceptance Criteria**:
+
 - [ ] 토큰 만료 감지 (401 Unauthorized)
 - [ ] 자동 갱신 시도
 - [ ] 갱신 실패 시 재로그인 유도
@@ -99,6 +107,7 @@ Token expired. Attempting to refresh...
 `survey schema` 명령어로 FastAPI 서버에서 survey 폼의 스키마(필드 정의, 타입, 검증 규칙)를 조회한다.
 
 **사용 예**:
+
 ```bash
 > survey schema
 Fetching survey schema...
@@ -109,14 +118,17 @@ Fetching survey schema...
 ```
 
 **기대 출력**:
+
 - 각 필드명, 타입, 필수 여부 표시
 - 인증 불필요 (public endpoint)
 
 **에러 케이스**:
+
 - 서버 미응답: "Failed to connect..."
 - API 에러: 에러 메시지 표시
 
 **Acceptance Criteria**:
+
 - [x] `survey schema` 명령어 작동
 - [x] GET /survey/schema 엔드포인트 호출
 - [x] 스키마 정보 파싱 및 표시
@@ -134,6 +146,7 @@ Fetching survey schema...
 `survey submit [level] [career] [interests]` 명령어로 자기평가 데이터를 제출한다. 로그인 후에만 작동.
 
 **사용 예**:
+
 ```bash
 > survey submit intermediate "5years" "AI,ML"
 Submitting survey...
@@ -144,15 +157,18 @@ Submitting survey...
 ```
 
 **기대 출력**:
+
 - 제출된 데이터 확인 표시
 - 성공 메시지
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated. Please login first: auth login [username]"
 - 인자 부족: Usage 가이드 표시
 - API 에러: 에러 메시지 표시
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 (token 필수)
 - [x] `survey submit [args]` 명령어 작동
 - [x] POST /survey/submit 엔드포인트 호출
@@ -172,6 +188,7 @@ Submitting survey...
 `profile nickname check [nickname]` 명령어로 닉네임 중복 여부를 확인한다. 인증 불필요.
 
 **사용 예**:
+
 ```bash
 > profile nickname check coolname
 Checking nickname availability...
@@ -185,14 +202,17 @@ Checking nickname availability...
 ```
 
 **기대 출력**:
+
 - 가능: "✓ Nickname 'xxx' is available"
 - 불가: "✗ Nickname 'xxx' is not available" + suggestions
 
 **에러 케이스**:
+
 - 서버 에러: "✗ Check failed"
 - 인자 없음: Usage 가이드
 
 **Acceptance Criteria**:
+
 - [x] 인증 불필요
 - [x] `profile nickname check [nickname]` 작동
 - [x] POST /profile/nickname/check 호출
@@ -210,6 +230,7 @@ Checking nickname availability...
 `profile nickname register [nickname]` 명령어로 새 닉네임을 등록한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > profile nickname register coolname
 Registering nickname 'coolname'...
@@ -217,14 +238,17 @@ Registering nickname 'coolname'...
 ```
 
 **기대 출력**:
+
 - 등록 성공 메시지
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 닉네임 중복: API 에러 메시지
 - 인자 없음: Usage 가이드
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 (token 필수)
 - [x] `profile nickname register [nickname]` 작동
 - [x] POST /profile/register 호출
@@ -242,6 +266,7 @@ Registering nickname 'coolname'...
 `profile nickname edit [new_nickname]` 명령어로 기존 닉네임을 변경한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > profile nickname edit newname
 Updating nickname to 'newname'...
@@ -249,14 +274,17 @@ Updating nickname to 'newname'...
 ```
 
 **기대 출력**:
+
 - 업데이트 성공 메시지
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 중복: API 에러 메시지
 - 인자 없음: Usage 가이드
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `profile nickname edit [new_nickname]` 작동
 - [x] PUT /profile/nickname 호출
@@ -274,6 +302,7 @@ Updating nickname to 'newname'...
 `profile update_survey [level] [career] [interests]` 명령어로 자기평가 정보를 수정한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > profile update_survey advanced "10years" "AI,ML,NLP"
 Updating survey...
@@ -282,14 +311,17 @@ Updating survey...
 ```
 
 **기대 출력**:
+
 - 업데이트 성공 메시지
 - 새 프로필 레코드 생성 안내
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 인자 부족: Usage 가이드
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `profile update_survey [args]` 작동
 - [x] PUT /profile/survey 호출
@@ -307,6 +339,7 @@ Updating survey...
 `profile view` 명령어로 현재 로그인한 사용자의 프로필 정보를 조회한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > profile view
 Fetching profile...
@@ -319,13 +352,16 @@ Fetching profile...
 ```
 
 **기대 출력**:
+
 - 사용자 정보 일목요연하게 표시
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - API 에러: 에러 메시지
 
 **Acceptance Criteria**:
+
 - [ ] 인증 확인 필수
 - [ ] `profile view` 명령어 작동
 - [ ] GET /profile (또는 /user/profile) 호출
@@ -345,6 +381,7 @@ Fetching profile...
 `questions generate` 명령어로 Round 1 테스트 문항 10개를 생성한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions generate
 Generating Round 1 questions...
@@ -354,14 +391,17 @@ Generating Round 1 questions...
 ```
 
 **기대 출력**:
+
 - 생성된 세션 ID
 - 문항 개수
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - API 에러: "✗ Generation failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions generate` 명령어 작동
 - [x] POST /questions/generate 호출
@@ -380,6 +420,7 @@ Generating Round 1 questions...
 `questions generate adaptive` 명령어로 Round 2 적응형 문항을 생성한다. Round 1 완료 후 작동.
 
 **사용 예**:
+
 ```bash
 > questions generate adaptive
 Generating adaptive questions...
@@ -389,15 +430,18 @@ Generating adaptive questions...
 ```
 
 **기대 출력**:
+
 - 문항 개수
 - 난이도
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 활성 세션 없음: "✗ No active session"
 - API 에러: "✗ Generation failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] 활성 세션 확인 필수
 - [x] `questions generate adaptive` 작동
@@ -416,6 +460,7 @@ Generating adaptive questions...
 `questions answer autosave [question_id] [answer]` 명령어로 답변을 실시간으로 저장한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions answer autosave q1 "machine learning is a subset of AI"
 Autosaving answer...
@@ -423,14 +468,17 @@ Autosaving answer...
 ```
 
 **기대 출력**:
+
 - 저장 완료 메시지
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 인자 부족: Usage 가이드
 - API 에러: "✗ Autosave failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions answer autosave [q_id] [answer]` 작동
 - [x] POST /questions/autosave 호출
@@ -448,6 +496,7 @@ Autosaving answer...
 `questions answer score [question_id] [answer]` 명령어로 단일 답변을 채점한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions answer score q1 "machine learning is a subset of AI"
 Scoring answer...
@@ -456,15 +505,18 @@ Scoring answer...
 ```
 
 **기대 출력**:
+
 - 점수 (%)
 - 정오답 여부
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 인자 부족: Usage 가이드
 - API 에러: "✗ Scoring failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions answer score [q_id] [answer]` 작동
 - [x] POST /questions/answer/score 호출
@@ -482,6 +534,7 @@ Scoring answer...
 `questions score` 명령어로 전체 라운드 점수를 계산하고 저장한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions score
 Calculating round score...
@@ -491,14 +544,17 @@ Calculating round score...
 ```
 
 **기대 출력**:
+
 - 총점
 - 정답 개수
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - API 에러: "✗ Calculation failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions score` 명령어 작동
 - [x] POST /questions/score 호출
@@ -516,6 +572,7 @@ Calculating round score...
 `questions explanation generate [question_id]` 명령어로 특정 문제의 해설을 생성한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions explanation generate q1
 Generating explanation...
@@ -524,14 +581,17 @@ Generating explanation...
 ```
 
 **기대 출력**:
+
 - 해설 텍스트 (처음 100자)
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 인자 없음: Usage 가이드
 - API 에러: "✗ Generation failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions explanation generate [q_id]` 작동
 - [x] POST /questions/explanations 호출
@@ -549,6 +609,7 @@ Generating explanation...
 `questions session resume` 명령어로 이전에 중단된 테스트 세션을 재개한다. 로그인 필수.
 
 **사용 예**:
+
 ```bash
 > questions session resume
 Resuming test session...
@@ -558,15 +619,18 @@ Resuming test session...
 ```
 
 **기대 출력**:
+
 - 세션 ID
 - 문항 개수
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 재개 가능한 세션 없음: API 에러
 - API 에러: "✗ Resume failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] `questions session resume` 작동
 - [x] GET /questions/resume 호출
@@ -584,6 +648,7 @@ Resuming test session...
 `questions session time_status` 명령어로 테스트 시간 제한을 확인한다. 로그인 + 활성 세션 필수.
 
 **사용 예**:
+
 ```bash
 > questions session time_status
 Checking time status...
@@ -592,16 +657,19 @@ Checking time status...
 ```
 
 **기대 출력**:
+
 - 경과 시간
 - 남은 시간
 - (선택) 시간 초과 경고
 
 **에러 케이스**:
+
 - 미인증: "✗ Not authenticated"
 - 활성 세션 없음: "✗ No active session"
 - API 에러: "✗ Check failed"
 
 **Acceptance Criteria**:
+
 - [x] 인증 확인 필수
 - [x] 활성 세션 확인 필수
 - [x] `questions session time_status` 작동
@@ -622,6 +690,7 @@ Checking time status...
 `session save [filename]` 명령어로 현재 세션 상태(토큰, 사용자 정보, 현재 테스트 세션 ID)를 JSON 파일로 저장한다.
 
 **사용 예**:
+
 ```bash
 > session save my_session.json
 Saving session...
@@ -632,6 +701,7 @@ Saving session...
 ```
 
 **파일 포맷**:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiI...",
@@ -644,14 +714,17 @@ Saving session...
 ```
 
 **기대 출력**:
+
 - 저장 성공 메시지
 - 저장된 파일명, 사용자명, 세션 정보
 
 **에러 케이스**:
+
 - 파일 쓰기 실패: "✗ Failed to save session: [error]"
 - 인자 없음: Usage 가이드
 
 **Acceptance Criteria**:
+
 - [ ] `session save [filename]` 명령어 작동
 - [ ] 세션 상태를 JSON으로 직렬화
 - [ ] 파일에 저장
@@ -669,6 +742,7 @@ Saving session...
 `session load [filename]` 명령어로 저장된 세션 파일을 복구한다.
 
 **사용 예**:
+
 ```bash
 > session load my_session.json
 Loading session...
@@ -679,15 +753,18 @@ Loading session...
 ```
 
 **기대 출력**:
+
 - 로드 성공 메시지
 - 복구된 사용자 정보, 세션 정보
 
 **에러 케이스**:
+
 - 파일 없음: "✗ File not found: my_session.json"
 - 파일 포맷 오류: "✗ Invalid session file format"
 - 토큰 만료: "⚠️  Token may have expired. Consider logging in again."
 
 **Acceptance Criteria**:
+
 - [ ] `session load [filename]` 명령어 작동
 - [ ] JSON 파일 파싱
 - [ ] context.session 복구
@@ -707,6 +784,7 @@ Loading session...
 `export json` 명령어로 현재 테스트 결과를 JSON 파일로 내보낸다.
 
 **사용 예**:
+
 ```bash
 > export json results.json
 Exporting results...
@@ -717,6 +795,7 @@ Exporting results...
 ```
 
 **파일 포맷**:
+
 ```json
 {
   "session_id": "session-123",
@@ -738,14 +817,17 @@ Exporting results...
 ```
 
 **기대 출력**:
+
 - 내보내기 성공 메시지
 - 세션 정보, 점수
 
 **에러 케이스**:
+
 - 활성 세션 없음: "✗ No active session to export"
 - 파일 쓰기 실패: "✗ Failed to export: [error]"
 
 **Acceptance Criteria**:
+
 - [ ] 활성 세션 확인 필수
 - [ ] `export json [filename]` 명령어 작동
 - [ ] API에서 결과 조회 (또는 캐시된 결과 사용)
@@ -763,6 +845,7 @@ Exporting results...
 `export csv` 명령어로 테스트 결과를 CSV 파일로 내보낸다.
 
 **사용 예**:
+
 ```bash
 > export csv results.csv
 Exporting results...
@@ -770,6 +853,7 @@ Exporting results...
 ```
 
 **파일 포맷**:
+
 ```
 question_id,user_answer,score,is_correct
 q1,answer1,100,true
@@ -778,13 +862,16 @@ q2,answer2,50,false
 ```
 
 **기대 출력**:
+
 - 내보내기 성공 메시지
 
 **에러 케이스**:
+
 - 활성 세션 없음: "✗ No active session to export"
 - 파일 쓰기 실패: "✗ Failed to export: [error]"
 
 **Acceptance Criteria**:
+
 - [ ] 활성 세션 확인 필수
 - [ ] `export csv [filename]` 명령어 작동
 - [ ] CSV 파일로 저장

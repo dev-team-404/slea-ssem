@@ -44,6 +44,7 @@ PORT=8100 ./tools/dev.sh down  # Stop port 8100 server
 ```
 
 **Notes**:
+
 - Default port: 8000 (can override with `PORT` env var)
 - `down` automatically finds and kills the server on specified port
 - `down` works with or without `lsof` command available
@@ -219,10 +220,12 @@ Assistant: (Automatically follows 4-phase workflow below)
 **파일**: `docs/CLI-FEATURE-REQUIREMENTS.md`에 다음 포맷으로 추가
 
 **포맷**: `REQ-CLI-[DOMAIN]-[NUMBER]`
+
 - Domain: auth, survey, profile, questions, session, export, ...
 - Number: 도메인 내 순번 (1, 2, 3, ...)
 
 **템플릿**:
+
 ```markdown
 ### REQ-CLI-[DOMAIN]-[NUMBER]: [기능명]
 
@@ -238,15 +241,18 @@ Assistant: (Automatically follows 4-phase workflow below)
 ```
 
 **기대 출력**:
+
 - 성공: 메시지 + 데이터
 - 실패: 에러 메시지
 
 **에러 케이스**:
+
 - Not authenticated → "Please login first"
 - API error → 상세 에러 메시지
 - Invalid input → Usage 가이드
 
 **Acceptance Criteria**:
+
 - [ ] 명령어 정확 작동
 - [ ] 에러 처리 완벽
 - [ ] 도움말 명확
@@ -254,6 +260,7 @@ Assistant: (Automatically follows 4-phase workflow below)
 **Priority**: M/H/L
 **Dependencies**: [API / Module]
 **Status**: ⏳ Backlog
+
 ```
 
 ### Step 2-5: REQ-Based Workflow 적용
@@ -261,12 +268,14 @@ Assistant: (Automatically follows 4-phase workflow below)
 **Phase 1-4는 기존 CLAUDE.md의 REQ-Based Development Workflow과 동일**
 
 ```
+
 REQ-CLI-AUTH-1 기능 구현해
 ↓
 Phase 1: 요구사항 검토 → Approve?
 Phase 2: 테스트 설계 → Approve?
 Phase 3: 구현 + 검증
 Phase 4: Commit + Progress tracking
+
 ```
 
 ### CLI Feature 발견 및 추가 방법
@@ -274,12 +283,15 @@ Phase 4: Commit + Progress tracking
 **방법: 즉시 추가 (권장)**
 
 ```
+
 사용자: "CLI에 세션 저장 기능이 필요해"
 ↓
+
 1. docs/CLI-FEATURE-REQUIREMENTS.md에 REQ-CLI-SESSION-1 추가
 2. Requirement 정의 (5분)
 3. "REQ-CLI-SESSION-1 기능 구현해" 요청
 4. Claude가 4단계 Workflow 적용
+
 ```
 
 ### CLI Requirement 관리
