@@ -299,15 +299,18 @@ Updating nickname to 'newname'...
 ### REQ-CLI-PROFILE-4: Update survey
 
 **Description**:
-`profile update_survey [level] [career] [interests]` 명령어로 자기평가 정보를 수정한다. 로그인 필수.
+`profile update_survey [level] [years] [--job_role ROLE] [--duty DUTY] [--interests ITEM1,ITEM2,...]` 명령어로 자기평가 정보를 수정한다. 로그인 필수.
 
 **사용 예**:
 
 ```bash
-> profile update_survey advanced "10years" "AI,ML,NLP"
+> profile update_survey advanced 10 --interests 'AI,ML,NLP'
 Updating survey...
 ✓ Profile survey updated
   New profile record created
+
+> profile update_survey intermediate 5 --job_role 'Senior Dev' --duty 'Architecture' --interests 'AI,ML'
+✓ Profile survey updated
 ```
 
 **기대 출력**:

@@ -108,7 +108,7 @@ survey submit [level] [career] [interests]  # Survey 데이터 제출
 profile nickname check [nickname]  # 닉네임 중복 확인
 profile nickname register [nickname]  # 닉네임 등록
 profile nickname edit [new_nickname]   # 닉네임 수정
-profile update_survey [level] [career] [interests]  # Survey 업데이트
+profile update_survey [level] [years] [--job_role ROLE] [--duty DUTY] [--interests ITEM1,ITEM2,...]  # Survey 업데이트
 ```
 
 **예시**:
@@ -123,7 +123,7 @@ profile update_survey [level] [career] [interests]  # Survey 업데이트
 > profile nickname edit coolname2
 ✓ Nickname updated to 'coolname2'
 
-> profile update_survey advanced "10years" "AI,ML,NLP"
+> profile update_survey intermediate 5 --interests 'AI,ML,NLP'
 ✓ Profile survey updated
   New profile record created
 ```
@@ -300,7 +300,7 @@ Logging in as 'bwyoon'...
   Status: Returning user
 
 # 2. 자기평가 정보 업데이트 (선택)
-> profile update_survey advanced "5years" "AI,ML,NLP"
+> profile update_survey advanced 5 --interests 'AI,ML,NLP'
 ✓ Profile survey updated
 
 # 3. 기존 세션 재개 (선택) 또는 새 테스트 시작
