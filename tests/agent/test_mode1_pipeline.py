@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -481,9 +480,7 @@ class TestErrorHandling:
 class TestBatchValidation:
     """Tests for batch validation (Tool 4)."""
 
-    def test_batch_validation_pass_recommendations(
-        self, mock_generated_questions: list[dict[str, Any]]
-    ) -> None:
+    def test_batch_validation_pass_recommendations(self, mock_generated_questions: list[dict[str, Any]]) -> None:
         """Test that pass recommendations are identified.
 
         REQ: REQ-A-Mode1-Pipeline, AC5
@@ -510,9 +507,7 @@ class TestBatchValidation:
             pass_count = sum(1 for r in results if r["recommendation"] == "pass")
             assert pass_count == 5
 
-    def test_batch_validation_reject_recommendations(
-        self, mock_generated_questions: list[dict[str, Any]]
-    ) -> None:
+    def test_batch_validation_reject_recommendations(self, mock_generated_questions: list[dict[str, Any]]) -> None:
         """Test that reject recommendations are identified.
 
         REQ: REQ-A-Mode1-Pipeline, AC5
@@ -565,19 +560,14 @@ class TestCompletePipeline:
         """
         from src.agent.pipeline.mode1_pipeline import Mode1Pipeline
 
-        with patch(
-            "src.agent.pipeline.mode1_pipeline.get_user_profile"
-        ) as mock_tool1, patch(
-            "src.agent.pipeline.mode1_pipeline.search_question_templates"
-        ) as mock_tool2, patch(
-            "src.agent.pipeline.mode1_pipeline.get_difficulty_keywords"
-        ) as mock_tool3, patch.object(
-            Mode1Pipeline, "_generate_questions_llm"
-        ) as mock_llm, patch(
-            "src.agent.pipeline.mode1_pipeline.validate_question_quality"
-        ) as mock_tool4, patch(
-            "src.agent.pipeline.mode1_pipeline.save_generated_question"
-        ) as mock_tool5:
+        with (
+            patch("src.agent.pipeline.mode1_pipeline.get_user_profile") as mock_tool1,
+            patch("src.agent.pipeline.mode1_pipeline.search_question_templates") as mock_tool2,
+            patch("src.agent.pipeline.mode1_pipeline.get_difficulty_keywords") as mock_tool3,
+            patch.object(Mode1Pipeline, "_generate_questions_llm") as mock_llm,
+            patch("src.agent.pipeline.mode1_pipeline.validate_question_quality") as mock_tool4,
+            patch("src.agent.pipeline.mode1_pipeline.save_generated_question") as mock_tool5,
+        ):
 
             # Setup mocks
             mock_tool1.return_value = mock_user_profile
@@ -623,17 +613,13 @@ class TestCompletePipeline:
         """
         from src.agent.pipeline.mode1_pipeline import Mode1Pipeline
 
-        with patch(
-            "src.agent.pipeline.mode1_pipeline.get_user_profile"
-        ) as mock_tool1, patch(
-            "src.agent.pipeline.mode1_pipeline.get_difficulty_keywords"
-        ) as mock_tool3, patch.object(
-            Mode1Pipeline, "_generate_questions_llm"
-        ) as mock_llm, patch(
-            "src.agent.pipeline.mode1_pipeline.validate_question_quality"
-        ) as mock_tool4, patch(
-            "src.agent.pipeline.mode1_pipeline.save_generated_question"
-        ) as mock_tool5:
+        with (
+            patch("src.agent.pipeline.mode1_pipeline.get_user_profile") as mock_tool1,
+            patch("src.agent.pipeline.mode1_pipeline.get_difficulty_keywords") as mock_tool3,
+            patch.object(Mode1Pipeline, "_generate_questions_llm") as mock_llm,
+            patch("src.agent.pipeline.mode1_pipeline.validate_question_quality") as mock_tool4,
+            patch("src.agent.pipeline.mode1_pipeline.save_generated_question") as mock_tool5,
+        ):
 
             mock_tool1.return_value = mock_user_profile
             mock_tool3.return_value = mock_difficulty_keywords

@@ -82,9 +82,7 @@ class TestSaveAttempt:
 
         # Save attempt (using session 2 as the final session)
         history_service = HistoryService(db_session)
-        attempt = history_service.save_attempt(
-            user_fixture.id, user_profile_survey_fixture.id, session2.id
-        )
+        attempt = history_service.save_attempt(user_fixture.id, user_profile_survey_fixture.id, session2.id)
 
         # Verify attempt grade
         assert attempt.final_grade in ["Intermediate-Advanced", "Advanced"]
@@ -135,7 +133,9 @@ class TestSaveAttempt:
 class TestImprovementCalculation:
     """Test REQ-B-B5-2: Calculate improvement metrics."""
 
-    def test_calculate_improvement_score_increased(self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt, create_attempt_round):
+    def test_calculate_improvement_score_increased(
+        self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt, create_attempt_round
+    ):
         """
         REQ-B-B5-2: Calculate improvement when score increases.
 
@@ -182,7 +182,9 @@ class TestImprovementCalculation:
         previous = history_service.get_latest_attempt(user_fixture.id)
         assert previous is None
 
-    def test_improvement_with_grade_no_change(self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt, create_attempt_round):
+    def test_improvement_with_grade_no_change(
+        self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt, create_attempt_round
+    ):
         """
         REQ-B-B5-2: Grade unchanged but score improved.
 
@@ -192,10 +194,14 @@ class TestImprovementCalculation:
         - score_change = positive
         - grade_improved = False
         """
-        attempt1 = create_attempt(user_fixture.id, user_profile_survey_fixture.id, final_grade="Intermediate", final_score=50.0)
+        attempt1 = create_attempt(
+            user_fixture.id, user_profile_survey_fixture.id, final_grade="Intermediate", final_score=50.0
+        )
         create_attempt_round(attempt1.id, score=50.0)
 
-        attempt2 = create_attempt(user_fixture.id, user_profile_survey_fixture.id, final_grade="Intermediate", final_score=55.0)
+        attempt2 = create_attempt(
+            user_fixture.id, user_profile_survey_fixture.id, final_grade="Intermediate", final_score=55.0
+        )
         create_attempt_round(attempt2.id, score=55.0)
 
         history_service = HistoryService(db_session)
@@ -300,14 +306,19 @@ class TestNewSurveyPerRetry:
 
         surveys = (
             db_session.query(__import__("src.backend.models", fromlist=["UserProfileSurvey"]).UserProfileSurvey)
-            .filter(__import__("src.backend.models", fromlist=["UserProfileSurvey"]).UserProfileSurvey.user_id == user_fixture.id)
+            .filter(
+                __import__("src.backend.models", fromlist=["UserProfileSurvey"]).UserProfileSurvey.user_id
+                == user_fixture.id
+            )
             .all()
         )
 
         assert len(surveys) >= 1  # At least one survey created
         assert survey1.id != survey2.id
 
-    def test_attempt_linked_to_specific_survey(self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt):
+    def test_attempt_linked_to_specific_survey(
+        self, db_session: Session, user_fixture, user_profile_survey_fixture, create_attempt
+    ):
         """
         REQ-B-B5-5: AC3 - Attempt linked to specific survey version.
 

@@ -10,7 +10,14 @@ from datetime import UTC, datetime
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from src.backend.models import Attempt, AttemptRound, TestResult, TestSession, User, UserProfileSurvey
+from src.backend.models import (
+    Attempt,
+    AttemptRound,
+    TestResult,
+    TestSession,
+    User,
+    UserProfileSurvey,
+)
 from src.backend.services.ranking_service import RankingService
 
 

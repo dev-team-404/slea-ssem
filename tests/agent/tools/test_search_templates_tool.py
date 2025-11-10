@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from src.agent.tools.search_templates_tool import _search_question_templates_impl
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

@@ -259,11 +259,7 @@ class TestCopyrightFilter:
 
         assert is_valid is False
         assert error is not None
-        assert (
-            "copyright" in error.lower()
-            or "attribution" in error.lower()
-            or "source" in error.lower()
-        )
+        assert "copyright" in error.lower() or "attribution" in error.lower() or "source" in error.lower()
 
     def test_question_with_plagiarized_content_pattern(self, question_factory) -> None:
         """
@@ -364,9 +360,7 @@ class TestAcceptanceCriteria:
         assert is_valid is False
 
         # Test profanity in choices
-        q_choices = question_factory(
-            stem="Good question", choices=["Hell yes", "No"]
-        )
+        q_choices = question_factory(stem="Good question", choices=["Hell yes", "No"])
         is_valid, _ = validator.validate_question(q_choices)
         assert is_valid is False
 
@@ -525,16 +519,12 @@ class TestValidatorMethods:
         """
         validator = QuestionContentValidator()
 
-        is_valid, error = validator._check_copyright(
-            'According to John Doe: "This is a quote"'
-        )
+        is_valid, error = validator._check_copyright('According to John Doe: "This is a quote"')
         # Unattributed quote should flag concern
         if not is_valid:
             assert error is not None
 
-        is_valid, error = validator._check_copyright(
-            "According to Wikipedia [source]: Information here"
-        )
+        is_valid, error = validator._check_copyright("According to Wikipedia [source]: Information here")
         # Properly attributed should pass
         assert is_valid is True
 

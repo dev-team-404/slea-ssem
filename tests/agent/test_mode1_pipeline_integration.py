@@ -20,7 +20,6 @@ import pytest
 
 from src.agent.pipeline.mode1_pipeline import Mode1Pipeline, get_top_category
 
-
 # ============================================================================
 # TEST DATA & FIXTURES
 # ============================================================================
@@ -415,9 +414,7 @@ class TestPartialSuccessScenarios:
             {"final_score": 0.92, "recommendation": "pass"},  # Pass
         ]
 
-        pass_count = sum(
-            1 for v in validation_results if v["recommendation"] in ["pass", "revise"]
-        )
+        pass_count = sum(1 for v in validation_results if v["recommendation"] in ["pass", "revise"])
         assert pass_count == 2
 
     @pytest.mark.asyncio

@@ -20,14 +20,13 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from src.agent.error_handler import (
-    ErrorHandler,
     ErrorContext,
+    ErrorHandler,
     ErrorStrategy,
     RetryConfig,
 )
 from src.agent.fallback_provider import FallbackProvider
-from src.agent.retry_strategy import RetryStrategy, ExponentialBackoff
-
+from src.agent.retry_strategy import ExponentialBackoff, RetryStrategy
 
 # ============================================================================
 # TEST DATA & FIXTURES
@@ -43,10 +42,7 @@ def error_handler() -> ErrorHandler:
 @pytest.fixture
 def retry_strategy() -> RetryStrategy:
     """Create retry strategy with exponential backoff."""
-    return RetryStrategy(
-        max_retries=3,
-        backoff_strategy=ExponentialBackoff(initial_delay=0.01, multiplier=2)
-    )
+    return RetryStrategy(max_retries=3, backoff_strategy=ExponentialBackoff(initial_delay=0.01, multiplier=2))
 
 
 @pytest.fixture
@@ -104,7 +100,7 @@ class TestTool1RetryMechanism:
                 "duty": "unknown",
                 "interests": [],
                 "previous_score": 50,
-            }
+            },
         )
 
         assert call_count == 4  # 3 failures + 1 success
@@ -112,6 +108,7 @@ class TestTool1RetryMechanism:
 
     def test_tool1_all_retries_exhausted_uses_fallback(self, error_handler, mock_tool1_db_error):
         """AC1: Tool 1 DB error → 3x retry exhausted → return default profile."""
+
         def failing_tool1():
             raise mock_tool1_db_error
 
@@ -126,10 +123,7 @@ class TestTool1RetryMechanism:
         }
 
         result = error_handler.execute_with_retry(
-            func=failing_tool1,
-            max_retries=3,
-            strategy=ErrorStrategy.RETRY_THEN_DEFAULT,
-            fallback_value=default_profile
+            func=failing_tool1, max_retries=3, strategy=ErrorStrategy.RETRY_THEN_DEFAULT, fallback_value=default_profile
         )
 
         assert result == default_profile
@@ -147,10 +141,7 @@ class TestTool1RetryMechanism:
             return {"status": "success"}
 
         result = error_handler.execute_with_retry(
-            func=failing_tool,
-            max_retries=3,
-            strategy=ErrorStrategy.RETRY_THEN_DEFAULT,
-            fallback_value={}
+            func=failing_tool, max_retries=3, strategy=ErrorStrategy.RETRY_THEN_DEFAULT, fallback_value={}
         )
 
         assert retry_count == 3  # 2 failures + 1 success
@@ -173,12 +164,12 @@ class TestTool2GracefulSkip:
         When: Error handler checks result
         Then: Continue pipeline with empty set
         """
+
         def tool2_no_results():
             return []  # No templates found
 
         result = error_handler.handle_tool2_no_results(
-            func=tool2_no_results,
-            skip_strategy=ErrorStrategy.SKIP_GRACEFULLY
+            func=tool2_no_results, skip_strategy=ErrorStrategy.SKIP_GRACEFULLY
         )
 
         assert result == []
@@ -189,10 +180,7 @@ class TestTool2GracefulSkip:
         empty_templates = []
 
         # Simulate Tool 2 returning nothing
-        can_continue = error_handler.can_continue_with_empty_results(
-            result=empty_templates,
-            tool_id="tool_2"
-        )
+        can_continue = error_handler.can_continue_with_empty_results(result=empty_templates, tool_id="tool_2")
 
         assert can_continue is True
 
@@ -224,6 +212,7 @@ class TestTool3CachedFallback:
         When: Error handler catches timeout
         Then: Return cached or default keywords
         """
+
         def failing_tool3():
             raise mock_tool3_timeout
 
@@ -240,7 +229,7 @@ class TestTool3CachedFallback:
                 "keywords": ["default"],
                 "concepts": ["general"],
                 "example_questions": [],
-            }
+            },
         )
 
         # Should return from cache first
@@ -249,6 +238,7 @@ class TestTool3CachedFallback:
 
     def test_tool3_no_cache_use_default(self, error_handler, mock_tool3_timeout):
         """AC3: Tool 3 failure with no cache → use default keywords."""
+
         def failing_tool3():
             raise mock_tool3_timeout
 
@@ -259,9 +249,7 @@ class TestTool3CachedFallback:
         }
 
         result = error_handler.execute_with_cache_fallback(
-            func=failing_tool3,
-            cache=None,
-            default_value=default_keywords
+            func=failing_tool3, cache=None, default_value=default_keywords
         )
 
         assert result == default_keywords
@@ -294,9 +282,7 @@ class TestTool4RegenerateOnLowScore:
             return {"validation_score": 0.85, "recommendation": "pass"}
 
         result = error_handler.execute_tool4_with_regenerate(
-            validate_func=tool4_validate,
-            max_regenerate_attempts=2,
-            score_threshold=0.70
+            validate_func=tool4_validate, max_regenerate_attempts=2, score_threshold=0.70
         )
 
         # After 2 attempts, score improves
@@ -305,13 +291,12 @@ class TestTool4RegenerateOnLowScore:
 
     def test_tool4_score_always_low_discard_question(self, error_handler):
         """AC4: Tool 4 low score after 2 retries → discard question."""
+
         def tool4_always_low():
             return {"validation_score": 0.50, "recommendation": "reject"}
 
         result = error_handler.execute_tool4_with_regenerate(
-            validate_func=tool4_always_low,
-            max_regenerate_attempts=2,
-            score_threshold=0.70
+            validate_func=tool4_always_low, max_regenerate_attempts=2, score_threshold=0.70
         )
 
         # Score never improves, question discarded
@@ -335,6 +320,7 @@ class TestTool5QueueForRetry:
         When: Error handler catches failure
         Then: Add item to memory queue for batch retry
         """
+
         def failing_save():
             raise IOError("Database write failed")
 
@@ -344,10 +330,7 @@ class TestTool5QueueForRetry:
             "type": "multiple_choice",
         }
 
-        queue_item = error_handler.queue_failed_save(
-            question=question,
-            error=IOError("Database write failed")
-        )
+        queue_item = error_handler.queue_failed_save(question=question, error=IOError("Database write failed"))
 
         assert queue_item["question_id"] == question["question_id"]
         assert queue_item["status"] == "queued"
@@ -363,10 +346,7 @@ class TestTool5QueueForRetry:
 
     def test_tool5_batch_retry_queue(self, error_handler):
         """AC5: Queued items can be batch retried."""
-        questions = [
-            {"question_id": f"q_{i}", "stem": f"Q{i}?", "type": "mc"}
-            for i in range(3)
-        ]
+        questions = [{"question_id": f"q_{i}", "stem": f"Q{i}?", "type": "mc"} for i in range(3)]
 
         for q in questions:
             error_handler.queue_failed_save(q, IOError("Save failed"))
@@ -405,13 +385,12 @@ class TestTool6LLMTimeoutFallback:
         When: Error handler catches TimeoutError
         Then: Return fallback score and explanation
         """
+
         def tool6_with_timeout():
             raise TimeoutError("LLM API timeout after 15 seconds")
 
         result = error_handler.handle_tool6_timeout(
-            timeout_error=TimeoutError("LLM API timeout"),
-            question_type="short_answer",
-            user_answer="Test answer"
+            timeout_error=TimeoutError("LLM API timeout"), question_type="short_answer", user_answer="Test answer"
         )
 
         assert "score" in result
@@ -425,7 +404,7 @@ class TestTool6LLMTimeoutFallback:
             timeout_error=TimeoutError("LLM API timeout"),
             question_type="multiple_choice",
             user_answer="B",
-            correct_answer="B"
+            correct_answer="B",
         )
 
         # For MC, should be able to use exact match
@@ -507,14 +486,12 @@ class TestErrorContextAndLogging:
         When: Error handler captures context
         Then: ErrorContext has all metadata
         """
+
         def failing_tool():
             raise ValueError("Validation failed")
 
         error_context = error_handler.capture_error_context(
-            tool_id="tool_1",
-            error=ValueError("Validation failed"),
-            attempt_number=2,
-            strategy="RETRY_THEN_DEFAULT"
+            tool_id="tool_1", error=ValueError("Validation failed"), attempt_number=2, strategy="RETRY_THEN_DEFAULT"
         )
 
         assert error_context.tool_id == "tool_1"
@@ -526,10 +503,7 @@ class TestErrorContextAndLogging:
     def test_error_context_includes_timestamp(self, error_handler):
         """AC8: Error context includes ISO 8601 timestamp."""
         error_context = error_handler.capture_error_context(
-            tool_id="tool_2",
-            error=Exception("Test"),
-            attempt_number=1,
-            strategy="SKIP"
+            tool_id="tool_2", error=Exception("Test"), attempt_number=1, strategy="SKIP"
         )
 
         assert error_context.timestamp is not None
@@ -540,6 +514,7 @@ class TestErrorContextAndLogging:
     def test_structured_error_logging(self, error_handler, caplog):
         """AC8: Errors logged in structured format."""
         import logging
+
         caplog.set_level(logging.ERROR)
 
         def failing_tool():
@@ -547,10 +522,7 @@ class TestErrorContextAndLogging:
 
         try:
             error_handler.log_error(
-                tool_id="tool_3",
-                error=RuntimeError("Tool failed"),
-                attempt_number=1,
-                strategy="CACHE_FALLBACK"
+                tool_id="tool_3", error=RuntimeError("Tool failed"), attempt_number=1, strategy="CACHE_FALLBACK"
             )
         except Exception:
             pass
@@ -589,10 +561,7 @@ class TestCircuitBreakerPattern:
         def tool_func():
             return "success"
 
-        result = error_handler.execute_with_circuit_breaker(
-            tool_id="tool_2",
-            func=tool_func
-        )
+        result = error_handler.execute_with_circuit_breaker(tool_id="tool_2", func=tool_func)
 
         assert result is None or result.get("status") == "circuit_breaker_open"
 
@@ -613,10 +582,7 @@ class TestAcceptanceCriteria:
             raise ConnectionError("DB failed")
 
         result = error_handler.execute_with_retry(
-            func=failing_tool,
-            max_retries=3,
-            strategy=ErrorStrategy.RETRY_THEN_DEFAULT,
-            fallback_value=default_profile
+            func=failing_tool, max_retries=3, strategy=ErrorStrategy.RETRY_THEN_DEFAULT, fallback_value=default_profile
         )
 
         assert result == default_profile
@@ -630,21 +596,18 @@ class TestAcceptanceCriteria:
         """AC3: Tool 3 failure → use cached/default keywords."""
         cached = {"keywords": ["cached"]}
         result = error_handler.execute_with_cache_fallback(
-            func=lambda: (_ for _ in ()).throw(TimeoutError()),
-            cache=cached,
-            default_value={"keywords": ["default"]}
+            func=lambda: (_ for _ in ()).throw(TimeoutError()), cache=cached, default_value={"keywords": ["default"]}
         )
         assert "keywords" in result
 
     def test_ac4_tool4_regenerate_on_low_score(self, error_handler):
         """AC4: Tool 4 low score → retry 2x → discard if still low."""
+
         def always_low():
             return {"validation_score": 0.50, "should_discard": True}
 
         result = error_handler.execute_tool4_with_regenerate(
-            validate_func=always_low,
-            max_regenerate_attempts=2,
-            score_threshold=0.70
+            validate_func=always_low, max_regenerate_attempts=2, score_threshold=0.70
         )
         assert result["should_discard"] is True
 
@@ -657,9 +620,7 @@ class TestAcceptanceCriteria:
     def test_ac6_tool6_llm_timeout_fallback(self, error_handler):
         """AC6: Tool 6 LLM timeout → fallback explanation."""
         result = error_handler.handle_tool6_timeout(
-            timeout_error=TimeoutError("Timeout"),
-            question_type="short_answer",
-            user_answer="Answer"
+            timeout_error=TimeoutError("Timeout"), question_type="short_answer", user_answer="Answer"
         )
         assert "score" in result
         assert "explanation" in result
@@ -673,10 +634,7 @@ class TestAcceptanceCriteria:
     def test_ac8_error_logging(self, error_handler):
         """AC8: All errors logged with structured context."""
         context = error_handler.capture_error_context(
-            tool_id="tool_1",
-            error=Exception("Test"),
-            attempt_number=1,
-            strategy="RETRY"
+            tool_id="tool_1", error=Exception("Test"), attempt_number=1, strategy="RETRY"
         )
         assert context.tool_id == "tool_1"
         assert context.timestamp is not None

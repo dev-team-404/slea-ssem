@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -226,9 +225,7 @@ class TestInputValidation:
 class TestAnswerSchemaValidation:
     """Tests for answer schema construction."""
 
-    def test_answer_schema_multiple_choice(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_answer_schema_multiple_choice(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test answer schema for multiple choice.
 
         REQ: REQ-A-Mode1-Tool5, AC2
@@ -253,9 +250,7 @@ class TestAnswerSchemaValidation:
         assert schema["validation_score"] == valid_multiple_choice_question["validation_score"]
         assert "explanation" in schema
 
-    def test_answer_schema_short_answer(
-        self, valid_short_answer_question: dict[str, Any]
-    ) -> None:
+    def test_answer_schema_short_answer(self, valid_short_answer_question: dict[str, Any]) -> None:
         """Test answer schema for short answer.
 
         REQ: REQ-A-Mode1-Tool5, AC2
@@ -307,14 +302,10 @@ class TestSaveQuestionHappyPath:
             mock_db.refresh = MagicMock()
 
             # Mock the Question model
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_001"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -336,9 +327,7 @@ class TestSaveQuestionHappyPath:
         assert "saved_at" in result
         assert result["round_id"] == valid_multiple_choice_question["round_id"]
 
-    def test_save_true_false_question(
-        self, valid_true_false_question: dict[str, Any], mock_db: MagicMock
-    ) -> None:
+    def test_save_true_false_question(self, valid_true_false_question: dict[str, Any], mock_db: MagicMock) -> None:
         """Test saving a true/false question.
 
         REQ: REQ-A-Mode1-Tool5, AC1
@@ -354,14 +343,10 @@ class TestSaveQuestionHappyPath:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_002"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -379,9 +364,7 @@ class TestSaveQuestionHappyPath:
 
         assert result["success"] is True
 
-    def test_save_short_answer_question(
-        self, valid_short_answer_question: dict[str, Any], mock_db: MagicMock
-    ) -> None:
+    def test_save_short_answer_question(self, valid_short_answer_question: dict[str, Any], mock_db: MagicMock) -> None:
         """Test saving a short answer question.
 
         REQ: REQ-A-Mode1-Tool5, AC1
@@ -397,14 +380,10 @@ class TestSaveQuestionHappyPath:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_003"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -449,14 +428,10 @@ class TestResponseStructure:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_001"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -503,14 +478,10 @@ class TestResponseStructure:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_001"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -555,14 +526,10 @@ class TestErrorHandling:
             mock_db.commit = MagicMock(side_effect=Exception("Database connection error"))
             mock_db.rollback = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_001"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 result = _save_generated_question_impl(
@@ -591,9 +558,7 @@ class TestErrorHandling:
 class TestMetadataStorage:
     """Tests for metadata storage in answer_schema."""
 
-    def test_validation_score_stored(
-        self, valid_multiple_choice_question: dict[str, Any], mock_db: MagicMock
-    ) -> None:
+    def test_validation_score_stored(self, valid_multiple_choice_question: dict[str, Any], mock_db: MagicMock) -> None:
         """Test that validation_score is stored in answer_schema.
 
         REQ: REQ-A-Mode1-Tool5, AC2
@@ -609,14 +574,10 @@ class TestMetadataStorage:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_001"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 _save_generated_question_impl(
@@ -638,9 +599,7 @@ class TestMetadataStorage:
                 assert "validation_score" in answer_schema
                 assert answer_schema["validation_score"] == valid_multiple_choice_question["validation_score"]
 
-    def test_explanation_stored(
-        self, valid_short_answer_question: dict[str, Any], mock_db: MagicMock
-    ) -> None:
+    def test_explanation_stored(self, valid_short_answer_question: dict[str, Any], mock_db: MagicMock) -> None:
         """Test that explanation is stored in answer_schema.
 
         REQ: REQ-A-Mode1-Tool5, AC2
@@ -656,14 +615,10 @@ class TestMetadataStorage:
             mock_db.commit = MagicMock()
             mock_db.refresh = MagicMock()
 
-            with patch(
-                "src.agent.tools.save_question_tool.Question"
-            ) as mock_question_class:
+            with patch("src.agent.tools.save_question_tool.Question") as mock_question_class:
                 mock_instance = MagicMock()
                 mock_instance.id = "q_test_003"
-                mock_instance.created_at = datetime.fromisoformat(
-                    "2025-11-09T10:30:00+00:00"
-                )
+                mock_instance.created_at = datetime.fromisoformat("2025-11-09T10:30:00+00:00")
                 mock_question_class.return_value = mock_instance
 
                 _save_generated_question_impl(

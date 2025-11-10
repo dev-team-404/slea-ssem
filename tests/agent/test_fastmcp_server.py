@@ -13,7 +13,6 @@ import pytest
 from src.agent.error_handler import ErrorHandler
 from src.agent.fastmcp_server import TOOLS
 
-
 # ============================================================================
 # TEST CLASS 1: TOOL REGISTRATION (AC7, AC8)
 # ============================================================================
@@ -100,11 +99,13 @@ class TestTool2SearchTemplates:
     def test_tool2_returns_list(self):
         """AC2: Tool 2 returns a list of templates."""
         tool2 = TOOLS[1]
-        result = tool2.invoke({
-            "interests": ["AI"],
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool2.invoke(
+            {
+                "interests": ["AI"],
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         assert isinstance(result, list)
 
 
@@ -124,10 +125,12 @@ class TestTool3DifficultyKeywords:
     def test_tool3_returns_dict_with_keywords(self):
         """AC3: Tool 3 returns keywords structure."""
         tool3 = TOOLS[2]
-        result = tool3.invoke({
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool3.invoke(
+            {
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         assert isinstance(result, dict)
         assert "keywords" in result
         assert "concepts" in result
@@ -149,10 +152,12 @@ class TestTool4ValidateQuality:
     def test_tool4_returns_validation_score(self):
         """AC4: Tool 4 returns score threshold (0.70)."""
         tool4 = TOOLS[3]
-        result = tool4.invoke({
-            "stem": "What is AI?",
-            "question_type": "multiple_choice",
-        })
+        result = tool4.invoke(
+            {
+                "stem": "What is AI?",
+                "question_type": "multiple_choice",
+            }
+        )
         assert isinstance(result, dict)
         assert "final_score" in result
         # Tool should respect 0.70 threshold
@@ -175,13 +180,15 @@ class TestTool5SaveQuestion:
     def test_tool5_returns_save_result(self):
         """AC5: Tool 5 returns save result."""
         tool5 = TOOLS[4]
-        result = tool5.invoke({
-            "item_type": "multiple_choice",
-            "stem": "Question?",
-            "difficulty": 5,
-            "categories": ["technical"],
-            "round_id": "sess_001_1",
-        })
+        result = tool5.invoke(
+            {
+                "item_type": "multiple_choice",
+                "stem": "Question?",
+                "difficulty": 5,
+                "categories": ["technical"],
+                "round_id": "sess_001_1",
+            }
+        )
         assert isinstance(result, dict)
         assert "success" in result or "question_id" in result
 
@@ -202,16 +209,18 @@ class TestTool6ScoreAndExplain:
     def test_tool6_returns_scoring_result(self):
         """AC6: Tool 6 returns scoring with required fields."""
         tool6 = TOOLS[5]
-        result = tool6.invoke({
-            "session_id": "sess_001",
-            "user_id": "user_123",
-            "question_id": "q_001",
-            "question_type": "multiple_choice",
-            "user_answer": "B",
-            "correct_answer": "B",
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool6.invoke(
+            {
+                "session_id": "sess_001",
+                "user_id": "user_123",
+                "question_id": "q_001",
+                "question_type": "multiple_choice",
+                "user_answer": "B",
+                "correct_answer": "B",
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         required_fields = ["is_correct", "score", "explanation", "graded_at"]
         for field in required_fields:
             assert field in result
@@ -261,60 +270,70 @@ class TestAcceptanceCriteria:
         """AC2: Tool 2 FastMCP wrapper with empty result handling."""
         tool2 = TOOLS[1]
         assert tool2.name == "search_question_templates"
-        result = tool2.invoke({
-            "interests": ["AI"],
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool2.invoke(
+            {
+                "interests": ["AI"],
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         assert isinstance(result, list)
 
     def test_ac3_tool3_fastmcp_wrapper(self):
         """AC3: Tool 3 FastMCP wrapper with cached/default fallback."""
         tool3 = TOOLS[2]
         assert tool3.name == "get_difficulty_keywords"
-        result = tool3.invoke({
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool3.invoke(
+            {
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         assert isinstance(result, dict)
 
     def test_ac4_tool4_fastmcp_wrapper(self):
         """AC4: Tool 4 FastMCP wrapper with score threshold 0.70."""
         tool4 = TOOLS[3]
         assert tool4.name == "validate_question_quality"
-        result = tool4.invoke({
-            "stem": "Question?",
-            "question_type": "multiple_choice",
-        })
+        result = tool4.invoke(
+            {
+                "stem": "Question?",
+                "question_type": "multiple_choice",
+            }
+        )
         assert "score" in result
 
     def test_ac5_tool5_fastmcp_wrapper(self):
         """AC5: Tool 5 FastMCP wrapper with queue on failure."""
         tool5 = TOOLS[4]
         assert tool5.name == "save_generated_question"
-        result = tool5.invoke({
-            "item_type": "multiple_choice",
-            "stem": "Question?",
-            "difficulty": 5,
-            "categories": ["technical"],
-            "round_id": "sess_001_1",
-        })
+        result = tool5.invoke(
+            {
+                "item_type": "multiple_choice",
+                "stem": "Question?",
+                "difficulty": 5,
+                "categories": ["technical"],
+                "round_id": "sess_001_1",
+            }
+        )
         assert isinstance(result, dict)
 
     def test_ac6_tool6_fastmcp_wrapper(self):
         """AC6: Tool 6 FastMCP wrapper with LLM timeout fallback."""
         tool6 = TOOLS[5]
         assert tool6.name == "score_and_explain"
-        result = tool6.invoke({
-            "session_id": "sess_001",
-            "user_id": "user_123",
-            "question_id": "q_001",
-            "question_type": "multiple_choice",
-            "user_answer": "B",
-            "correct_answer": "B",
-            "difficulty": 5,
-            "category": "technical",
-        })
+        result = tool6.invoke(
+            {
+                "session_id": "sess_001",
+                "user_id": "user_123",
+                "question_id": "q_001",
+                "question_type": "multiple_choice",
+                "user_answer": "B",
+                "correct_answer": "B",
+                "difficulty": 5,
+                "category": "technical",
+            }
+        )
         assert "is_correct" in result
 
     def test_ac7_tools_registered(self):

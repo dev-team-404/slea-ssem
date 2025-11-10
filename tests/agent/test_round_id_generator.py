@@ -17,7 +17,6 @@ import pytest
 
 from src.agent.round_id_generator import RoundID, RoundIDGenerator
 
-
 # ============================================================================
 # TEST DATA & FIXTURES
 # ============================================================================
@@ -57,10 +56,7 @@ class TestRoundIDFormatCompliance:
         When: Format checked
         Then: Matches pattern session_id_1_timestamp
         """
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Pattern: {session_id}_{round_number}_{iso_timestamp}
         pattern = r"^sess_[a-f0-9]{8}_[1-2]_\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
@@ -68,25 +64,16 @@ class TestRoundIDFormatCompliance:
 
     def test_round_id_contains_session_id(self, round_id_generator, valid_session_id):
         """AC1: Round ID contains session_id as first component."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         assert round_id.startswith(valid_session_id)
 
     def test_round_id_contains_round_number(self, round_id_generator, valid_session_id):
         """AC1: Round ID contains round_number (1 or 2)."""
-        round_id_1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id_1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
         assert "_1_" in round_id_1
 
-        round_id_2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        round_id_2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
         assert "_2_" in round_id_2
 
     def test_round_id_iso_8601_timestamp(self, round_id_generator, valid_session_id):
@@ -97,10 +84,7 @@ class TestRoundIDFormatCompliance:
         When: Timestamp extracted
         Then: Valid ISO 8601 UTC format
         """
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Parse using generator method instead
         parsed = round_id_generator.parse(round_id)
@@ -109,10 +93,7 @@ class TestRoundIDFormatCompliance:
 
     def test_timestamp_format_with_timezone(self, round_id_generator, valid_session_id):
         """AC2: Timestamp includes timezone (+00:00 or Z)."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Timestamp should end with timezone indicator
         assert "+00:00" in round_id or "Z" in round_id or "-00:00" in round_id
@@ -135,10 +116,7 @@ class TestRoundIDPerformance:
         Then: Complete in < 1ms
         """
         start_time = time.time()
-        round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id_generator.generate(session_id=valid_session_id, round_number=1)
         elapsed_ms = (time.time() - start_time) * 1000
 
         assert elapsed_ms < 1.0, f"Generation took {elapsed_ms}ms (threshold: 1ms)"
@@ -148,10 +126,7 @@ class TestRoundIDPerformance:
         start_time = time.time()
 
         for i in range(1000):
-            round_id_generator.generate(
-                session_id=f"{valid_session_id}_{i}",
-                round_number=1
-            )
+            round_id_generator.generate(session_id=f"{valid_session_id}_{i}", round_number=1)
 
         elapsed_ms = (time.time() - start_time) * 1000
         assert elapsed_ms < 1000, f"Batch took {elapsed_ms}ms (threshold: 1000ms)"
@@ -177,28 +152,19 @@ class TestRoundIDUniqueness:
 
         for i in range(100):
             session_id = f"sess_{i:08d}"
-            round_id = round_id_generator.generate(
-                session_id=session_id,
-                round_number=1
-            )
+            round_id = round_id_generator.generate(session_id=session_id, round_number=1)
             round_ids.add(round_id)
 
         assert len(round_ids) == 100, "Duplicate Round IDs detected"
 
     def test_round_ids_different_same_session(self, round_id_generator, valid_session_id):
         """AC4: Same session, different rounds have different Round IDs."""
-        round_id_1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id_1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Small delay to ensure different timestamp
         time.sleep(0.001)
 
-        round_id_2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        round_id_2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
 
         assert round_id_1 != round_id_2
 
@@ -208,10 +174,7 @@ class TestRoundIDUniqueness:
         round_ids = set()
 
         for _ in range(10):
-            round_id = round_id_generator.generate(
-                session_id=session_id,
-                round_number=1
-            )
+            round_id = round_id_generator.generate(session_id=session_id, round_number=1)
             round_ids.add(round_id)
 
         assert len(round_ids) <= 10, "Collisions detected in rapid generation"
@@ -233,14 +196,8 @@ class TestRoundNumberDistinction:
         When: Compare Round IDs
         Then: Different IDs, with different round numbers
         """
-        round_id_1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
-        round_id_2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        round_id_1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
+        round_id_2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
 
         # Parse round numbers
         parsed_1 = round_id_generator.parse(round_id_1)
@@ -253,16 +210,10 @@ class TestRoundNumberDistinction:
     def test_round_number_validation(self, round_id_generator, valid_session_id):
         """Round numbers must be 1 or 2."""
         # Valid round numbers
-        round_id_1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id_1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
         assert "_1_" in round_id_1
 
-        round_id_2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        round_id_2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
         assert "_2_" in round_id_2
 
 
@@ -282,10 +233,7 @@ class TestRoundIDParsing:
         When: Parse it
         Then: Extract session_id, round_number, timestamp
         """
-        original_round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        original_round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         parsed = round_id_generator.parse(original_round_id)
 
@@ -295,10 +243,7 @@ class TestRoundIDParsing:
 
     def test_parsed_timestamp_is_datetime(self, round_id_generator, valid_session_id):
         """AC6: Parsed timestamp is valid datetime object."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         parsed = round_id_generator.parse(round_id)
 
@@ -307,10 +252,7 @@ class TestRoundIDParsing:
 
     def test_parse_round_id_roundtrip(self, round_id_generator, valid_session_id):
         """AC6: Parse then regenerate produces same Round ID."""
-        original_round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        original_round_id = round_id_generator.generate(session_id=valid_session_id, round_number=2)
 
         parsed = round_id_generator.parse(original_round_id)
 
@@ -336,10 +278,7 @@ class TestRoundIDImmutability:
         When: Attempt to modify
         Then: Modification creates new string (immutable)
         """
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Strings are immutable in Python
         original_id = round_id
@@ -351,11 +290,7 @@ class TestRoundIDImmutability:
 
     def test_round_id_object_immutable(self, round_id_generator, valid_session_id):
         """AC7: RoundID object with frozen attributes."""
-        round_id_obj = RoundID(
-            session_id=valid_session_id,
-            round_number=1,
-            timestamp=datetime.now(UTC)
-        )
+        round_id_obj = RoundID(session_id=valid_session_id, round_number=1, timestamp=datetime.now(UTC))
 
         # Verify it's frozen/immutable
         assert hasattr(round_id_obj, "session_id")
@@ -379,10 +314,7 @@ class TestRoundIDPipelineIntegration:
         When: Round ID attached to questions
         Then: Can be retrieved and parsed
         """
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Simulate question with Round ID
         question = {
@@ -398,10 +330,7 @@ class TestRoundIDPipelineIntegration:
 
     def test_round_id_compatible_with_mode2_pipeline(self, round_id_generator, valid_session_id):
         """AC8: Round ID works with Mode 2 pipeline."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=2)
 
         # Simulate scoring result with Round ID
         score_result = {
@@ -420,17 +349,12 @@ class TestRoundIDPipelineIntegration:
         round_ids = []
 
         for i in range(3):
-            round_id = round_id_generator.generate(
-                session_id=f"{valid_session_id}_{i}",
-                round_number=1
-            )
+            round_id = round_id_generator.generate(session_id=f"{valid_session_id}_{i}", round_number=1)
             round_ids.append(round_id)
             time.sleep(0.001)
 
         # Parse and sort by timestamp
-        parsed_list = [
-            round_id_generator.parse(rid) for rid in round_ids
-        ]
+        parsed_list = [round_id_generator.parse(rid) for rid in round_ids]
 
         # Verify chronological order
         timestamps = [p.timestamp for p in parsed_list]
@@ -447,10 +371,7 @@ class TestAcceptanceCriteria:
 
     def test_ac1_format_structure(self, round_id_generator, valid_session_id):
         """AC1: Format is {session_id}_{round_number}_{iso_timestamp}."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Verify format by parsing
         parsed = round_id_generator.parse(round_id)
@@ -460,10 +381,7 @@ class TestAcceptanceCriteria:
 
     def test_ac2_iso_8601_utc(self, round_id_generator, valid_session_id):
         """AC2: Timestamp is ISO 8601 format with UTC timezone."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
 
         # Parse to verify timestamp is ISO 8601 with UTC
         parsed = round_id_generator.parse(round_id)
@@ -476,68 +394,41 @@ class TestAcceptanceCriteria:
     def test_ac3_performance(self, round_id_generator, valid_session_id):
         """AC3: Generation < 1ms."""
         start = time.time()
-        round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id_generator.generate(session_id=valid_session_id, round_number=1)
         elapsed_ms = (time.time() - start) * 1000
         assert elapsed_ms < 1.0
 
     def test_ac4_uniqueness(self, round_id_generator):
         """AC4: Round IDs are unique."""
-        ids = {
-            round_id_generator.generate(
-                session_id=f"sess_{i}",
-                round_number=1
-            )
-            for i in range(100)
-        }
+        ids = {round_id_generator.generate(session_id=f"sess_{i}", round_number=1) for i in range(100)}
         assert len(ids) == 100
 
     def test_ac5_round_distinction(self, round_id_generator, valid_session_id):
         """AC5: Round 1 and 2 distinguished."""
-        r1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
-        r2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        r1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
+        r2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
         assert "_1_" in r1
         assert "_2_" in r2
         assert r1 != r2
 
     def test_ac6_parseable(self, round_id_generator, valid_session_id):
         """AC6: Round ID can be parsed."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
         parsed = round_id_generator.parse(round_id)
         assert parsed.session_id == valid_session_id
         assert parsed.round_number == 1
 
     def test_ac7_immutable(self, round_id_generator, valid_session_id):
         """AC7: Round ID immutable."""
-        round_id = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
+        round_id = round_id_generator.generate(session_id=valid_session_id, round_number=1)
         original = round_id
         # String immutability
         assert round_id == original
 
     def test_ac8_pipeline_compatible(self, round_id_generator, valid_session_id):
         """AC8: Works with Mode 1 and Mode 2 pipelines."""
-        r1 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=1
-        )
-        r2 = round_id_generator.generate(
-            session_id=valid_session_id,
-            round_number=2
-        )
+        r1 = round_id_generator.generate(session_id=valid_session_id, round_number=1)
+        r2 = round_id_generator.generate(session_id=valid_session_id, round_number=2)
 
         # Both should be usable in pipeline
         assert r1 and r2

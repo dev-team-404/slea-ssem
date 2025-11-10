@@ -4,11 +4,12 @@ Pytest Configuration for Agent Tests
 Provides shared fixtures and configuration for ItemGenAgent testing.
 """
 
-import pytest
-from unittest.mock import AsyncMock
-import sys
 import os
+import sys
 from typing import Any
+from unittest.mock import AsyncMock
+
+import pytest
 
 # Add project root to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))

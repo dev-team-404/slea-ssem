@@ -13,9 +13,8 @@ import pytest
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from src.backend.models.user_profile import UserProfileSurvey
 from src.agent.tools.user_profile_tool import _get_user_profile_impl
-
+from src.backend.models.user_profile import UserProfileSurvey
 
 # ============================================================================
 # Fixtures
@@ -341,9 +340,7 @@ class TestGetUserProfileDatabaseErrors:
         mock_db.query.return_value = mock_query
         mock_query.filter.return_value = mock_query
         mock_query.order_by.return_value = mock_query
-        mock_query.first.side_effect = OperationalError(
-            "Connection timeout", None, None
-        )
+        mock_query.first.side_effect = OperationalError("Connection timeout", None, None)
 
         # Execute
         with patch("src.agent.tools.user_profile_tool.get_db", return_value=iter([mock_db])):

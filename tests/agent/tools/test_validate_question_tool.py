@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -233,9 +232,7 @@ class TestInputValidation:
 class TestRuleBasedValidation:
     """Tests for rule-based quality checks."""
 
-    def test_rule_validation_stem_length_valid(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_stem_length_valid(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test that valid stem length passes rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -256,9 +253,7 @@ class TestRuleBasedValidation:
         assert score > 0
         assert not any("length" in issue.lower() for issue in issues)
 
-    def test_rule_validation_stem_length_invalid(
-        self, invalid_long_stem_question: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_stem_length_invalid(self, invalid_long_stem_question: dict[str, Any]) -> None:
         """Test that long stem fails rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -279,9 +274,7 @@ class TestRuleBasedValidation:
         assert score < 1.0
         assert any("length" in issue.lower() for issue in issues)
 
-    def test_rule_validation_choices_count_valid(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_choices_count_valid(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test that valid choice count passes rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -302,9 +295,7 @@ class TestRuleBasedValidation:
         assert score > 0
         assert not any("choice" in issue.lower() for issue in issues)
 
-    def test_rule_validation_choices_count_too_few(
-        self, invalid_few_choices_question: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_choices_count_too_few(self, invalid_few_choices_question: dict[str, Any]) -> None:
         """Test that too few choices fails rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -325,9 +316,7 @@ class TestRuleBasedValidation:
         assert score < 1.0
         assert any("choice" in issue.lower() for issue in issues)
 
-    def test_rule_validation_choices_count_too_many(
-        self, invalid_many_choices_question: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_choices_count_too_many(self, invalid_many_choices_question: dict[str, Any]) -> None:
         """Test that too many choices fails rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -348,9 +337,7 @@ class TestRuleBasedValidation:
         assert score < 1.0
         assert any("choice" in issue.lower() for issue in issues)
 
-    def test_rule_validation_answer_not_in_choices(
-        self, invalid_answer_not_in_choices: dict[str, Any]
-    ) -> None:
+    def test_rule_validation_answer_not_in_choices(self, invalid_answer_not_in_choices: dict[str, Any]) -> None:
         """Test that answer not in choices fails rule check.
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -380,9 +367,7 @@ class TestRuleBasedValidation:
 class TestSingleValidationHappyPath:
     """Tests for successful single question validation."""
 
-    def test_validate_multiple_choice_high_quality(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_validate_multiple_choice_high_quality(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test validation of high-quality multiple choice question.
 
         REQ: REQ-A-Mode1-Tool4, AC1 & AC3
@@ -391,11 +376,11 @@ class TestSingleValidationHappyPath:
         When: validate_question_quality() is called
         Then: Returns dict with is_valid=True and recommendation="pass"
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.92  # High LLM score
 
             result = _validate_question_quality_impl(
@@ -412,9 +397,7 @@ class TestSingleValidationHappyPath:
         assert result["feedback"] is not None
         assert isinstance(result["issues"], list)
 
-    def test_validate_true_false_high_quality(
-        self, valid_true_false_question: dict[str, Any]
-    ) -> None:
+    def test_validate_true_false_high_quality(self, valid_true_false_question: dict[str, Any]) -> None:
         """Test validation of high-quality true/false question.
 
         REQ: REQ-A-Mode1-Tool4, AC1 & AC3
@@ -423,11 +406,11 @@ class TestSingleValidationHappyPath:
         When: validate_question_quality() is called
         Then: Returns dict with is_valid=True and recommendation="pass"
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.88
 
             result = _validate_question_quality_impl(
@@ -440,9 +423,7 @@ class TestSingleValidationHappyPath:
         assert result["is_valid"] is True
         assert result["recommendation"] == "pass"
 
-    def test_validate_short_answer_high_quality(
-        self, valid_short_answer_question: dict[str, Any]
-    ) -> None:
+    def test_validate_short_answer_high_quality(self, valid_short_answer_question: dict[str, Any]) -> None:
         """Test validation of high-quality short answer question.
 
         REQ: REQ-A-Mode1-Tool4, AC1 & AC3
@@ -451,11 +432,11 @@ class TestSingleValidationHappyPath:
         When: validate_question_quality() is called
         Then: Returns dict with is_valid=True and recommendation="pass"
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.90
 
             result = _validate_question_quality_impl(
@@ -477,9 +458,7 @@ class TestSingleValidationHappyPath:
 class TestRecommendationLogic:
     """Tests for recommendation logic (pass/revise/reject)."""
 
-    def test_recommendation_pass_high_score(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_recommendation_pass_high_score(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test recommendation is 'pass' when final_score >= 0.85.
 
         REQ: REQ-A-Mode1-Tool4, AC3
@@ -488,11 +467,11 @@ class TestRecommendationLogic:
         When: validate_question_quality() is called
         Then: recommendation = "pass"
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.87
 
             result = _validate_question_quality_impl(
@@ -505,9 +484,7 @@ class TestRecommendationLogic:
         assert result["final_score"] >= 0.85
         assert result["recommendation"] == "pass"
 
-    def test_recommendation_revise_medium_score(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_recommendation_revise_medium_score(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test recommendation is 'revise' when 0.70 <= final_score < 0.85.
 
         REQ: REQ-A-Mode1-Tool4, AC3
@@ -516,11 +493,11 @@ class TestRecommendationLogic:
         When: validate_question_quality() is called
         Then: recommendation = "revise"
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.78
 
             result = _validate_question_quality_impl(
@@ -533,9 +510,7 @@ class TestRecommendationLogic:
         assert 0.70 <= result["final_score"] < 0.85
         assert result["recommendation"] == "revise"
 
-    def test_recommendation_reject_low_score(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_recommendation_reject_low_score(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test recommendation is 'reject' when final_score < 0.70.
 
         REQ: REQ-A-Mode1-Tool4, AC3
@@ -544,11 +519,11 @@ class TestRecommendationLogic:
         When: validate_question_quality() is called
         Then: recommendation = "reject", is_valid = False
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.65
 
             result = _validate_question_quality_impl(
@@ -571,9 +546,7 @@ class TestRecommendationLogic:
 class TestBatchValidation:
     """Tests for batch question validation."""
 
-    def test_batch_validation_returns_list(
-        self, batch_questions: list[dict[str, Any]]
-    ) -> None:
+    def test_batch_validation_returns_list(self, batch_questions: list[dict[str, Any]]) -> None:
         """Test that batch validation returns list of results.
 
         REQ: REQ-A-Mode1-Tool4, AC4
@@ -582,11 +555,11 @@ class TestBatchValidation:
         When: validate_question_quality() is called with batch=True
         Then: Returns list with 5 validation results
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.88
 
             results = _validate_question_quality_impl(
@@ -601,9 +574,7 @@ class TestBatchValidation:
         assert len(results) == 5
         assert all(isinstance(r, dict) for r in results)
 
-    def test_batch_validation_each_result_valid(
-        self, batch_questions: list[dict[str, Any]]
-    ) -> None:
+    def test_batch_validation_each_result_valid(self, batch_questions: list[dict[str, Any]]) -> None:
         """Test that each batch result has required fields.
 
         REQ: REQ-A-Mode1-Tool4, AC4
@@ -612,11 +583,11 @@ class TestBatchValidation:
         When: validate_question_quality() is called with batch=True
         Then: Each result contains is_valid, score, rule_score, final_score, recommendation
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.85
 
             results = _validate_question_quality_impl(
@@ -645,9 +616,7 @@ class TestBatchValidation:
 class TestEdgeCasesAndErrorHandling:
     """Tests for edge cases and error handling."""
 
-    def test_validate_question_with_special_characters(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_validate_question_with_special_characters(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test validation of question with special characters.
 
         REQ: REQ-A-Mode1-Tool4
@@ -656,13 +625,13 @@ class TestEdgeCasesAndErrorHandling:
         When: validate_question_quality() is called
         Then: Validates successfully without errors
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
         stem_with_special = 'What is "RAG"? (Retrieval-Augmented Generation) - 생성형 AI?'
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.88
 
             result = _validate_question_quality_impl(
@@ -675,9 +644,7 @@ class TestEdgeCasesAndErrorHandling:
         assert result is not None
         assert "is_valid" in result
 
-    def test_validate_question_llm_call_fails(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_validate_question_llm_call_fails(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test graceful handling when LLM call fails.
 
         REQ: REQ-A-Mode1-Tool4
@@ -686,7 +653,9 @@ class TestEdgeCasesAndErrorHandling:
         When: validate_question_quality() is called
         Then: Uses default score (0.5) and continues validation
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
         with patch("src.agent.tools.validate_question_tool.create_llm") as mock_create_llm:
             mock_llm_instance = MagicMock()
@@ -714,9 +683,7 @@ class TestEdgeCasesAndErrorHandling:
 class TestResponseStructure:
     """Tests for response structure and field presence."""
 
-    def test_single_validation_response_structure(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_single_validation_response_structure(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test that single validation response has all required fields.
 
         REQ: REQ-A-Mode1-Tool4, AC1
@@ -725,11 +692,11 @@ class TestResponseStructure:
         When: validate_question_quality() is called (single)
         Then: Response contains all required fields
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.88
 
             result = _validate_question_quality_impl(
@@ -761,9 +728,7 @@ class TestResponseStructure:
         assert isinstance(result["issues"], list)
         assert result["recommendation"] in ["pass", "revise", "reject"]
 
-    def test_score_values_in_valid_range(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_score_values_in_valid_range(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test that all scores are in 0-1 range.
 
         REQ: REQ-A-Mode1-Tool4
@@ -772,11 +737,11 @@ class TestResponseStructure:
         When: validate_question_quality() is called
         Then: All scores in [0.0, 1.0]
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.88
 
             result = _validate_question_quality_impl(
@@ -790,9 +755,7 @@ class TestResponseStructure:
         assert 0.0 <= result["rule_score"] <= 1.0
         assert 0.0 <= result["final_score"] <= 1.0
 
-    def test_final_score_is_minimum(
-        self, valid_multiple_choice_question: dict[str, Any]
-    ) -> None:
+    def test_final_score_is_minimum(self, valid_multiple_choice_question: dict[str, Any]) -> None:
         """Test that final_score = min(score, rule_score).
 
         REQ: REQ-A-Mode1-Tool4, AC2
@@ -801,11 +764,11 @@ class TestResponseStructure:
         When: validate_question_quality() is called
         Then: final_score = min(LLM_score, rule_score)
         """
-        from src.agent.tools.validate_question_tool import _validate_question_quality_impl
+        from src.agent.tools.validate_question_tool import (
+            _validate_question_quality_impl,
+        )
 
-        with patch(
-            "src.agent.tools.validate_question_tool._call_llm_validation"
-        ) as mock_llm:
+        with patch("src.agent.tools.validate_question_tool._call_llm_validation") as mock_llm:
             mock_llm.return_value = 0.75  # LLM score
 
             result = _validate_question_quality_impl(

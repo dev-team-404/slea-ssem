@@ -10,21 +10,21 @@ Reference: LangChain Agent Testing Guide
 https://python.langchain.com/docs/how_to/agent_structured_outputs
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-from datetime import datetime
 import json
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
 
 from src.agent.llm_agent import (
-    ItemGenAgent,
+    GeneratedQuestion,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
-    GeneratedQuestion,
+    ItemGenAgent,
     ScoreAnswerRequest,
     ScoreAnswerResponse,
     create_agent,
 )
-
 
 # ============================================================================
 # Fixtures: LLM & Agent Mocking
@@ -110,16 +110,18 @@ class TestGenerateQuestionsHappyPath:
                 {
                     "type": "tool",
                     "name": "save_generated_question",
-                    "content": json.dumps({
-                        "question_id": "q_001",
-                        "stem": "What is LLM?",
-                        "item_type": "short_answer",
-                        "difficulty": 5,
-                        "category": "AI",
-                        "validation_score": 0.90,
-                        "saved_at": "2025-11-09T10:00:00Z",
-                        "success": True
-                    })
+                    "content": json.dumps(
+                        {
+                            "question_id": "q_001",
+                            "stem": "What is LLM?",
+                            "item_type": "short_answer",
+                            "difficulty": 5,
+                            "category": "AI",
+                            "validation_score": 0.90,
+                            "saved_at": "2025-11-09T10:00:00Z",
+                            "success": True,
+                        }
+                    ),
                 },
                 {"role": "ai", "content": "Generated 1 question successfully"},
             ]
@@ -158,18 +160,20 @@ class TestGenerateQuestionsHappyPath:
 
         # Helper to create question JSON
         def create_question(qid: int) -> str:
-            return json.dumps({
-                "question_id": f"q_{qid:03d}",
-                "stem": f"Question {qid}",
-                "item_type": "multiple_choice",
-                "choices": ["A", "B", "C", "D"],
-                "correct_answer": "A",
-                "difficulty": 7,
-                "category": "AI",
-                "validation_score": 0.88 + qid * 0.01,
-                "saved_at": "2025-11-09T10:00:00Z",
-                "success": True
-            })
+            return json.dumps(
+                {
+                    "question_id": f"q_{qid:03d}",
+                    "stem": f"Question {qid}",
+                    "item_type": "multiple_choice",
+                    "choices": ["A", "B", "C", "D"],
+                    "correct_answer": "A",
+                    "difficulty": 7,
+                    "category": "AI",
+                    "validation_score": 0.88 + qid * 0.01,
+                    "saved_at": "2025-11-09T10:00:00Z",
+                    "success": True,
+                }
+            )
 
         # Mock LangGraph message format with multiple tool calls
         agent_instance.agent.ainvoke.return_value = {
@@ -346,9 +350,7 @@ class TestGenerateQuestionsErrorHandling:
             num_questions=3,
         )
 
-        agent_instance.agent.ainvoke.side_effect = RuntimeError(
-            "LLM API timeout"
-        )
+        agent_instance.agent.ainvoke.side_effect = RuntimeError("LLM API timeout")
 
         response = await agent_instance.generate_questions(request)
 
@@ -424,11 +426,7 @@ class TestScoreAndExplainHappyPath:
         )
 
         agent_instance.agent.ainvoke.return_value = {
-            "output": (
-                "Score: 100\n"
-                "Is Correct: True\n"
-                "Explanation: Option A is the correct answer because..."
-            ),
+            "output": ("Score: 100\n" "Is Correct: True\n" "Explanation: Option A is the correct answer because..."),
             "intermediate_steps": [("Tool 6", "graded")],
         }
 
@@ -462,11 +460,7 @@ class TestScoreAndExplainHappyPath:
         )
 
         agent_instance.agent.ainvoke.return_value = {
-            "output": (
-                "Score: 0\n"
-                "Is Correct: False\n"
-                "Explanation: The correct answer is B, not C."
-            ),
+            "output": ("Score: 0\n" "Is Correct: False\n" "Explanation: The correct answer is B, not C."),
             "intermediate_steps": [("Tool 6", "graded")],
         }
 
@@ -762,9 +756,7 @@ class TestItemGenAgentInitialization:
                         mock_llm = MagicMock()
                         mock_create_llm.return_value = mock_llm
                         mock_tools_list = [MagicMock() for _ in range(6)]
-                        mock_tools.__iter__ = MagicMock(
-                            return_value=iter(mock_tools_list)
-                        )
+                        mock_tools.__iter__ = MagicMock(return_value=iter(mock_tools_list))
                         mock_tools.__len__ = MagicMock(return_value=6)
                         mock_agent = MagicMock()
                         mock_create_agent.return_value = mock_agent
@@ -789,9 +781,7 @@ class TestItemGenAgentInitialization:
             - Raises ValueError with informative message
         """
         with patch("src.agent.llm_agent.create_llm") as mock_create_llm:
-            mock_create_llm.side_effect = ValueError(
-                "GEMINI_API_KEY 환경 변수가 설정되지 않았습니다."
-            )
+            mock_create_llm.side_effect = ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
 
             with pytest.raises(ValueError, match="GEMINI_API_KEY"):
                 ItemGenAgent()
@@ -872,31 +862,35 @@ class TestIntegrationWithMockedComponents:
                 {
                     "type": "tool",
                     "name": "save_generated_question",
-                    "content": json.dumps({
-                        "question_id": "q_int_001",
-                        "stem": "Integration test Q1",
-                        "item_type": "short_answer",
-                        "difficulty": 6,
-                        "category": "AI",
-                        "validation_score": 0.85,
-                        "saved_at": "2025-11-09T10:00:00Z",
-                        "success": True
-                    })
+                    "content": json.dumps(
+                        {
+                            "question_id": "q_int_001",
+                            "stem": "Integration test Q1",
+                            "item_type": "short_answer",
+                            "difficulty": 6,
+                            "category": "AI",
+                            "validation_score": 0.85,
+                            "saved_at": "2025-11-09T10:00:00Z",
+                            "success": True,
+                        }
+                    ),
                 },
                 {"type": "tool", "name": "validate_question_quality", "content": "{}"},
                 {
                     "type": "tool",
                     "name": "save_generated_question",
-                    "content": json.dumps({
-                        "question_id": "q_int_002",
-                        "stem": "Integration test Q2",
-                        "item_type": "short_answer",
-                        "difficulty": 6,
-                        "category": "AI",
-                        "validation_score": 0.87,
-                        "saved_at": "2025-11-09T10:05:00Z",
-                        "success": True
-                    })
+                    "content": json.dumps(
+                        {
+                            "question_id": "q_int_002",
+                            "stem": "Integration test Q2",
+                            "item_type": "short_answer",
+                            "difficulty": 6,
+                            "category": "AI",
+                            "validation_score": 0.87,
+                            "saved_at": "2025-11-09T10:05:00Z",
+                            "success": True,
+                        }
+                    ),
                 },
                 {"role": "ai", "content": "Generated 2 questions successfully"},
             ],
@@ -931,10 +925,7 @@ class TestIntegrationWithMockedComponents:
             user_id="integration_user",
             question_id="q_integration",
             question_type="short_answer",
-            user_answer=(
-                "Transformers use attention mechanisms to process "
-                "sequential data in parallel."
-            ),
+            user_answer=("Transformers use attention mechanisms to process " "sequential data in parallel."),
             correct_keywords=["transformers", "attention", "parallel"],
             difficulty=7,
             category="Deep Learning",
@@ -1070,16 +1061,12 @@ class TestParseAgentOutputGenerate:
                 {
                     "type": "tool",
                     "name": "save_generated_question",
-                    "content": json.dumps(
-                        {"question_id": "q1", "success": True}
-                    ),
+                    "content": json.dumps({"question_id": "q1", "success": True}),
                 },
                 {
                     "type": "tool",
                     "name": "save_generated_question",
-                    "content": json.dumps(
-                        {"error": "Validation failed", "success": False}
-                    ),
+                    "content": json.dumps({"error": "Validation failed", "success": False}),
                 },
                 {"role": "ai", "content": "Partial success"},
             ]

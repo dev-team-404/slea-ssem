@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-
 # ============================================================================
 # TEST DATA & FIXTURES
 # ============================================================================
@@ -276,9 +275,7 @@ class TestShortAnswerScoring:
     """Test short answer LLM-based semantic scoring."""
 
     @pytest.mark.asyncio
-    async def test_short_answer_high_score_with_keywords(
-        self, valid_short_answer_request, mock_llm
-    ):
+    async def test_short_answer_high_score_with_keywords(self, valid_short_answer_request, mock_llm):
         """AC2: Short answer with all keywords → is_correct=True, score=100."""
         # User answer contains all keywords
         mock_llm.invoke.return_value.content = """
@@ -297,9 +294,7 @@ class TestShortAnswerScoring:
         assert len(expected_keywords) == 3
 
     @pytest.mark.asyncio
-    async def test_short_answer_partial_credit(
-        self, valid_short_answer_request, mock_llm
-    ):
+    async def test_short_answer_partial_credit(self, valid_short_answer_request, mock_llm):
         """AC2: Short answer with partial keywords → 70-79 score, is_correct=False."""
         # User answer contains 1-2 keywords
         mock_llm.invoke.return_value.content = """
@@ -500,10 +495,7 @@ class TestExplanationGeneration:
         """
 
         # Expected: explanation contains affirmation + educational content
-        expected_explanation = (
-            "This is a correct answer. "
-            "You have demonstrated understanding of RAG systems."
-        )
+        expected_explanation = "This is a correct answer. " "You have demonstrated understanding of RAG systems."
 
         assert "correct" in expected_explanation.lower()
         assert "understanding" in expected_explanation.lower()
@@ -668,9 +660,7 @@ class TestAcceptanceCriteria:
         # OX
         assert valid_ox_request.user_answer == valid_ox_request.correct_answer
 
-    def test_ac2_short_answer_semantic_evaluation(
-        self, valid_short_answer_request
-    ):
+    def test_ac2_short_answer_semantic_evaluation(self, valid_short_answer_request):
         """AC2: Short answer uses semantic evaluation."""
         assert valid_short_answer_request.question_type == "short_answer"
         assert valid_short_answer_request.correct_keywords is not None

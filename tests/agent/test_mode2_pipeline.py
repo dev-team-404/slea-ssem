@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-
 # ============================================================================
 # TEST DATA & SCHEMAS
 # ============================================================================
@@ -291,9 +290,7 @@ class TestErrorHandling:
     """Test Mode 2 pipeline error handling."""
 
     @pytest.mark.asyncio
-    async def test_tool6_timeout_graceful_degradation(
-        self, valid_mc_request, tool6_timeout_error
-    ):
+    async def test_tool6_timeout_graceful_degradation(self, valid_mc_request, tool6_timeout_error):
         """AC3: LLM timeout returns fallback explanation."""
         with patch("src.agent.tools.score_and_explain_tool.score_and_explain") as mock_tool:
             mock_tool.side_effect = tool6_timeout_error
@@ -319,10 +316,7 @@ class TestErrorHandling:
         # MC can use exact match fallback, SA uses default score
         if valid_mc_request.question_type == "multiple_choice":
             # Can score MC without LLM
-            is_correct = (
-                valid_mc_request.user_answer.upper()
-                == valid_mc_request.correct_answer.upper()
-            )
+            is_correct = valid_mc_request.user_answer.upper() == valid_mc_request.correct_answer.upper()
             score = 100 if is_correct else 0
             assert score in [0, 100]
 
@@ -487,9 +481,7 @@ class TestPipelineOrchestration:
             assert result["question_type"] == "short_answer"
 
     @pytest.mark.asyncio
-    async def test_pipeline_request_to_response_mapping(
-        self, valid_mc_request, tool6_success_response
-    ):
+    async def test_pipeline_request_to_response_mapping(self, valid_mc_request, tool6_success_response):
         """AC2: Request fields map correctly to response."""
         response = ScoreAnswerResponse(**tool6_success_response)
 

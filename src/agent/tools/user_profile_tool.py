@@ -104,15 +104,17 @@ def _build_profile_response(user_id: str, profile: UserProfileSurvey | None) -> 
     return {
         "user_id": user_id,
         "self_level": profile.self_level or DEFAULT_PROFILE["self_level"],
-        "years_experience": profile.years_experience
-        if profile.years_experience is not None
-        else DEFAULT_PROFILE["years_experience"],
+        "years_experience": (
+            profile.years_experience if profile.years_experience is not None else DEFAULT_PROFILE["years_experience"]
+        ),
         "job_role": profile.job_role or DEFAULT_PROFILE["job_role"],
         "duty": profile.duty or DEFAULT_PROFILE["duty"],
         "interests": profile.interests or DEFAULT_PROFILE["interests"],
-        "previous_score": profile.previous_score
-        if hasattr(profile, "previous_score") and profile.previous_score is not None
-        else DEFAULT_PROFILE["previous_score"],
+        "previous_score": (
+            profile.previous_score
+            if hasattr(profile, "previous_score") and profile.previous_score is not None
+            else DEFAULT_PROFILE["previous_score"]
+        ),
     }
 
 

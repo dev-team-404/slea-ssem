@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from src.agent.tools.difficulty_keywords_tool import _get_difficulty_keywords_impl
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

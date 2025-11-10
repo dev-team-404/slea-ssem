@@ -21,7 +21,6 @@ import pytest
 
 from src.agent.pipeline.mode2_pipeline import Mode2Pipeline
 
-
 # ============================================================================
 # TEST DATA & FIXTURES
 # ============================================================================

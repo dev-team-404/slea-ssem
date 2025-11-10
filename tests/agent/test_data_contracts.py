@@ -10,9 +10,10 @@ Tests verify that all 6 tools conform to their defined data contracts:
 - Tool 6: Score & Generate Explanation
 """
 
-import pytest
 from datetime import datetime
 from typing import Any
+
+import pytest
 from pydantic import ValidationError
 
 # REQ: REQ-A-DataContract
@@ -36,7 +37,7 @@ class TestTool1UserProfileContract:
             job_role="Software Engineer",
             duty="Backend Development",
             interests=["LLM", "RAG"],
-            previous_score=75.0
+            previous_score=75.0,
         )
 
         assert valid_output.self_level == 5
@@ -58,7 +59,7 @@ class TestTool1UserProfileContract:
                 job_role="Engineer",
                 duty="Backend",
                 interests=["LLM"],
-                previous_score=75.0
+                previous_score=75.0,
                 # Missing: self_level
             )
 
@@ -96,11 +97,7 @@ class TestTool2TemplateSearchContract:
         """
         from src.agent.data_contracts import Tool2Input
 
-        valid_input = Tool2Input(
-            interests=["LLM", "RAG"],
-            difficulty=5,
-            category="technical"
-        )
+        valid_input = Tool2Input(interests=["LLM", "RAG"], difficulty=5, category="technical")
 
         assert valid_input.interests == ["LLM", "RAG"]
         assert valid_input.difficulty == 5
@@ -111,7 +108,7 @@ class TestTool2TemplateSearchContract:
 
         Expected: Output is list of QuestionTemplate objects
         """
-        from src.agent.data_contracts import Tool2Output, QuestionTemplate
+        from src.agent.data_contracts import QuestionTemplate, Tool2Output
 
         template = QuestionTemplate(
             id="template_1",
@@ -121,7 +118,7 @@ class TestTool2TemplateSearchContract:
             correct_answer="keyword1, keyword2",
             correct_rate=0.85,
             usage_count=10,
-            avg_difficulty_score=5.0
+            avg_difficulty_score=5.0,
         )
 
         output = Tool2Output(templates=[template])
@@ -151,10 +148,7 @@ class TestTool3DifficultyKeywordsContract:
         """
         from src.agent.data_contracts import Tool3Input
 
-        valid_input = Tool3Input(
-            difficulty=5,
-            category="technical"
-        )
+        valid_input = Tool3Input(difficulty=5, category="technical")
 
         assert valid_input.difficulty == 5
         assert valid_input.category == "technical"
@@ -170,7 +164,7 @@ class TestTool3DifficultyKeywordsContract:
         output = Tool3Output(
             keywords=["LLM", "prompt engineering"],
             concepts=["attention mechanism", "transformer"],
-            example_questions=["What is attention?", "Explain transformers"]
+            example_questions=["What is attention?", "Explain transformers"],
         )
 
         assert len(output.keywords) == 2
@@ -188,7 +182,7 @@ class TestTool3DifficultyKeywordsContract:
         with pytest.raises(ValidationError):
             Tool3Output(
                 concepts=["attention"],
-                example_questions=["What is attention?"]
+                example_questions=["What is attention?"],
                 # Missing: keywords
             )
 
@@ -205,10 +199,7 @@ class TestTool4ValidationContract:
         from src.agent.data_contracts import Tool4Input
 
         valid_input = Tool4Input(
-            stem="What is LLM?",
-            question_type="short_answer",
-            choices=None,
-            correct_answer="Large Language Model"
+            stem="What is LLM?", question_type="short_answer", choices=None, correct_answer="Large Language Model"
         )
 
         assert valid_input.stem == "What is LLM?"
@@ -226,7 +217,7 @@ class TestTool4ValidationContract:
             stem="Choose the correct answer",
             question_type="multiple_choice",
             choices=["A", "B", "C", "D"],
-            correct_answer="A"
+            correct_answer="A",
         )
 
         assert valid_input.choices == ["A", "B", "C", "D"]
@@ -247,7 +238,7 @@ class TestTool4ValidationContract:
             final_score=0.92,
             recommendation="pass",
             feedback="Question is clear and well-formed",
-            issues=[]
+            issues=[],
         )
 
         assert output.is_valid is True
@@ -269,7 +260,7 @@ class TestTool4ValidationContract:
             final_score=0.75,
             recommendation="revise",
             feedback="Consider adding more depth",
-            issues=["unclear_phrasing"]
+            issues=["unclear_phrasing"],
         )
 
         assert output.recommendation == "revise"
@@ -290,7 +281,7 @@ class TestTool4ValidationContract:
             final_score=0.65,
             recommendation="reject",
             feedback="Question quality too low",
-            issues=["too_ambiguous", "invalid_format"]
+            issues=["too_ambiguous", "invalid_format"],
         )
 
         assert output.recommendation == "reject"
@@ -317,7 +308,7 @@ class TestTool5SaveQuestionContract:
             categories=["technical"],
             round_id="sess_123_1_2025-11-09T10:30:00",
             validation_score=0.92,
-            explanation=None
+            explanation=None,
         )
 
         assert valid_input.item_type == "multiple_choice"
@@ -341,7 +332,7 @@ class TestTool5SaveQuestionContract:
             categories=["technical", "LLM"],
             round_id="sess_123_1_2025-11-09T10:30:00",
             validation_score=0.88,
-            explanation="LLM is a model trained on large text data"
+            explanation="LLM is a model trained on large text data",
         )
 
         assert valid_input.item_type == "short_answer"
@@ -359,7 +350,7 @@ class TestTool5SaveQuestionContract:
             question_id="q_uuid_123",
             round_id="sess_123_1_2025-11-09T10:30:00",
             saved_at=datetime.utcnow().isoformat(),
-            success=True
+            success=True,
         )
 
         assert output.question_id == "q_uuid_123"
@@ -382,7 +373,7 @@ class TestTool5SaveQuestionContract:
             difficulty=3,
             categories=["general"],
             round_id="sess_abc123_2_2025-11-09T10:30:00.000Z",
-            validation_score=0.90
+            validation_score=0.90,
         )
 
         assert "sess_" in valid_input.round_id
@@ -409,7 +400,7 @@ class TestTool6ScoringContract:
             correct_answer="language model",
             correct_keywords=["language", "model"],
             difficulty=5,
-            category="technical"
+            category="technical",
         )
 
         assert valid_input.session_id == "sess_123"
@@ -433,7 +424,7 @@ class TestTool6ScoringContract:
             explanation="Your answer is correct!",
             keyword_matches=["language", "model"],
             feedback="Good understanding of LLM",
-            graded_at=datetime.utcnow().isoformat()
+            graded_at=datetime.utcnow().isoformat(),
         )
 
         assert output.is_correct is True
@@ -457,7 +448,7 @@ class TestTool6ScoringContract:
             explanation="Partially correct - missing some details",
             keyword_matches=["language"],
             feedback="Include 'model' concept",
-            graded_at=datetime.utcnow().isoformat()
+            graded_at=datetime.utcnow().isoformat(),
         )
 
         assert output.is_correct is False
@@ -481,7 +472,7 @@ class TestTool6ScoringContract:
             explanation="Answer does not match expected concepts",
             keyword_matches=[],
             feedback="Review LLM fundamentals",
-            graded_at=datetime.utcnow().isoformat()
+            graded_at=datetime.utcnow().isoformat(),
         )
 
         assert output.is_correct is False
@@ -497,7 +488,7 @@ class TestPipelineOutputContract:
 
         Expected: PipelineOutput contains list of generated questions
         """
-        from src.agent.data_contracts import PipelineOutput, GeneratedQuestionOutput
+        from src.agent.data_contracts import GeneratedQuestionOutput, PipelineOutput
 
         question = GeneratedQuestionOutput(
             question_id="q_123",
@@ -509,15 +500,10 @@ class TestPipelineOutputContract:
             category="technical",
             round_id="sess_123_1_2025-11-09T10:30:00",
             validation_score=0.92,
-            saved_at="2025-11-09T10:30:00Z"
+            saved_at="2025-11-09T10:30:00Z",
         )
 
-        output = PipelineOutput(
-            questions=[question],
-            total_generated=1,
-            total_valid=1,
-            total_rejected=0
-        )
+        output = PipelineOutput(questions=[question], total_generated=1, total_valid=1, total_rejected=0)
 
         assert len(output.questions) == 1
         assert output.total_valid == 1
@@ -528,7 +514,7 @@ class TestPipelineOutputContract:
 
         Expected: PipelineOutput aggregates stats correctly
         """
-        from src.agent.data_contracts import PipelineOutput, GeneratedQuestionOutput
+        from src.agent.data_contracts import GeneratedQuestionOutput, PipelineOutput
 
         questions = [
             GeneratedQuestionOutput(
@@ -541,17 +527,12 @@ class TestPipelineOutputContract:
                 category="technical",
                 round_id="sess_123_1_2025-11-09T10:30:00",
                 validation_score=0.85 + (i * 0.05),
-                saved_at="2025-11-09T10:30:00Z"
+                saved_at="2025-11-09T10:30:00Z",
             )
             for i in range(3)
         ]
 
-        output = PipelineOutput(
-            questions=questions,
-            total_generated=5,
-            total_valid=3,
-            total_rejected=2
-        )
+        output = PipelineOutput(questions=questions, total_generated=5, total_valid=3, total_rejected=2)
 
         assert len(output.questions) == 3
         assert output.total_generated == 5
@@ -576,7 +557,7 @@ class TestDataContractIntegration:
             final_score=0.92,
             recommendation="pass",
             feedback="Good",
-            issues=[]
+            issues=[],
         )
 
         # Tool 5 input using Tool 4 output
@@ -590,7 +571,7 @@ class TestDataContractIntegration:
             categories=["technical"],
             round_id="sess_123_1_2025-11-09T10:30:00",
             validation_score=validation.final_score,
-            explanation=None
+            explanation=None,
         )
 
         assert save_input.validation_score == validation.final_score
@@ -601,14 +582,18 @@ class TestDataContractIntegration:
 
         Expected: Tool5Output fields present in pipeline output
         """
-        from src.agent.data_contracts import Tool5Output, PipelineOutput, GeneratedQuestionOutput
+        from src.agent.data_contracts import (
+            GeneratedQuestionOutput,
+            PipelineOutput,
+            Tool5Output,
+        )
 
         # Tool 5 output
         save_output = Tool5Output(
             question_id="q_123",
             round_id="sess_123_1_2025-11-09T10:30:00",
             saved_at="2025-11-09T10:30:00Z",
-            success=True
+            success=True,
         )
 
         # Map to pipeline output
@@ -622,7 +607,7 @@ class TestDataContractIntegration:
             category="technical",
             round_id=save_output.round_id,
             validation_score=0.92,
-            saved_at=save_output.saved_at
+            saved_at=save_output.saved_at,
         )
 
         assert question.question_id == save_output.question_id
