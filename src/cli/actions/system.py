@@ -66,8 +66,8 @@ def help(context: CLIContext, *args: str) -> None:
 
     # Display commands with usage and description
     for _cmd, usage, description in all_commands:
-        # Usage in dim style, description in normal style
-        table.add_row(f"[dim]{usage}[/dim]", description)
+        # Usage in normal style (white), description in dim style
+        table.add_row(usage, f"[dim]{description}[/dim]")
 
     context.console.print(table)
 
