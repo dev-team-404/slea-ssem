@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 version = "0.1.0"
 name = "slea-ssem"
 description = "An AI-driven learning platform designed to guide S.LSI employees from beginner to expert in AI."
-authors = [{ name = "deitey719", email = "deity719@github.com" }]
+authors = [{ name = "deitey719", email = "deity719@github.com" }, { name = "larvine", email = "jeane2003@naver.com" }]
 dependencies = [
     "fastapi>=0.121.0",
     "langchain>=1.0.5",
@@ -60,7 +60,6 @@ filterwarnings = [
     "ignore::DeprecationWarning:langgraph.*",
     "ignore:AgentStatePydantic has been moved:DeprecationWarning",
 ]
-
 
 [tool.black]
 line-length = 120
@@ -152,6 +151,7 @@ ignore = [
 ]
 
 [tool.ruff.format]
+
 
 [dependency-groups]
 dev = [
