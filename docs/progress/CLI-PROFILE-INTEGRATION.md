@@ -7,6 +7,7 @@
 ## 1. Requirements
 
 ### Objective
+
 Integrate CLI profile commands with JWT-authenticated backend APIs (REQ-B-A2) to enable user authentication and authorization for nickname and profile management operations.
 
 ### Requirements Mapping
@@ -24,9 +25,11 @@ Integrate CLI profile commands with JWT-authenticated backend APIs (REQ-B-A2) to
 ### Files Modified
 
 #### `src/cli/actions/profile.py`
+
 **Purpose**: CLI action handlers for profile-related commands
 
 **Changes**:
+
 1. **Added `view_nickname()` function** (lines 56-96)
    - Retrieves current user's nickname information
    - Requires JWT authentication
@@ -52,9 +55,11 @@ Integrate CLI profile commands with JWT-authenticated backend APIs (REQ-B-A2) to
    - Added "(인증 필요)" for JWT-required commands
 
 #### `src/cli/config/command_layout.py`
+
 **Purpose**: CLI command hierarchy and routing configuration
 
 **Changes**:
+
 - Added `view` command to `profile.nickname.sub_commands` (lines 64-68)
   - Description: "현재 닉네임 조회"
   - Usage: `profile nickname view`
@@ -95,6 +100,7 @@ def command_name(context: CLIContext, *args: str) -> None:
 ## 3. Test Results
 
 ### CLI Help Command Output
+
 ```
 ✓ profile                          - Shows all profile commands
 ✓ profile nickname view            - Listed in help output
@@ -105,6 +111,7 @@ def command_name(context: CLIContext, *args: str) -> None:
 ```
 
 ### Command Registration Verification
+
 - All profile commands registered in `command_layout.py`
 - New `view` command successfully registered
 - Help system displays all commands with correct descriptions
@@ -127,6 +134,7 @@ def command_name(context: CLIContext, *args: str) -> None:
    - Returns 401 if token missing/invalid
 
 ### Error Handling
+
 - Missing token: Shows authentication prompt
 - API errors: Displays error message and logs issue
 - Invalid status codes: Shows HTTP status error
@@ -135,16 +143,19 @@ def command_name(context: CLIContext, *args: str) -> None:
 ## 5. Code Quality
 
 ### Type Safety
+
 - All functions have proper type hints
 - Type hints: `context: CLIContext, *args: str -> None`
 - Response handling uses `.get()` for safe dict access
 
 ### Documentation
+
 - All functions have docstrings in Korean
 - Functions document their purpose and requirements
 - Comments explain JWT token setting
 
 ### Code Standards
+
 - Follows project naming conventions (snake_case)
 - Consistent error message formatting with Rich library
 - Proper logging for all operations
@@ -153,6 +164,7 @@ def command_name(context: CLIContext, *args: str) -> None:
 ## 6. Git Commit
 
 **Commit Message**:
+
 ```
 feat: Integrate CLI profile commands with JWT authentication
 
@@ -178,6 +190,7 @@ Tests:
 ```
 
 **Files Modified**:
+
 1. `src/cli/actions/profile.py` - 4 functions updated, 1 new function added
 2. `src/cli/config/command_layout.py` - view command registered
 
@@ -188,27 +201,33 @@ Tests:
 Successfully integrated CLI profile commands with JWT-authenticated backend APIs:
 
 ✅ **New Features Added**:
+
 - `profile nickname view` command to retrieve current nickname
 
 ✅ **Existing Features Enhanced**:
+
 - JWT token passing to all authenticated profile operations
 - Improved help messages with authentication status
 
 ✅ **Command Registration**:
+
 - All commands properly registered in CLI routing
 - Help system displays complete command hierarchy
 
 ✅ **Code Quality**:
+
 - Type hints on all functions
 - Proper error handling and logging
 - Follows project conventions
 
 ✅ **Testing**:
+
 - CLI help verified
 - Commands listed correctly
 - Authentication requirements clear
 
 **Next Steps**:
+
 - User can now login with `auth login [username]` to get JWT
 - User can then use profile commands that require authentication
 - CLI automatically includes Bearer token in API requests

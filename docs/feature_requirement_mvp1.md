@@ -377,6 +377,7 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 **API 엔드포인트**: `POST /profile/register` (인증 필수: Authorization 헤더의 JWT)
 
 **응답**:
+
 ```json
 {
   "success": true,
@@ -405,6 +406,7 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 **API 엔드포인트**: `GET /profile/nickname` (인증 필수: Authorization 헤더의 JWT)
 
 **응답**:
+
 ```json
 {
   "user_id": "bwyoon",
@@ -416,6 +418,7 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 ```
 
 **에러 응답**:
+
 ```json
 {
   "error": "Nickname not set",

@@ -85,6 +85,16 @@ case "$cmd" in
     fi
     ;;
 
+  clean)
+    echo "🧹 Cleaning Python cache..."
+    find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+    find . -type f -name "*.pyc" -delete 2>/dev/null || true
+    find . -type f -name "*.pyo" -delete 2>/dev/null || true
+    find . -type f -name "*.pyd" -delete 2>/dev/null || true
+    find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+    echo "✅ Python cache cleaned"
+    ;;
+
   *)
     cat <<'HELP'
 Usage: ./tools/dev.sh <command>
@@ -94,6 +104,7 @@ Commands:
   down         Stop dev server (free port)
   test         Run test suite (pytest)
   format       Format + lint code (tox -e ruff)
+  clean        Clean Python cache (__pycache__, *.pyc, etc)
   shell        Enter project shell
   cli          Start interactive CLI
 
@@ -110,6 +121,7 @@ Examples:
   PORT=8100 ./tools/dev.sh up       # Start on port 8100
   PORT=8100 ./tools/dev.sh down     # Stop port 8100
   ./tools/dev.sh cli                # Start CLI
+  ./tools/dev.sh clean              # Clean Python cache (before restarting CLI)
 
 See CLAUDE.md for more.
 HELP

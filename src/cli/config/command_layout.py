@@ -75,7 +75,7 @@ COMMAND_LAYOUT = {
             },
             "update_survey": {
                 "description": "Survey 업데이트 (새 프로필 레코드 생성)",
-                "usage": "profile update_survey [level] [career] [interests]",
+                "usage": "profile update_survey",
                 "target": "src.cli.actions.profile.update_survey",
             },
         },

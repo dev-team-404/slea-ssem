@@ -8,6 +8,7 @@ and interactive prompt loop.
 import atexit
 import importlib
 import logging
+import shlex
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -158,8 +159,17 @@ class CLI:
         return WordCompleter(words, ignore_case=True)
 
     def _parse_input(self, text: str) -> tuple[list[str], list[str]]:
-        """입력 문자열을 명령어 경로와 인자로 분리합니다."""
-        parts = text.strip().split()
+        """
+        입력 문자열을 명령어 경로와 인자로 분리합니다.
+
+        shlex를 사용해서 인용된 문자열(작은따옴표, 큰따옴표)을 제대로 처리합니다.
+        """
+        try:
+            parts = shlex.split(text.strip())
+        except ValueError:
+            # 따옴표 불일치 등의 에러 발생 시 기본 split 사용
+            parts = text.strip().split()
+
         if not parts:
             return [], []
 

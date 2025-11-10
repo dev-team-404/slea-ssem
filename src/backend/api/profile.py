@@ -89,7 +89,7 @@ class SurveyUpdateRequest(BaseModel):
     """Request model for survey update."""
 
     level: str | None = Field(None, description="Self-assessed level")
-    career: str | None = Field(None, description="Years of experience")
+    career: int | None = Field(None, description="Years of experience (0-60)")
     job_role: str | None = Field(None, description="Job role/title")
     duty: str | None = Field(None, description="Main responsibilities")
     interests: list[str] | None = Field(None, description="Interest categories")
@@ -309,7 +309,21 @@ def update_survey(
     try:
         profile_service = ProfileService(db)
         survey_data = request.model_dump(exclude_none=True)
-        result = profile_service.update_survey(user.id, survey_data)
+
+        # Map API field names to service field names
+        mapped_data = {}
+        if "level" in survey_data:
+            mapped_data["self_level"] = survey_data["level"]
+        if "career" in survey_data:
+            mapped_data["years_experience"] = survey_data["career"]
+        if "job_role" in survey_data:
+            mapped_data["job_role"] = survey_data["job_role"]
+        if "duty" in survey_data:
+            mapped_data["duty"] = survey_data["duty"]
+        if "interests" in survey_data:
+            mapped_data["interests"] = survey_data["interests"]
+
+        result = profile_service.update_survey(user.id, mapped_data)
         return {
             "success": True,
             "message": "자기평가 정보 업데이트 완료",

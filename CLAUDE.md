@@ -135,6 +135,28 @@ Key Components:
 **Import errors?** Run `tox -e ruff` then `./tools/dev.sh format`
 **DB issues?** Check `alembic/versions/` for migrations, then `./tools/dev.sh up`
 
+### Rich Console Markup Issues
+
+**Problem**: When printing usage strings with square brackets like `[level]`, `[years]`, Rich Console interprets them as markup tags and removes them.
+
+```python
+# ❌ Wrong: Will output "Usage: cmd [--option]" (brackets removed)
+console.print("Usage: cmd [level] [years] [--option VALUE]")
+
+# ✅ Correct: Use markup=False parameter
+console.print("Usage: cmd [level] [years] [--option VALUE]", markup=False)
+
+# ✅ Also correct: Escape with double brackets
+console.print("Usage: cmd [[level]] [[years]] [--option VALUE]")
+```
+
+**When to use**:
+
+- Use `markup=False` when printing usage/help text with square brackets (cleaner)
+- Use `[[...]]` when you need markup enabled elsewhere but want literal brackets
+
+**Cache after changes**: Run `./tools/dev.sh clean` before testing CLI changes, as Python caches compiled modules.
+
 ## Further Reading
 
 - **User Scenarios**: `docs/user_scenarios_mvp1.md`

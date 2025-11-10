@@ -1,5 +1,7 @@
 """Profile-related CLI actions."""
 
+import re
+
 from src.cli.context import CLIContext
 
 
@@ -10,7 +12,9 @@ def profile_help(context: CLIContext, *args: str) -> None:
     context.console.print("  profile nickname view         - 닉네임 조회 (인증 필요)")
     context.console.print("  profile nickname register     - 닉네임 등록 (인증 필요)")
     context.console.print("  profile nickname edit         - 닉네임 수정 (인증 필요)")
-    context.console.print("  profile update_survey         - Survey 업데이트 (인증 필요, 새 프로필 레코드 생성)")
+    context.console.print(
+        "  profile update_survey         - Survey 업데이트 (인증 필요, 옵션: job_role, duty, interests)"
+    )
 
 
 def check_nickname_availability(context: CLIContext, *args: str) -> None:
@@ -181,29 +185,92 @@ def update_survey(context: CLIContext, *args: str) -> None:
         context.console.print("[yellow]Please login first: auth login [username][/yellow]")
         return
 
-    if not args:
-        context.console.print("[bold yellow]Usage:[/bold yellow] profile update_survey [level] [career] [interests]")
-        context.console.print("[bold cyan]Example:[/bold cyan] profile update_survey 'intermediate' '5years' 'AI,ML'")
+    if len(args) < 2:
+        context.console.print("[bold yellow]Usage:[/bold yellow]")
+        context.console.print(
+            "  profile update_survey [level] [years] [--job_role ROLE] [--duty DUTY] [--interests ITEM1,ITEM2,...]",
+            markup=False,
+        )
+        context.console.print("[bold dim]level:[/bold dim] beginner | intermediate | advanced")
+        context.console.print("[bold dim]years:[/bold dim] 0-60 (years of experience)")
+        context.console.print("[bold cyan]Examples:[/bold cyan]")
+        context.console.print("  profile update_survey beginner 0")
+        context.console.print("  profile update_survey intermediate 5 --interests 'AI,ML,NLP'")
+        context.console.print(
+            "  profile update_survey advanced 10 --job_role 'Senior Dev' --duty 'Architecture' --interests 'AI,ML'"
+        )
         return
 
-    level = args[0] if len(args) > 0 else ""
-    career = args[1] if len(args) > 1 else ""
-    interests = args[2] if len(args) > 2 else ""
+    level = args[0]
+    career_input = args[1]
+
+    # Parse career (years_experience) - extract integer from input
+    try:
+        # Try to parse as integer directly first
+        years_experience = int(career_input)
+    except ValueError:
+        # If that fails, try to extract number from string like "5years"
+        match = re.search(r"\d+", career_input)
+        if match:
+            years_experience = int(match.group())
+        else:
+            context.console.print("[bold red]✗ Invalid career value[/bold red]")
+            context.console.print("[yellow]Career must be a number (0-60) or string like '5years'[/yellow]")
+            return
+
+    # Validate range
+    if not (0 <= years_experience <= 60):
+        context.console.print("[bold red]✗ Invalid career value[/bold red]")
+        context.console.print("[yellow]Years of experience must be between 0 and 60[/yellow]")
+        return
+
+    career = years_experience
+    job_role = None
+    duty = None
+    interests_str = None
+
+    # Parse optional flags
+    i = 2
+    while i < len(args):
+        if args[i] == "--job_role" and i + 1 < len(args):
+            job_role = args[i + 1]
+            i += 2
+        elif args[i] == "--duty" and i + 1 < len(args):
+            duty = args[i + 1]
+            i += 2
+        elif args[i] == "--interests" and i + 1 < len(args):
+            interests_str = args[i + 1]
+            i += 2
+        else:
+            context.console.print(f"[yellow]Unknown option: {args[i]}[/yellow]")
+            i += 1
 
     context.console.print("[dim]Updating survey...[/dim]")
 
     # JWT 토큰을 client에 설정
     context.client.set_token(context.session.token)
 
+    # Prepare JSON data
+    json_data = {
+        "level": level,
+        "career": career,
+    }
+
+    # Add optional fields if provided
+    if job_role:
+        json_data["job_role"] = job_role
+    if duty:
+        json_data["duty"] = duty
+    if interests_str:
+        # Convert comma-separated string to list
+        interests = [item.strip() for item in interests_str.split(",")]
+        json_data["interests"] = interests
+
     # API 호출
     status_code, response, error = context.client.make_request(
         "PUT",
         "/profile/survey",
-        json_data={
-            "level": level,
-            "career": career,
-            "interests": interests,
-        },
+        json_data=json_data,
     )
 
     if error:
@@ -218,4 +285,6 @@ def update_survey(context: CLIContext, *args: str) -> None:
 
     context.console.print("[bold green]✓ Profile survey updated[/bold green]")
     context.console.print("[dim]  New profile record created[/dim]")
-    context.logger.info(f"Survey updated: level={level}, career={career}, interests={interests}.")
+    context.logger.info(
+        f"Survey updated: level={level}, career={career}, job_role={job_role}, duty={duty}, interests={interests_str}."
+    )

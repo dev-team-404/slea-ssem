@@ -1,7 +1,7 @@
 """Authentication utilities for JWT token extraction."""
 
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from src.backend.database import get_db
@@ -12,8 +12,8 @@ security = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> User:
     """
     Extract and validate JWT token, return current User object.
@@ -45,12 +45,12 @@ def get_current_user(
         return user
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid token") from e
 
 
 def get_current_user_id(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),  # noqa: B008
 ) -> int:
     """
     Get current user's database ID.
