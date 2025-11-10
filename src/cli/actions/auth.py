@@ -61,5 +61,7 @@ def login(context: CLIContext, *args: str) -> None:
     context.console.print(f"[bold green]✓ Successfully logged in as '{username}'[/bold green]")
     context.console.print(f"[dim]  Status: {'New user' if is_new_user else 'Returning user'}[/dim]")
     context.console.print(f"[dim]  User ID: {context.session.user_id}[/dim]")
-    context.console.print(f"[dim]  Token (first 20 chars): {token[:20]}...[/dim]")
+    token_length = len(token)
+    token_display = f"{token[:8]}...{token[-8:]}"
+    context.console.print(f"[dim]  Token (Total {token_length} chars): {token_display}[/dim]")
     context.logger.info(f"User '{username}' logged in successfully.")
