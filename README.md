@@ -16,7 +16,7 @@ S.LSI의 AI 역량(EA: Education/AI)을 높이는 '쌤(SSEM)'이 되겠다는 �
 brew install anthropics/tap/claude
 
 # npm (Windows/Linux)
-npm install -g @anthropic-ai/claude-cli
+npm install -g @anthropic-ai/claude-code
 
 # Verify installation
 claude --version
