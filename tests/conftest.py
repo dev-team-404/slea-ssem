@@ -1,15 +1,15 @@
 """Pytest configuration and shared fixtures."""
 
+import os
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
 import pytest
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.backend.api.auth import router as auth_router
@@ -26,35 +26,39 @@ from src.backend.models.test_session import TestSession
 from src.backend.models.user import Base, User
 from src.backend.models.user_profile import UserProfileSurvey
 
+# Load .env to get TEST_DATABASE_URL
+load_dotenv()
+
 
 @pytest.fixture(scope="function")
-def db_engine(tmp_path: Path) -> Generator[Engine, None, None]:
+def db_engine() -> Generator[Engine, None, None]:
     """
-    Create file-based SQLite database for testing.
+    Create PostgreSQL test database for testing.
 
-    Args:
-        tmp_path: Temporary directory path from pytest
+    Uses TEST_DATABASE_URL from .env file.
+    Creates and drops all tables for test isolation.
 
     Yields:
-        SQLAlchemy engine
+        SQLAlchemy engine connected to test database
 
     """
-    # Use file-based SQLite instead of in-memory to avoid per-connection isolation
-    db_path = tmp_path / "test.db"
-    engine = create_engine(
-        f"sqlite:///{db_path}",
-        connect_args={"check_same_thread": False},
-    )
+    test_database_url = os.getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise ValueError(
+            "TEST_DATABASE_URL environment variable is not set. "
+            "Please set it in .env file for testing."
+        )
 
-    # Enable foreign keys for SQLite
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn: Any, connection_record: Any) -> None:  # noqa: ANN401
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    # Convert async PostgreSQL URL to sync if needed
+    # postgresql+asyncpg:// → postgresql://
+    db_url_for_sync = test_database_url.replace("postgresql+asyncpg://", "postgresql://")
 
+    engine = create_engine(db_url_for_sync)
+
+    # Create all tables
     Base.metadata.create_all(bind=engine)
     yield engine
+    # Drop all tables after test
     Base.metadata.drop_all(bind=engine)
 
 

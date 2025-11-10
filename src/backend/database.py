@@ -2,12 +2,23 @@
 
 import os
 from collections.abc import Generator
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-# Database connection string from environment or default to SQLite
-DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+# Load .env file if it exists
+env_file = Path(__file__).parent.parent.parent / ".env"
+if env_file.exists():
+    load_dotenv(dotenv_path=env_file)
+
+# Database connection string from environment (must be set)
+DATABASE_URL: str = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is not set. Please set it to a PostgreSQL connection string in .env file"
+    )
 
 # Convert async PostgreSQL URL to sync if needed
 # postgresql+asyncpg:// → postgresql://

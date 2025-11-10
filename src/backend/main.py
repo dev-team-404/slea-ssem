@@ -14,7 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.backend.api import auth, profile, questions, survey
 from src.backend.database import init_db
 
-
 app = FastAPI(
     title="SLEA-SSEM",
     description="AI-driven learning platform for S.LSI employees",
