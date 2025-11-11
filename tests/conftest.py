@@ -31,7 +31,7 @@ def pytest_configure(config):
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.backend.database import get_db
@@ -92,6 +92,23 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
         SQLAlchemy session
 
     """
+    # Explicitly drop and recreate tables for each test
+    Base.metadata.drop_all(bind=db_engine)
+    Base.metadata.create_all(bind=db_engine)
+
+    # Reset all sequences to 1 for PostgreSQL
+    with db_engine.connect() as conn:
+        # Get all table names
+        db_inspector = inspect(db_engine)
+        for table_name in db_inspector.get_table_names():
+            # Reset sequence for each table (assuming id is the primary key)
+            try:
+                conn.execute(text(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1"))
+            except Exception:
+                # Skip if sequence doesn't exist
+                pass
+        conn.commit()
+
     session_local = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
     session = session_local()
     yield session
@@ -103,17 +120,15 @@ def authenticated_user(db_session: Session) -> User:
     """
     Create a test user for authenticated requests.
 
-    Explicitly uses id=1 to match hardcoded user_id in question endpoints.
-
     Args:
         db_session: Database session
 
     Returns:
-        Test user instance with id=1
+        Test user instance
 
     """
     user = User(
-        id=1,  # Explicitly set to id=1 for endpoint consistency
+        # Don't explicitly set id; let the database auto-generate it
         knox_id="test_jwt_user",
         name="JWT Test User",
         dept="Test Dept",

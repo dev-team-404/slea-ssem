@@ -255,7 +255,7 @@ class TestRetryAPI:
 class TestPreviousSurvey:
     """Test REQ-B-B5-4: Load previous survey."""
 
-    def test_get_previous_survey(self, db_session: Session, user_fixture, user_profile_survey_fixture):
+    def test_get_previous_survey(self, db_session: Session, authenticated_user, user_profile_survey_fixture):
         """
         REQ-B-B5-4: Load previous survey for retry form.
 
@@ -266,10 +266,10 @@ class TestPreviousSurvey:
         - Contains survey data (self_level, years_experience, etc.)
         """
         history_service = HistoryService(db_session)
-        survey = history_service.get_previous_survey(user_fixture.id)
+        survey = history_service.get_previous_survey(authenticated_user.id)
 
         assert survey is not None
-        assert survey.user_id == user_fixture.id
+        assert survey.user_id == authenticated_user.id
         assert survey.self_level == "intermediate"
 
     def test_get_previous_survey_no_history(self, db_session: Session, user_fixture):
