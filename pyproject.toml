@@ -38,6 +38,7 @@ dependencies = [
     "langchain-google-genai>=3.0.1",
     "langgraph>=1.0.0",
     "psycopg2-binary>=2.9.11",
+    "pytest>=8.4.2",
 ]
 
 

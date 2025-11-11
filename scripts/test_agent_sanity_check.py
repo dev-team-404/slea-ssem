@@ -40,8 +40,9 @@ from src.agent.llm_agent import (
 )
 
 # .env 파일 로드 (프로젝트 루트)
+# override=False: 이미 환경변수로 설정된 값은 덮어쓰지 않음 (테스트 환경에서 중요)
 env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+load_dotenv(env_path, override=False)
 
 # 로깅 설정
 logging.basicConfig(
