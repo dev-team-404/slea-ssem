@@ -97,8 +97,11 @@ async def test_score_answers_parallel_all_success_small_batch(mode2_pipeline):
         create_answer_dict(f"q_{i:02d}") for i in range(1, 6)
     ]
 
+    async def async_score_side_effect(**kwargs):
+        return create_score_result(kwargs.get("question_id", "q_00"))
+
     with patch.object(
-        mode2_pipeline, "score_answer", return_value=create_score_result("q_01")
+        mode2_pipeline, "a_score_answer", side_effect=async_score_side_effect
     ) as mock_score:
         response = await mode2_pipeline.score_answers_batch_parallel(answers)
 
@@ -235,19 +238,18 @@ async def test_score_answers_llm_timeout_fallback(mode2_pipeline):
         ),
     ]
 
-    async def async_score_side_effect(**kwargs):
-        await asyncio.sleep(0.01)
-        raise TimeoutError("LLM timeout")
-
-    with patch.object(
-        mode2_pipeline, "a_score_answer", side_effect=async_score_side_effect
-    ):
+    # Patch the underlying scoring function to raise TimeoutError
+    # This triggers the fallback handling in _score_answer_impl
+    with patch("src.agent.pipeline.mode2_pipeline._score_and_explain_impl") as mock_impl:
+        mock_impl.side_effect = TimeoutError("LLM timeout")
         response = await mode2_pipeline.score_answers_batch_parallel(answers)
 
-    # Should have fallback result
+    # Should have fallback result (successful with fallback score)
     assert response["batch_stats"]["successful_count"] == 1
-    # Fallback result should be included
-    assert len(response["results"]) == 1 or len(response["failed_question_ids"]) == 1
+    assert len(response["results"]) == 1
+    # Fallback result should have a score and explanation
+    assert response["results"][0]["score"] == 50  # Default fallback score for SA
+    assert "temporary delay" in response["results"][0]["explanation"].lower()
 
 
 @pytest.mark.asyncio
@@ -364,14 +366,15 @@ async def test_no_race_conditions_concurrent_writes(mode2_pipeline):
     AC7: Metrics calculated correctly despite concurrent updates
     """
     answers = [
-        create_answer_dict(f"q_{i:02d}", score=50 + i * 5) for i in range(1, 6)
+        create_answer_dict(f"q_{i:02d}") for i in range(1, 6)
     ]
 
     async def async_score_with_varying_scores(**kwargs):
-        idx = int(kwargs.get("question_id", "q_01").split("_")[1]) - 1
-        await asyncio.sleep(0.01 * (5 - idx))  # Stagger completion times
+        qid = kwargs.get("question_id", "q_01")
+        idx = int(qid.split("_")[1])
+        await asyncio.sleep(0.01 * (6 - idx))  # Stagger completion times
         return create_score_result(
-            kwargs.get("question_id", "q_00"), score=50 + idx * 5
+            qid, score=50 + idx * 5
         )
 
     with patch.object(
