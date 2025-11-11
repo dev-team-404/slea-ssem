@@ -149,6 +149,33 @@
   background-color: #007bff;
 }
 
+.form-actions {
+  margin-top: 1.5rem;
+}
+
+.next-button {
+  width: 100%;
+  padding: 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background-color: #28a745;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.next-button:hover:not(:disabled) {
+  background-color: #1c7c32;
+}
+
+.next-button:disabled {
+  background-color: #b7d7bc;
+  cursor: not-allowed;
+  color: #f8f9fa;
+}
+
 .info-box {
   margin-top: 2rem;
   padding: 1rem;

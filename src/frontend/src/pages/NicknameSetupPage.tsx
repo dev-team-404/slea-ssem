@@ -30,6 +30,12 @@ const NicknameSetupPage: React.FC = () => {
     checkNickname()
   }
 
+  const handleNextClick = () => {
+    // REQ: REQ-F-A2-6
+    // TODO: REQ-F-A2-7 - 닉네임 저장 및 다음 단계 이동 구현 예정
+    console.info('다음 단계로 이동 준비: 닉네임 저장 로직은 추후 구현됩니다.')
+  }
+
   const getStatusMessage = () => {
     if (checkStatus === 'available') {
       return {
@@ -54,6 +60,7 @@ const NicknameSetupPage: React.FC = () => {
 
   const statusMessage = getStatusMessage()
   const isChecking = checkStatus === 'checking'
+  const isNextEnabled = checkStatus === 'available'
 
   return (
     <main className="nickname-setup-page">
@@ -108,6 +115,17 @@ const NicknameSetupPage: React.FC = () => {
               </ul>
             </div>
           )}
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="next-button"
+            onClick={handleNextClick}
+            disabled={!isNextEnabled || isChecking}
+          >
+            다음
+          </button>
         </div>
 
         <div className="info-box">

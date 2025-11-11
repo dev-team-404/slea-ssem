@@ -27,12 +27,21 @@ describe('NicknameSetupPage', () => {
     vi.clearAllMocks()
   })
 
-  test('renders nickname input field and check button', () => {
+  test('renders nickname input field, check button, and next button', () => {
     // REQ: REQ-F-A2-2
     renderWithRouter(<NicknameSetupPage />)
 
     expect(screen.getByLabelText(/닉네임/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /중복 확인/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /다음/i })).toBeInTheDocument()
+  })
+
+  test('keeps next button disabled initially', () => {
+    // REQ: REQ-F-A2-6
+    renderWithRouter(<NicknameSetupPage />)
+
+    const nextButton = screen.getByRole('button', { name: /다음/i })
+    expect(nextButton).toBeDisabled()
   })
 
   test('shows available message when nickname is not taken', async () => {
@@ -51,7 +60,33 @@ describe('NicknameSetupPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /다음/i })).not.toBeDisabled()
     })
+  })
+
+  test('re-disables next button when nickname changes after success', async () => {
+    // REQ: REQ-F-A2-6
+    const mockResponse = { available: true, suggestions: [] }
+    vi.mocked(transport.transport.post).mockResolvedValue(mockResponse)
+
+    const user = userEvent.setup()
+    renderWithRouter(<NicknameSetupPage />)
+
+    const input = screen.getByLabelText(/닉네임/i)
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    const nextButton = screen.getByRole('button', { name: /다음/i })
+
+    await user.type(input, 'john_doe')
+    await user.click(checkButton)
+
+    await waitFor(() => {
+      expect(nextButton).not.toBeDisabled()
+    })
+
+    await user.type(input, 'x')
+
+    expect(nextButton).toBeDisabled()
+    expect(screen.queryByText(/사용 가능한 닉네임입니다/i)).not.toBeInTheDocument()
   })
 
   test('shows taken message when nickname is already used', async () => {
@@ -103,7 +138,9 @@ describe('NicknameSetupPage', () => {
     await user.click(checkButton)
 
     // Validation error is synchronous, no need to wait
-    expect(screen.getByText(/영문자, 숫자, 언더스코어/i)).toBeInTheDocument()
+    expect(
+      screen.getByText('닉네임은 영문자, 숫자, 언더스코어만 사용 가능합니다.')
+    ).toBeInTheDocument()
   })
 
   test('disables check button while checking', async () => {
@@ -121,15 +158,18 @@ describe('NicknameSetupPage', () => {
 
     const input = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    const nextButton = screen.getByRole('button', { name: /다음/i })
 
     await user.type(input, 'john_doe')
     await user.click(checkButton)
 
     // Button should be disabled while checking
     expect(checkButton).toBeDisabled()
+    expect(nextButton).toBeDisabled()
 
     await waitFor(() => {
       expect(checkButton).not.toBeDisabled()
+      expect(nextButton).not.toBeDisabled()
     })
   })
 })
