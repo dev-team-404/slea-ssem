@@ -25,7 +25,12 @@ const HomePage: React.FC = () => {
         navigate('/signup')
       }
     } catch (err) {
-      setErrorMessage('프로필 정보를 불러오는데 실패했습니다. 다시 시도해주세요.')
+      // Log detailed error for debugging
+      console.error('Failed to check user profile:', err)
+
+      // Show user-friendly error message with hint
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      setErrorMessage(`프로필 정보를 불러오는데 실패했습니다: ${errorMsg}`)
     }
   }
 

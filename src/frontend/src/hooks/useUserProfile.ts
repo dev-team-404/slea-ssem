@@ -1,6 +1,6 @@
 // REQ: REQ-F-A2-1
 import { useState, useCallback } from 'react'
-import { getToken } from '../utils/auth'
+import { transport } from '../lib/transport'
 
 /**
  * User profile response from GET /api/profile/nickname
@@ -16,6 +16,10 @@ interface UserProfileResponse {
  * Hook for fetching and managing user profile information
  *
  * REQ: REQ-F-A2-1 - Check if user has set nickname
+ *
+ * Uses Transport pattern for API calls:
+ * - Real backend in production
+ * - Mock data in development (when VITE_MOCK_API=true or ?mock=true)
  *
  * Usage:
  * ```tsx
@@ -40,28 +44,12 @@ export function useUserProfile() {
     setError(null)
 
     try {
-      const token = getToken()
-      if (!token) {
-        throw new Error('No authentication token found')
-      }
+      // Use transport layer instead of direct fetch
+      const data = await transport.get<UserProfileResponse>('/api/profile/nickname')
 
-      const response = await fetch('/api/profile/nickname', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to fetch user profile')
-      }
-
-      const data: UserProfileResponse = await response.json()
       setNickname(data.nickname)
       setLoading(false)
-      return data.nickname  // ✅ Return the value directly
+      return data.nickname
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
       setError(errorMessage)
