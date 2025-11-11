@@ -3,7 +3,6 @@ import LoginPage from './pages/LoginPage'
 import CallbackPage from './pages/CallbackPage'
 import HomePage from './pages/HomePage'
 import SignupPage from './pages/SignupPage'
-import DashboardPage from './pages/DashboardPage'
 
 function App() {
   return (
@@ -13,7 +12,6 @@ function App() {
         <Route path="/auth/callback" element={<CallbackPage />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
       </Routes>
     </BrowserRouter>
   )
