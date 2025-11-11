@@ -80,6 +80,65 @@ COMMAND_LAYOUT = {
             },
         },
     },
+    "agent": {
+        "description": "Agent-based question generation and scoring",
+        "usage": "agent [subcommand]",
+        "target": "src.cli.actions.agent.agent_help",
+        "sub_commands": {
+            "generate-questions": {
+                "description": "📝 문항 생성 (Tool 1-5 체인)",
+                "usage": "agent generate-questions",
+                "target": "src.cli.actions.agent.generate_questions",
+            },
+            "score-answer": {
+                "description": "📋 답변 채점 (Tool 6)",
+                "usage": "agent score-answer",
+                "target": "src.cli.actions.agent.score_answer",
+            },
+            "batch-score": {
+                "description": "📊 배치 채점 (복수 답변, 병렬)",
+                "usage": "agent batch-score",
+                "target": "src.cli.actions.agent.batch_score",
+            },
+            "tools": {
+                "description": "🔧 개별 Tool 디버깅",
+                "usage": "agent tools [subcommand]",
+                "target": "src.cli.actions.agent.tools_help",
+                "sub_commands": {
+                    "t1": {
+                        "description": "🔍 Get User Profile (Tool 1)",
+                        "usage": "agent tools t1",
+                        "target": "src.cli.actions.agent.t1_get_user_profile",
+                    },
+                    "t2": {
+                        "description": "📚 Search Question Templates (Tool 2)",
+                        "usage": "agent tools t2",
+                        "target": "src.cli.actions.agent.t2_search_question_templates",
+                    },
+                    "t3": {
+                        "description": "📊 Get Difficulty Keywords (Tool 3)",
+                        "usage": "agent tools t3",
+                        "target": "src.cli.actions.agent.t3_get_difficulty_keywords",
+                    },
+                    "t4": {
+                        "description": "✅ Validate Question Quality (Tool 4)",
+                        "usage": "agent tools t4",
+                        "target": "src.cli.actions.agent.t4_validate_question_quality",
+                    },
+                    "t5": {
+                        "description": "💾 Save Generated Question (Tool 5)",
+                        "usage": "agent tools t5",
+                        "target": "src.cli.actions.agent.t5_save_generated_question",
+                    },
+                    "t6": {
+                        "description": "🎯 Score & Generate Explanation (Tool 6)",
+                        "usage": "agent tools t6",
+                        "target": "src.cli.actions.agent.t6_score_and_explain",
+                    },
+                },
+            },
+        },
+    },
     "questions": {
         "description": "테스트 문항 생성, 채점, 저장",
         "usage": "questions [subcommand]",
