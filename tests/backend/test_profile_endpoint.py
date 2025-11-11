@@ -75,16 +75,15 @@ class TestProfileEndpoint:
         data = response.json()
         assert data["nickname"] == "john_doe"
         assert "user_id" in data
-        assert "updated_at" in data
+        assert "registered_at" in data
 
     def test_post_profile_register_invalid_nickname(self, client: TestClient) -> None:
         """Integration test: POST /profile/register - validation error."""
-        # Test too short
+        # Test too short (Pydantic validation returns 422)
         response = client.post("/profile/register", json={"nickname": "ab"})
-        assert response.status_code == 400
-        assert "at least 3 characters" in response.json()["detail"]
+        assert response.status_code == 422
 
-        # Test forbidden word
+        # Test forbidden word (business logic returns 400)
         response = client.post("/profile/register", json={"nickname": "admin"})
         assert response.status_code == 400
         assert "prohibited word" in response.json()["detail"]

@@ -37,10 +37,10 @@ class TestAuthEndpoint:
         # THEN: 201 Created with JWT + flag
         assert response.status_code == 201
         data = response.json()
-        assert "jwt_token" in data
+        assert "access_token" in data
         assert data["is_new_user"] is True
-        assert isinstance(data["jwt_token"], str)
-        assert len(data["jwt_token"]) > 0
+        assert isinstance(data["access_token"], str)
+        assert len(data["access_token"]) > 0
 
     def test_post_auth_login_existing_user(self, client: TestClient, user_fixture: User) -> None:
         """
@@ -67,9 +67,9 @@ class TestAuthEndpoint:
         # THEN: 200 OK with JWT + flag
         assert response.status_code == 200
         data = response.json()
-        assert "jwt_token" in data
+        assert "access_token" in data
         assert data["is_new_user"] is False
-        assert isinstance(data["jwt_token"], str)
+        assert isinstance(data["access_token"], str)
 
     def test_post_auth_login_missing_required_field(self, client: TestClient) -> None:
         """

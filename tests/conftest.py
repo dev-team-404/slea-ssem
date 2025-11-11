@@ -117,12 +117,40 @@ def db_session(db_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(scope="function")
-def client(db_session: Session) -> Generator[TestClient, None, None]:
+def authenticated_user(db_session: Session) -> User:
+    """
+    Create a test user for authenticated requests.
+
+    Args:
+        db_session: Database session
+
+    Returns:
+        Test user instance
+
+    """
+    user = User(
+        knox_id="test_jwt_user",
+        name="JWT Test User",
+        dept="Test Dept",
+        business_unit="Test BU",
+        email="jwt_test@samsung.com",
+        nickname="jwt_test_user",
+        last_login=datetime.now(UTC),
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture(scope="function")
+def client(db_session: Session, authenticated_user: User) -> Generator[TestClient, None, None]:
     """
     Create a FastAPI test client with mocked database.
 
     Args:
         db_session: Database session from fixture
+        authenticated_user: Test user for authenticated requests
 
     Yields:
         TestClient for making HTTP requests
@@ -133,12 +161,13 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     from src.backend.api.profile import router as profile_router
     from src.backend.api.questions import router as questions_router
     from src.backend.api.survey import router as survey_router
+    from src.backend.utils.auth import get_current_user
 
     app = FastAPI()
-    app.include_router(auth_router)
-    app.include_router(profile_router)
-    app.include_router(survey_router)
-    app.include_router(questions_router)
+    app.include_router(auth_router, prefix="/auth", tags=["auth"])
+    app.include_router(profile_router, prefix="/profile", tags=["profile"])
+    app.include_router(survey_router, prefix="/survey", tags=["survey"])
+    app.include_router(questions_router, prefix="/questions", tags=["questions"])
 
     # Override database dependency to use the test session
     def override_get_db() -> Generator[Session, None, None]:
@@ -146,7 +175,12 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
         db_session.commit()
         yield db_session
 
+    # Override JWT authentication to return test user
+    def override_get_current_user() -> User:
+        return authenticated_user
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     yield TestClient(app)
 
