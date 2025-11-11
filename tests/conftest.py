@@ -14,26 +14,8 @@ from dotenv import load_dotenv
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Mock missing modules for test collection if not installed
-from unittest.mock import MagicMock
-import types
-
-missing_modules = [
-    "langgraph",
-    "langgraph.prebuilt",
-    "langchain_core",
-    "langchain_core.tools",
-    "langchain_core.prompts",
-    "langchain_google_genai",
-    "chromadb",
-    "jwt",  # PyJWT may not be available during import
-]
-for module_name in missing_modules:
-    try:
-        __import__(module_name)
-    except (ModuleNotFoundError, ImportError):
-        # Create a proper module object instead of just MagicMock
-        sys.modules[module_name] = types.ModuleType(module_name)
+# Note: Do NOT mock langgraph/langchain modules here as it breaks imports
+# Let pytest skip agent tests if dependencies are missing instead
 
 
 def pytest_configure(config):

@@ -3,7 +3,7 @@ ItemGenAgent Tests
 
 REQ: REQ-A-ItemGen
 
-Comprehensive test suite for LangChain ReAct-based Item-Gen-Agent.
+Comprehensive test suite for LangChain AgentExecutor-based Item-Gen-Agent.
 Tests both Mode 1 (question generation) and Mode 2 (auto-grading).
 
 Reference: LangChain Agent Testing Guide
@@ -11,18 +11,24 @@ https://python.langchain.com/docs/how_to/agent_structured_outputs
 """
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
 from src.agent.llm_agent import (
-    GeneratedQuestion,
+    AnswerSchema,
+    GeneratedItem,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
     ItemGenAgent,
+    ItemScore,
+    RoundStats,
     ScoreAnswerRequest,
     ScoreAnswerResponse,
+    SubmitAnswersRequest,
+    SubmitAnswersResponse,
+    UserAnswer,
     create_agent,
 )
 
@@ -60,11 +66,11 @@ def agent_instance(mock_llm, mock_tools):
     with patch("src.agent.llm_agent.create_llm", return_value=mock_llm):
         with patch("src.agent.llm_agent.TOOLS", mock_tools):
             with patch("src.agent.llm_agent.get_react_prompt") as mock_prompt:
-                mock_prompt.return_value = MagicMock()
-                with patch("src.agent.llm_agent.create_react_agent") as mock_create:
-                    # Mock the agent (CompiledStateGraph)
+                with patch("src.agent.llm_agent.create_react_agent") as mock_create_agent:
+                    # Mock the LangGraph agent
                     mock_agent = AsyncMock()
-                    mock_create.return_value = mock_agent
+                    mock_create_agent.return_value = mock_agent
+
                     agent = ItemGenAgent()
                     agent.agent = mock_agent  # Ensure mocked agent is set
                     return agent
@@ -85,174 +91,152 @@ class TestGenerateQuestionsHappyPath:
         Happy path: Generate 1 high-quality question
 
         Given:
-            - Valid GenerateQuestionsRequest (difficulty=5)
+            - Valid GenerateQuestionsRequest (round_idx=1)
         When:
             - generate_questions() is called
         Then:
             - AgentExecutor invokes with correct input format
-            - Returns GenerateQuestionsResponse with success=True
-            - total_generated=1, failed_count=0
+            - Returns GenerateQuestionsResponse with round_id
+            - items list contains 1 GeneratedItem
         """
-        import json
-
         request = GenerateQuestionsRequest(
-            user_id="user_123",
-            difficulty=5,
-            interests=["LLM", "RAG"],
-            num_questions=1,
+            survey_id="survey_123",
+            round_idx=1,
+            prev_answers=None,
         )
 
-        # Mock LangGraph output (messages format) with realistic JSON content
-        agent_instance.agent.ainvoke.return_value = {
-            "messages": [
-                {"role": "user", "content": "Generate questions..."},
-                {"type": "tool", "name": "get_user_profile", "content": "profile_data"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps(
-                        {
-                            "question_id": "q_001",
-                            "stem": "What is LLM?",
-                            "item_type": "short_answer",
-                            "difficulty": 5,
-                            "category": "AI",
-                            "validation_score": 0.90,
-                            "saved_at": "2025-11-09T10:00:00Z",
-                            "success": True,
-                        }
-                    ),
-                },
-                {"role": "ai", "content": "Generated 1 question successfully"},
+        # Mock AgentExecutor output format with intermediate_steps
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Generated 1 question successfully",
+            "intermediate_steps": [
+                ("get_user_profile", "profile_data"),
+                ("save_generated_question", json.dumps({
+                    "question_id": "q_001",
+                    "stem": "What is LLM?",
+                    "item_type": "short_answer",
+                    "difficulty": 5,
+                    "category": "AI",
+                    "answer_type": "keyword_match",
+                    "correct_keywords": ["large", "language", "model"],
+                    "validation_score": 0.90,
+                    "saved_at": "2025-11-11T10:00:00Z",
+                    "success": True,
+                }))
             ]
         }
 
         response = await agent_instance.generate_questions(request)
 
-        assert response.success is True
-        assert response.total_generated == 1
-        assert response.failed_count == 0
-        assert response.agent_steps >= 2
+        assert isinstance(response, GenerateQuestionsResponse)
+        assert response.round_id is not None
+        assert len(response.items) == 1
+        assert response.items[0].id == "q_001"
         assert response.error_message is None
 
     @pytest.mark.asyncio
     async def test_generate_questions_multiple_questions(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Generate 5 questions (default)
+        Generate multiple questions in single round
 
         Given:
-            - GenerateQuestionsRequest with num_questions=5
+            - GenerateQuestionsRequest with round_idx=2
         When:
             - generate_questions() is called
         Then:
-            - Returns response with total_generated=5
-            - agent_steps reflects full ReAct loop iterations
+            - Returns response with multiple GeneratedItem objects
         """
-        import json
-
         request = GenerateQuestionsRequest(
-            user_id="user_456",
-            difficulty=7,
-            interests=["Agent Architecture"],
-            num_questions=5,
+            survey_id="survey_456",
+            round_idx=2,
+            prev_answers=[{"item_id": "q_prev_1", "score": 85}],
         )
 
         # Helper to create question JSON
         def create_question(qid: int) -> str:
-            return json.dumps(
-                {
-                    "question_id": f"q_{qid:03d}",
-                    "stem": f"Question {qid}",
-                    "item_type": "multiple_choice",
-                    "choices": ["A", "B", "C", "D"],
-                    "correct_answer": "A",
-                    "difficulty": 7,
-                    "category": "AI",
-                    "validation_score": 0.88 + qid * 0.01,
-                    "saved_at": "2025-11-09T10:00:00Z",
-                    "success": True,
-                }
-            )
+            return json.dumps({
+                "question_id": f"q_{qid:03d}",
+                "stem": f"Question {qid}",
+                "item_type": "multiple_choice",
+                "choices": ["A", "B", "C", "D"],
+                "answer_type": "exact_match",
+                "correct_answer": "A",
+                "difficulty": 7,
+                "category": "AI",
+                "validation_score": 0.88 + qid * 0.01,
+                "saved_at": "2025-11-11T10:00:00Z",
+                "success": True,
+            })
 
-        # Mock LangGraph message format with multiple tool calls
-        agent_instance.agent.ainvoke.return_value = {
-            "messages": [
-                {"role": "user", "content": "Generate 5 questions"},
-                {"type": "tool", "name": "get_user_profile", "content": "profile"},
-                {"type": "tool", "name": "search_question_templates", "content": "templates"},
-                {"type": "tool", "name": "get_difficulty_keywords", "content": "keywords"},
-                {"type": "tool", "name": "validate_question_quality", "content": "q1_valid"},
-                {"type": "tool", "name": "save_generated_question", "content": create_question(1)},
-                {"type": "tool", "name": "validate_question_quality", "content": "q2_valid"},
-                {"type": "tool", "name": "save_generated_question", "content": create_question(2)},
-                {"type": "tool", "name": "validate_question_quality", "content": "q3_valid"},
-                {"type": "tool", "name": "save_generated_question", "content": create_question(3)},
-                {"type": "tool", "name": "validate_question_quality", "content": "q4_valid"},
-                {"type": "tool", "name": "save_generated_question", "content": create_question(4)},
-                {"type": "tool", "name": "validate_question_quality", "content": "q5_valid"},
-                {"type": "tool", "name": "save_generated_question", "content": create_question(5)},
-                {"role": "ai", "content": "Successfully generated 5 questions"},
-            ],
+        # Mock AgentExecutor with multiple save_generated_question calls
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Generated 3 questions successfully",
+            "intermediate_steps": [
+                ("get_user_profile", "profile"),
+                ("get_difficulty_keywords", "keywords"),
+                ("save_generated_question", create_question(1)),
+                ("validate_question_quality", "valid"),
+                ("save_generated_question", create_question(2)),
+                ("validate_question_quality", "valid"),
+                ("save_generated_question", create_question(3)),
+            ]
         }
 
         response = await agent_instance.generate_questions(request)
 
-        assert response.success is True
-        assert response.total_generated == 5
+        assert response.round_id is not None
+        assert len(response.items) == 3
         assert response.failed_count == 0
-        # agent_steps counts messages where type is 'tool' (13 tool messages)
-        assert response.agent_steps == 13
-        agent_instance.agent.ainvoke.assert_called_once()
+        agent_instance.executor.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_questions_with_test_session_id(self, agent_instance):
+    async def test_generate_questions_adaptive_mode(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Generate questions with test session tracking
+        Generate questions with previous answers (adaptive testing)
 
         Given:
-            - GenerateQuestionsRequest with test_session_id="sess_abc"
+            - GenerateQuestionsRequest with prev_answers
         When:
             - generate_questions() is called
         Then:
-            - agent_input includes session ID
-            - Agent can track round_id for question persistence
+            - prev_answers included in agent input
+            - Difficulty adjusted based on previous performance
         """
         request = GenerateQuestionsRequest(
-            user_id="user_789",
-            difficulty=3,
-            interests=[],
-            num_questions=3,
-            test_session_id="sess_abc_2025",
+            survey_id="survey_adaptive",
+            round_idx=2,
+            prev_answers=[
+                {"item_id": "q_1", "score": 100},
+                {"item_id": "q_2", "score": 75}
+            ],
         )
 
-        agent_instance.agent.ainvoke.return_value = {
-            "output": "Generated 3 questions for session sess_abc_2025",
-            "intermediate_steps": [],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Generated adaptive questions",
+            "intermediate_steps": []
         }
 
         response = await agent_instance.generate_questions(request)
 
-        # Verify session ID was passed to agent
-        call_args = agent_instance.agent.ainvoke.call_args
-        # Check if session ID was passed in the messages content
-        messages = call_args[0][0].get("messages", [])
-        assert any("sess_abc_2025" in str(m.get("content", "")) for m in messages)
-        assert response.success is True
+        assert isinstance(response, GenerateQuestionsResponse)
+        # Verify prev_answers were passed to agent
+        call_args = agent_instance.executor.ainvoke.call_args
+        input_str = call_args[0][0].get("input", "")
+        assert "prev_answers" in input_str.lower() or "previous" in input_str.lower()
 
 
 class TestGenerateQuestionsValidation:
     """Test input validation for question generation"""
 
     @pytest.mark.asyncio
-    async def test_generate_questions_invalid_difficulty_low(self):
+    async def test_generate_questions_invalid_round_idx(self):
         """
         REQ: REQ-A-ItemGen
-        Reject invalid difficulty (< 1)
+        Reject invalid round_idx (< 1)
 
         Given:
-            - GenerateQuestionsRequest with difficulty=0
+            - GenerateQuestionsRequest with round_idx=0
         When:
             - Request is created
         Then:
@@ -260,69 +244,26 @@ class TestGenerateQuestionsValidation:
         """
         with pytest.raises(ValueError):
             GenerateQuestionsRequest(
-                user_id="user_invalid",
-                difficulty=0,  # Invalid: < 1
-                interests=[],
+                survey_id="survey_test",
+                round_idx=0,  # Invalid: < 1
             )
 
     @pytest.mark.asyncio
-    async def test_generate_questions_invalid_difficulty_high(self):
+    async def test_generate_questions_missing_survey_id(self):
         """
         REQ: REQ-A-ItemGen
-        Reject invalid difficulty (> 10)
+        Reject request without survey_id
 
         Given:
-            - GenerateQuestionsRequest with difficulty=11
+            - GenerateQuestionsRequest without survey_id
         When:
             - Request is created
         Then:
-            - Pydantic validation raises ValueError
+            - Pydantic validation raises error
         """
-        with pytest.raises(ValueError):
+        with pytest.raises(Exception):  # Missing required field
             GenerateQuestionsRequest(
-                user_id="user_invalid",
-                difficulty=11,  # Invalid: > 10
-                interests=[],
-            )
-
-    @pytest.mark.asyncio
-    async def test_generate_questions_invalid_num_questions_zero(self):
-        """
-        REQ: REQ-A-ItemGen
-        Reject invalid num_questions (< 1)
-
-        Given:
-            - GenerateQuestionsRequest with num_questions=0
-        When:
-            - Request is created
-        Then:
-            - Pydantic validation raises ValueError
-        """
-        with pytest.raises(ValueError):
-            GenerateQuestionsRequest(
-                user_id="user_invalid",
-                difficulty=5,
-                num_questions=0,  # Invalid: < 1
-            )
-
-    @pytest.mark.asyncio
-    async def test_generate_questions_invalid_num_questions_exceeds_max(self):
-        """
-        REQ: REQ-A-ItemGen
-        Reject num_questions > 10
-
-        Given:
-            - GenerateQuestionsRequest with num_questions=11
-        When:
-            - Request is created
-        Then:
-            - Pydantic validation raises ValueError
-        """
-        with pytest.raises(ValueError):
-            GenerateQuestionsRequest(
-                user_id="user_invalid",
-                difficulty=5,
-                num_questions=11,  # Invalid: > 10
+                round_idx=1,
             )
 
 
@@ -340,34 +281,30 @@ class TestGenerateQuestionsErrorHandling:
         When:
             - executor.ainvoke() raises RuntimeError
         Then:
-            - Returns GenerateQuestionsResponse with success=False
-            - error_message contains exception details
-            - questions list is empty
+            - Returns GenerateQuestionsResponse with error_message
+            - items list is empty
         """
         request = GenerateQuestionsRequest(
-            user_id="user_error",
-            difficulty=5,
-            num_questions=3,
+            survey_id="survey_error",
+            round_idx=1,
         )
 
-        agent_instance.agent.ainvoke.side_effect = RuntimeError("LLM API timeout")
+        agent_instance.executor.ainvoke.side_effect = RuntimeError("LLM API timeout")
 
         response = await agent_instance.generate_questions(request)
 
-        assert response.success is False
-        assert len(response.questions) == 0
-        assert response.total_generated == 0
-        assert response.failed_count == 3
+        assert isinstance(response, GenerateQuestionsResponse)
+        assert len(response.items) == 0
         assert "LLM API timeout" in response.error_message
 
     @pytest.mark.asyncio
-    async def test_generate_questions_llm_parsing_error(self, agent_instance):
+    async def test_generate_questions_malformed_output(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Handle LLM output parsing error
+        Handle malformed agent output
 
         Given:
-            - executor returns malformed output
+            - executor returns invalid intermediate_steps
         When:
             - _parse_agent_output_generate() is called
         Then:
@@ -375,21 +312,20 @@ class TestGenerateQuestionsErrorHandling:
             - Graceful degradation
         """
         request = GenerateQuestionsRequest(
-            user_id="user_parse_error",
-            difficulty=5,
-            num_questions=2,
+            survey_id="survey_malformed",
+            round_idx=1,
         )
 
-        # Malformed output
-        agent_instance.agent.ainvoke.return_value = {
-            "output": "Invalid JSON [[[",
-            "intermediate_steps": [],
+        # Invalid output
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Invalid",
+            "intermediate_steps": None,  # Invalid
         }
 
         response = await agent_instance.generate_questions(request)
 
-        # Should handle gracefully
         assert isinstance(response, GenerateQuestionsResponse)
+        assert response.round_id is not None
 
 
 # ============================================================================
@@ -407,33 +343,42 @@ class TestScoreAndExplainHappyPath:
         Score multiple choice answer (correct)
 
         Given:
-            - ScoreAnswerRequest with question_type="multiple_choice"
-            - user_answer matches correct_answer
+            - ScoreAnswerRequest for multiple_choice
+            - user_answer is correct
         When:
             - score_and_explain() is called
         Then:
-            - Returns response with is_correct=True
-            - score=100
+            - Returns response with correct=True
+            - score >= 80
             - explanation provided
         """
         request = ScoreAnswerRequest(
-            session_id="sess_123",
-            user_id="user_abc",
-            question_id="q_001",
-            question_type="multiple_choice",
+            round_id="round_123",
+            item_id="item_001",
             user_answer="A",
-            correct_answer="A",
+            response_time_ms=5000,
         )
 
-        agent_instance.agent.ainvoke.return_value = {
-            "output": ("Score: 100\n" "Is Correct: True\n" "Explanation: Option A is the correct answer because..."),
-            "intermediate_steps": [("Tool 6", "graded")],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Score: 100",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps({
+                    "correct": True,
+                    "score": 100,
+                    "explanation": "Option A is correct",
+                    "feedback": None,
+                    "extracted_keywords": [],
+                    "graded_at": "2025-11-11T10:00:00Z",
+                }))
+            ]
         }
 
         response = await agent_instance.score_and_explain(request)
 
         assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_001"
+        assert response.item_id == "item_001"
+        assert response.correct is True
+        assert response.score == 100
 
     @pytest.mark.asyncio
     async def test_score_multiple_choice_incorrect(self, agent_instance):
@@ -442,202 +387,100 @@ class TestScoreAndExplainHappyPath:
         Score multiple choice answer (incorrect)
 
         Given:
-            - user_answer differs from correct_answer
+            - user_answer differs from correct answer
         When:
             - score_and_explain() is called
         Then:
-            - Returns response with is_correct=False
+            - Returns response with correct=False
             - score=0
-            - explanation clarifies correct answer
         """
         request = ScoreAnswerRequest(
-            session_id="sess_124",
-            user_id="user_def",
-            question_id="q_002",
-            question_type="multiple_choice",
+            round_id="round_124",
+            item_id="item_002",
             user_answer="C",
-            correct_answer="B",
+            response_time_ms=8000,
         )
 
-        agent_instance.agent.ainvoke.return_value = {
-            "output": ("Score: 0\n" "Is Correct: False\n" "Explanation: The correct answer is B, not C."),
-            "intermediate_steps": [("Tool 6", "graded")],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Score: 0",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps({
+                    "correct": False,
+                    "score": 0,
+                    "explanation": "The correct answer is B, not C",
+                    "feedback": None,
+                    "extracted_keywords": [],
+                    "graded_at": "2025-11-11T10:01:00Z",
+                }))
+            ]
         }
 
         response = await agent_instance.score_and_explain(request)
 
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_002"
+        assert response.correct is False
+        assert response.score == 0
 
     @pytest.mark.asyncio
-    async def test_score_true_false(self, agent_instance):
+    async def test_score_short_answer_with_keywords(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Score true/false answer
+        Score short answer with keyword extraction
 
         Given:
-            - ScoreAnswerRequest with question_type="true_false"
+            - Short answer with keyword matching
         When:
             - score_and_explain() is called
         Then:
-            - Returns response with is_correct (boolean)
-            - score (0 or 100)
+            - extracted_keywords populated
+            - score based on keyword matches
         """
         request = ScoreAnswerRequest(
-            session_id="sess_125",
-            user_id="user_ghi",
-            question_id="q_003",
-            question_type="true_false",
-            user_answer="True",
-            correct_answer="True",
+            round_id="round_125",
+            item_id="item_003",
+            user_answer="LLM is a large language model trained on vast data.",
+            response_time_ms=10000,
         )
 
-        agent_instance.agent.ainvoke.return_value = {
-            "output": "Score: 100\nIs Correct: True",
-            "intermediate_steps": [("Tool 6", "graded")],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Score: 90",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps({
+                    "correct": True,
+                    "score": 90,
+                    "explanation": "Excellent understanding",
+                    "feedback": "Could mention training techniques",
+                    "extracted_keywords": ["large", "language", "model"],
+                    "graded_at": "2025-11-11T10:02:00Z",
+                }))
+            ]
         }
 
         response = await agent_instance.score_and_explain(request)
 
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.graded_at is not None
-
-    @pytest.mark.asyncio
-    async def test_score_short_answer_correct(self, agent_instance):
-        """
-        REQ: REQ-A-ItemGen
-        Score short answer (LLM-based) - Correct
-
-        Given:
-            - question_type="short_answer"
-            - user_answer contains correct keywords
-        When:
-            - score_and_explain() is called
-        Then:
-            - score >= 80 (is_correct=True)
-            - keyword_matches populated
-        """
-        request = ScoreAnswerRequest(
-            session_id="sess_126",
-            user_id="user_jkl",
-            question_id="q_004",
-            question_type="short_answer",
-            user_answer="LLM is a large language model trained on vast text data.",
-            correct_keywords=["large", "language", "model"],
-        )
-
-        agent_instance.agent.ainvoke.return_value = {
-            "output": (
-                "Score: 92\n"
-                "Is Correct: True\n"
-                "Keyword Matches: large, language, model\n"
-                "Explanation: Excellent understanding of LLM fundamentals."
-            ),
-            "intermediate_steps": [("Tool 6", "graded")],
-        }
-
-        response = await agent_instance.score_and_explain(request)
-
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_004"
-
-    @pytest.mark.asyncio
-    async def test_score_short_answer_partial(self, agent_instance):
-        """
-        REQ: REQ-A-ItemGen
-        Score short answer - Partial credit (70-79)
-
-        Given:
-            - user_answer contains some but not all keywords
-        When:
-            - score_and_explain() is called
-        Then:
-            - 70 <= score < 80
-            - feedback provided for improvement
-        """
-        request = ScoreAnswerRequest(
-            session_id="sess_127",
-            user_id="user_mno",
-            question_id="q_005",
-            question_type="short_answer",
-            user_answer="LLM is a language model.",
-            correct_keywords=["large", "language", "model", "training"],
-        )
-
-        agent_instance.agent.ainvoke.return_value = {
-            "output": (
-                "Score: 75\n"
-                "Is Correct: False\n"
-                "Keyword Matches: language, model\n"
-                "Feedback: You captured 'language' and 'model' but missed 'large' "
-                "and 'training'. Consider mentioning scale and training process."
-            ),
-            "intermediate_steps": [("Tool 6", "graded")],
-        }
-
-        response = await agent_instance.score_and_explain(request)
-
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_005"
-
-    @pytest.mark.asyncio
-    async def test_score_short_answer_incorrect(self, agent_instance):
-        """
-        REQ: REQ-A-ItemGen
-        Score short answer - Incorrect (< 70)
-
-        Given:
-            - user_answer lacks correct keywords
-        When:
-            - score_and_explain() is called
-        Then:
-            - score < 70
-            - is_correct=False
-        """
-        request = ScoreAnswerRequest(
-            session_id="sess_128",
-            user_id="user_pqr",
-            question_id="q_006",
-            question_type="short_answer",
-            user_answer="I don't know.",
-            correct_keywords=["transformer", "attention", "mechanism"],
-        )
-
-        agent_instance.agent.ainvoke.return_value = {
-            "output": (
-                "Score: 0\n"
-                "Is Correct: False\n"
-                "Explanation: No understanding of transformer mechanism demonstrated."
-            ),
-            "intermediate_steps": [("Tool 6", "graded")],
-        }
-
-        response = await agent_instance.score_and_explain(request)
-
-        assert isinstance(response, ScoreAnswerResponse)
+        assert response.correct is True
+        assert response.score == 90
+        assert len(response.extracted_keywords) == 3
 
 
 class TestScoreAnswerValidation:
     """Test input validation for scoring"""
 
     @pytest.mark.asyncio
-    async def test_score_answer_missing_session_id(self):
+    async def test_score_answer_missing_round_id(self):
         """
         REQ: REQ-A-ItemGen
-        Reject request without session_id
+        Reject request without round_id
 
         Given:
-            - ScoreAnswerRequest without session_id
+            - ScoreAnswerRequest without round_id
         When:
             - Request is created
         Then:
             - Pydantic validation raises error
         """
-        with pytest.raises(Exception):  # Pydantic error
+        with pytest.raises(Exception):
             ScoreAnswerRequest(
-                user_id="user_test",
-                question_id="q_test",
-                question_type="short_answer",
+                item_id="item_test",
                 user_answer="answer",
             )
 
@@ -654,12 +497,10 @@ class TestScoreAnswerValidation:
         Then:
             - Pydantic validation raises error
         """
-        with pytest.raises(Exception):  # Pydantic error
+        with pytest.raises(Exception):
             ScoreAnswerRequest(
-                session_id="sess_test",
-                user_id="user_test",
-                question_id="q_test",
-                question_type="short_answer",
+                round_id="round_test",
+                item_id="item_test",
             )
 
 
@@ -675,54 +516,25 @@ class TestScoreAnswerErrorHandling:
         Given:
             - Valid ScoreAnswerRequest
         When:
-            - executor.ainvoke() raises APIError
+            - executor.ainvoke() raises RuntimeError
         Then:
             - Returns ScoreAnswerResponse with score=0
             - explanation contains error message
-            - is_correct=False
+            - correct=False
         """
         request = ScoreAnswerRequest(
-            session_id="sess_error",
-            user_id="user_error",
-            question_id="q_error",
-            question_type="short_answer",
+            round_id="round_error",
+            item_id="item_error",
             user_answer="test answer",
         )
 
-        agent_instance.agent.ainvoke.side_effect = RuntimeError("API unavailable")
+        agent_instance.executor.ainvoke.side_effect = RuntimeError("API unavailable")
 
         response = await agent_instance.score_and_explain(request)
 
         assert isinstance(response, ScoreAnswerResponse)
-        assert response.score == 0
-        assert response.is_correct is False
-
-    @pytest.mark.asyncio
-    async def test_score_answer_timeout(self, agent_instance):
-        """
-        REQ: REQ-A-ItemGen
-        Handle scoring timeout gracefully
-
-        Given:
-            - executor times out
-        When:
-            - score_and_explain() is called
-        Then:
-            - Returns response with timeout error message
-        """
-        request = ScoreAnswerRequest(
-            session_id="sess_timeout",
-            user_id="user_timeout",
-            question_id="q_timeout",
-            question_type="short_answer",
-            user_answer="test",
-        )
-
-        agent_instance.agent.ainvoke.side_effect = TimeoutError("Tool timeout")
-
-        response = await agent_instance.score_and_explain(request)
-
-        assert isinstance(response, ScoreAnswerResponse)
+        assert response.score == 0.0
+        assert response.correct is False
 
 
 # ============================================================================
@@ -743,11 +555,10 @@ class TestItemGenAgentInitialization:
         When:
             - ItemGenAgent() is called
         Then:
-            - LLM is created (ChatGoogleGenerativeAI)
-            - ReAct prompt is loaded
+            - LLM is created
+            - Prompt is loaded
             - 6 tools are registered
-            - create_react_agent() is called
-            - Agent (CompiledStateGraph) is configured
+            - AgentExecutor is configured
         """
         with patch("src.agent.llm_agent.create_llm") as mock_create_llm:
             with patch("src.agent.llm_agent.get_react_prompt") as mock_prompt:
@@ -764,9 +575,8 @@ class TestItemGenAgentInitialization:
                         agent = ItemGenAgent()
 
                         assert agent.llm is not None
-                        assert agent.prompt is not None
                         assert agent.tools is not None
-                        assert agent.agent is not None
+                        assert agent.executor is not None
 
     def test_agent_initialization_no_gemini_api_key(self):
         """
@@ -778,10 +588,10 @@ class TestItemGenAgentInitialization:
         When:
             - ItemGenAgent() is called
         Then:
-            - Raises ValueError with informative message
+            - Raises ValueError
         """
         with patch("src.agent.llm_agent.create_llm") as mock_create_llm:
-            mock_create_llm.side_effect = ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
+            mock_create_llm.side_effect = ValueError("GEMINI_API_KEY not set")
 
             with pytest.raises(ValueError, match="GEMINI_API_KEY"):
                 ItemGenAgent()
@@ -809,7 +619,7 @@ class TestCreateAgentFactory:
             - Returns ItemGenAgent instance
         """
         with patch("src.agent.llm_agent.ItemGenAgent") as MockAgent:
-            mock_instance = AsyncMock(spec=ItemGenAgent)
+            mock_instance = MagicMock(spec=ItemGenAgent)
             MockAgent.return_value = mock_instance
 
             result = await create_agent()
@@ -818,7 +628,182 @@ class TestCreateAgentFactory:
 
 
 # ============================================================================
-# Integration Tests (Optional, with Real Components)
+# Phase 5: Test Parsing Logic
+# ============================================================================
+
+
+class TestParseAgentOutputGenerate:
+    """Test _parse_agent_output_generate() parsing logic"""
+
+    @pytest.mark.asyncio
+    async def test_parse_single_saved_question(self, agent_instance):
+        """
+        REQ: REQ-A-LangChain
+        Parse single save_generated_question tool output
+
+        Given:
+            - intermediate_steps with one save_generated_question
+        When:
+            - _parse_agent_output_generate() is called
+        Then:
+            - GeneratedItem extracted with answer_schema
+        """
+        tool_output = {
+            "question_id": "q_123",
+            "stem": "What is a transformer?",
+            "item_type": "short_answer",
+            "answer_type": "keyword_match",
+            "correct_keywords": ["transformer", "attention"],
+            "difficulty": 5,
+            "category": "AI",
+            "validation_score": 0.92,
+            "saved_at": "2025-11-11T10:00:00Z",
+            "success": True,
+        }
+
+        result = {
+            "output": "Generated",
+            "intermediate_steps": [
+                ("save_generated_question", json.dumps(tool_output))
+            ]
+        }
+
+        response = agent_instance._parse_agent_output_generate(result, "round_test_123")
+
+        assert isinstance(response, GenerateQuestionsResponse)
+        assert response.round_id == "round_test_123"
+        assert len(response.items) == 1
+        assert response.items[0].id == "q_123"
+        assert response.items[0].answer_schema.type == "keyword_match"
+
+    @pytest.mark.asyncio
+    async def test_parse_multiple_saved_questions(self, agent_instance):
+        """
+        REQ: REQ-A-LangChain
+        Parse multiple save_generated_question tool outputs
+
+        Given:
+            - intermediate_steps with 3 save_generated_question calls
+        When:
+            - _parse_agent_output_generate() is called
+        Then:
+            - All 3 items extracted
+        """
+        result = {
+            "output": "Generated 3",
+            "intermediate_steps": [
+                ("save_generated_question", json.dumps({"question_id": "q1", "stem": "Q1", "success": True})),
+                ("save_generated_question", json.dumps({"question_id": "q2", "stem": "Q2", "success": True})),
+                ("save_generated_question", json.dumps({"question_id": "q3", "stem": "Q3", "success": True})),
+            ]
+        }
+
+        response = agent_instance._parse_agent_output_generate(result, "round_multi")
+
+        assert len(response.items) == 3
+
+    @pytest.mark.asyncio
+    async def test_parse_malformed_json_in_intermediate_steps(self, agent_instance):
+        """
+        REQ: REQ-A-LangChain
+        Handle malformed JSON in intermediate_steps
+
+        Given:
+            - Tool output with invalid JSON
+        When:
+            - _parse_agent_output_generate() is called
+        Then:
+            - Gracefully skips malformed entry
+            - Returns response with error_message
+        """
+        result = {
+            "output": "Error",
+            "intermediate_steps": [
+                ("save_generated_question", "invalid json [[[")
+            ]
+        }
+
+        response = agent_instance._parse_agent_output_generate(result, "round_error")
+
+        assert isinstance(response, GenerateQuestionsResponse)
+        assert response.error_message is not None
+
+
+class TestParseAgentOutputScore:
+    """Test _parse_agent_output_score() parsing logic"""
+
+    @pytest.mark.asyncio
+    async def test_parse_score_tool_output_json(self, agent_instance):
+        """
+        REQ: REQ-A-LangChain
+        Parse Tool 6 (score_and_explain) output
+
+        Given:
+            - Tool 6 returns JSON with correct, score, explanation
+        When:
+            - _parse_agent_output_score() is called
+        Then:
+            - Fields extracted correctly
+        """
+        tool_output = {
+            "correct": True,
+            "score": 92,
+            "explanation": "Excellent understanding",
+            "extracted_keywords": ["transformer", "attention"],
+            "feedback": "Great work!",
+            "graded_at": "2025-11-11T10:00:00Z",
+        }
+
+        result = {
+            "output": "Graded",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps(tool_output))
+            ]
+        }
+
+        response = agent_instance._parse_agent_output_score(result, "item_test")
+
+        assert isinstance(response, ScoreAnswerResponse)
+        assert response.item_id == "item_test"
+        assert response.correct is True
+        assert response.score == 92
+
+    @pytest.mark.asyncio
+    async def test_parse_score_with_extracted_keywords(self, agent_instance):
+        """
+        REQ: REQ-A-LangChain
+        Extract keywords from Tool 6 output
+
+        Given:
+            - Short answer scored with keyword extraction
+        When:
+            - _parse_agent_output_score() is called
+        Then:
+            - extracted_keywords list populated
+        """
+        tool_output = {
+            "correct": True,
+            "score": 85,
+            "explanation": "Good understanding",
+            "extracted_keywords": ["ai", "learning", "model"],
+            "feedback": "Well explained",
+            "graded_at": "2025-11-11T11:00:00Z",
+        }
+
+        result = {
+            "output": "Graded",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps(tool_output))
+            ]
+        }
+
+        response = agent_instance._parse_agent_output_score(result, "item_456")
+
+        assert len(response.extracted_keywords) == 3
+
+
+# ============================================================================
+# Integration Tests
 # ============================================================================
 
 
@@ -829,456 +814,476 @@ class TestIntegrationWithMockedComponents:
     async def test_full_question_generation_flow(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Full Mode 1 flow: Tool 1 → 2 → 3 → 4 → 5 → 6
-
-        Integration test demonstrating complete pipeline
+        Full Mode 1 flow with complete pipeline
 
         Given:
             - Complete environment with all tools
         When:
             - Full question generation is executed
         Then:
-            - All tools are called in correct order
             - Questions are validated and saved
-            - Response contains all metadata
+            - Response contains proper structure
         """
-        import json
-
         request = GenerateQuestionsRequest(
-            user_id="integration_user",
-            difficulty=6,
-            interests=["LLM", "RAG", "Agent"],
-            num_questions=2,
+            survey_id="integration_survey",
+            round_idx=1,
         )
 
-        # Simulate realistic LangGraph output with JSON tool outputs
-        agent_instance.agent.ainvoke.return_value = {
-            "messages": [
-                {"role": "user", "content": "Generate 2 questions"},
-                {"type": "tool", "name": "get_user_profile", "content": "{}"},
-                {"type": "tool", "name": "search_question_templates", "content": "{}"},
-                {"type": "tool", "name": "get_difficulty_keywords", "content": "{}"},
-                {"type": "tool", "name": "validate_question_quality", "content": "{}"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps(
-                        {
-                            "question_id": "q_int_001",
-                            "stem": "Integration test Q1",
-                            "item_type": "short_answer",
-                            "difficulty": 6,
-                            "category": "AI",
-                            "validation_score": 0.85,
-                            "saved_at": "2025-11-09T10:00:00Z",
-                            "success": True,
-                        }
-                    ),
-                },
-                {"type": "tool", "name": "validate_question_quality", "content": "{}"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps(
-                        {
-                            "question_id": "q_int_002",
-                            "stem": "Integration test Q2",
-                            "item_type": "short_answer",
-                            "difficulty": 6,
-                            "category": "AI",
-                            "validation_score": 0.87,
-                            "saved_at": "2025-11-09T10:05:00Z",
-                            "success": True,
-                        }
-                    ),
-                },
-                {"role": "ai", "content": "Generated 2 questions successfully"},
-            ],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Generated 2 questions",
+            "intermediate_steps": [
+                ("get_user_profile", "{}"),
+                ("save_generated_question", json.dumps({
+                    "question_id": "q_int_001",
+                    "stem": "Integration Q1",
+                    "item_type": "multiple_choice",
+                    "success": True
+                })),
+                ("save_generated_question", json.dumps({
+                    "question_id": "q_int_002",
+                    "stem": "Integration Q2",
+                    "item_type": "short_answer",
+                    "success": True
+                })),
+            ]
         }
 
         response = await agent_instance.generate_questions(request)
 
-        assert response.success is True
-        assert response.total_generated == 2
-        assert response.failed_count == 0
-        # 7 tool messages
-        assert response.agent_steps == 7
+        assert response.round_id is not None
+        assert len(response.items) == 2
+        assert response.time_limit_seconds == 1200
 
     @pytest.mark.asyncio
     async def test_full_scoring_flow(self, agent_instance):
         """
         REQ: REQ-A-ItemGen
-        Full Mode 2 flow: Tool 6 execution
-
-        Integration test for auto-grading pipeline
+        Full Mode 2 flow with auto-grading
 
         Given:
-            - Short answer question with keywords
+            - Short answer question
         When:
             - score_and_explain() is executed
         Then:
-            - Tool 6 processes and returns score
-            - Explanation and feedback are generated
+            - Tool 6 processes and returns complete response
         """
         request = ScoreAnswerRequest(
-            session_id="integration_session",
-            user_id="integration_user",
-            question_id="q_integration",
-            question_type="short_answer",
-            user_answer=("Transformers use attention mechanisms to process " "sequential data in parallel."),
-            correct_keywords=["transformers", "attention", "parallel"],
-            difficulty=7,
-            category="Deep Learning",
+            round_id="integration_round",
+            item_id="integration_item",
+            user_answer="Transformers use attention mechanisms",
         )
 
-        agent_instance.agent.ainvoke.return_value = {
-            "messages": [
-                {"role": "user", "content": "Score this answer"},
-                {"type": "tool", "name": "score_and_explain", "content": "graded"},
-                {"role": "ai", "content": "Score: 88, Excellent understanding"},
-            ],
+        agent_instance.executor.ainvoke.return_value = {
+            "output": "Graded successfully",
+            "intermediate_steps": [
+                ("score_and_explain", json.dumps({
+                    "correct": True,
+                    "score": 88,
+                    "explanation": "Good explanation",
+                    "extracted_keywords": ["transformers", "attention"],
+                    "feedback": None,
+                    "graded_at": "2025-11-11T10:00:00Z"
+                }))
+            ]
         }
 
         response = await agent_instance.score_and_explain(request)
 
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_integration"
+        assert response.item_id == "integration_item"
+        assert response.correct is True
+        assert response.score == 88
 
 
 # ============================================================================
-# Phase 5: Test Parsing Logic (REQ-A-LangChain Implementation)
+# Phase 2: Test Mode 2 - Batch Answer Submission
 # ============================================================================
 
 
-class TestParseAgentOutputGenerate:
-    """Test _parse_agent_output_generate() parsing logic"""
+class TestSubmitAnswersBatchHappyPath:
+    """Test successful batch answer submission"""
 
     @pytest.mark.asyncio
-    async def test_parse_tool_output_with_json_content(self, agent_instance):
+    async def test_submit_answers_multiple_items(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Parse tool output when content is JSON string
+        REQ: REQ-A-ItemGen
+        Submit answers for multiple items in one batch
 
         Given:
-            - Tool returns JSON string in content field
+            - SubmitAnswersRequest with 3 items
         When:
-            - _parse_agent_output_generate() is called
+            - submit_answers() is called
         Then:
-            - JSON is parsed and question data extracted
-            - question_id, stem, item_type, etc. populated
+            - Returns SubmitAnswersResponse with per_item results
+            - Includes round_score and round_stats
         """
-        import json
-
-        tool_output = {
-            "question_id": "q_123",
-            "stem": "What is a transformer?",
-            "item_type": "short_answer",
-            "difficulty": 5,
-            "category": "AI",
-            "validation_score": 0.92,
-            "saved_at": "2025-11-09T10:00:00Z",
-        }
-
-        result = {
-            "messages": [
-                {"role": "user", "content": "Generate"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps(tool_output),
-                },
-                {"role": "ai", "content": "Success"},
+        request = SubmitAnswersRequest(
+            round_id="batch_round_001",
+            answers=[
+                UserAnswer(item_id="item_1", user_answer="Answer 1", response_time_ms=5000),
+                UserAnswer(item_id="item_2", user_answer="Answer 2", response_time_ms=4000),
+                UserAnswer(item_id="item_3", user_answer="Answer 3", response_time_ms=6000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_generate(result, 1)
+        # Mock score_and_explain to return different scores
+        responses = [
+            ScoreAnswerResponse(
+                item_id="item_1", correct=True, score=90.0,
+                extracted_keywords=["keyword1"], explanation="Good", feedback=None,
+                graded_at=datetime.now(UTC).isoformat()
+            ),
+            ScoreAnswerResponse(
+                item_id="item_2", correct=True, score=85.0,
+                extracted_keywords=["keyword2"], explanation="Good", feedback=None,
+                graded_at=datetime.now(UTC).isoformat()
+            ),
+            ScoreAnswerResponse(
+                item_id="item_3", correct=False, score=50.0,
+                extracted_keywords=[], explanation="Incomplete", feedback=None,
+                graded_at=datetime.now(UTC).isoformat()
+            ),
+        ]
 
-        assert response.success is True
-        assert response.total_generated >= 0
+        agent_instance.score_and_explain = AsyncMock(side_effect=responses)
+
+        response = await agent_instance.submit_answers(request)
+
+        # Verify response structure
+        assert isinstance(response, SubmitAnswersResponse)
+        assert response.round_id == "batch_round_001"
+        assert len(response.per_item) == 3
+
+        # Verify per-item results
+        assert response.per_item[0].item_id == "item_1"
+        assert response.per_item[0].correct is True
+        assert response.per_item[0].score == 90.0
+
+        assert response.per_item[1].correct is True
+        assert response.per_item[2].correct is False
 
     @pytest.mark.asyncio
-    async def test_parse_multiple_saved_questions(self, agent_instance):
+    async def test_submit_answers_single_item(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Parse multiple save_generated_question tool outputs
+        REQ: REQ-A-ItemGen
+        Submit answers for single item in batch
 
         Given:
-            - Messages contain 3 save_generated_question tool calls
+            - SubmitAnswersRequest with 1 item
         When:
-            - _parse_agent_output_generate() is called
+            - submit_answers() is called
         Then:
-            - All 3 questions extracted and aggregated
-            - total_generated=3, failed_count=0
+            - Returns response with 1 per_item result
         """
-        import json
-
-        result = {
-            "messages": [
-                {"role": "user", "content": "Generate 3"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps({"question_id": "q1", "success": True}),
-                },
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps({"question_id": "q2", "success": True}),
-                },
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps({"question_id": "q3", "success": True}),
-                },
-                {"role": "ai", "content": "Done"},
+        request = SubmitAnswersRequest(
+            round_id="single_batch",
+            answers=[
+                UserAnswer(item_id="solo_item", user_answer="Solo answer", response_time_ms=3000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_generate(result, 3)
+        mock_response = ScoreAnswerResponse(
+            item_id="solo_item", correct=True, score=100.0,
+            extracted_keywords=[], explanation="Perfect", feedback=None,
+            graded_at=datetime.now(UTC).isoformat()
+        )
 
-        assert response.total_generated == 3
+        agent_instance.score_and_explain = AsyncMock(return_value=mock_response)
+
+        response = await agent_instance.submit_answers(request)
+
+        assert len(response.per_item) == 1
+        assert response.per_item[0].item_id == "solo_item"
+        assert response.round_score == 100.0
+
+
+class TestSubmitAnswersStatistics:
+    """Test RoundStats calculation in batch submission"""
 
     @pytest.mark.asyncio
-    async def test_parse_partial_failure_mixed_messages(self, agent_instance):
+    async def test_round_stats_calculation(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Parse when some tools fail (error messages in content)
+        REQ: REQ-A-ItemGen
+        Verify RoundStats aggregation
 
         Given:
-            - Messages contain both success and error tool outputs
+            - Batch with 3 items (scores: 90, 80, 70; times: 5000, 4000, 6000)
         When:
-            - _parse_agent_output_generate() is called
+            - submit_answers() is called
         Then:
-            - Successful questions counted
-            - Failed count reflects error messages
-            - error_message populated
+            - round_score = 80.0 (average)
+            - correct_count = 3
+            - total_count = 3
+            - avg_response_time = 5000.0 (average)
         """
-        import json
-
-        result = {
-            "messages": [
-                {"role": "user", "content": "Generate 2"},
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps({"question_id": "q1", "success": True}),
-                },
-                {
-                    "type": "tool",
-                    "name": "save_generated_question",
-                    "content": json.dumps({"error": "Validation failed", "success": False}),
-                },
-                {"role": "ai", "content": "Partial success"},
+        request = SubmitAnswersRequest(
+            round_id="stats_test",
+            answers=[
+                UserAnswer(item_id="s1", user_answer="A1", response_time_ms=5000),
+                UserAnswer(item_id="s2", user_answer="A2", response_time_ms=4000),
+                UserAnswer(item_id="s3", user_answer="A3", response_time_ms=6000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_generate(result, 2)
+        responses = [
+            ScoreAnswerResponse(item_id="s1", correct=True, score=90.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="s2", correct=True, score=80.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="s3", correct=True, score=70.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+        ]
 
-        assert response.total_generated >= 1
-        assert response.failed_count >= 0
+        agent_instance.score_and_explain = AsyncMock(side_effect=responses)
+
+        response = await agent_instance.submit_answers(request)
+
+        # Verify round score (average of 90, 80, 70)
+        assert response.round_score == 80.0
+
+        # Verify round stats
+        assert response.round_stats.correct_count == 3
+        assert response.round_stats.total_count == 3
+        # Average of 5000, 4000, 6000 = 5000
+        assert response.round_stats.avg_response_time == 5000.0
 
     @pytest.mark.asyncio
-    async def test_parse_malformed_json_content(self, agent_instance):
+    async def test_round_stats_partial_correct(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Handle malformed JSON in tool output
+        REQ: REQ-A-ItemGen
+        Calculate stats when some answers are incorrect
 
         Given:
-            - Tool content contains invalid JSON
+            - Batch with 4 items (2 correct, 2 incorrect)
         When:
-            - _parse_agent_output_generate() is called
+            - submit_answers() is called
         Then:
-            - Gracefully skips malformed message
-            - Returns response with error_message
+            - correct_count = 2
+            - total_count = 4
+            - round_score includes incorrect answers
         """
-        result = {
-            "messages": [
-                {"role": "user", "content": "Generate"},
-                {"type": "tool", "name": "save_generated_question", "content": "invalid json [[["},
-                {"role": "ai", "content": "Error"},
+        request = SubmitAnswersRequest(
+            round_id="partial_correct",
+            answers=[
+                UserAnswer(item_id="p1", user_answer="A", response_time_ms=3000),
+                UserAnswer(item_id="p2", user_answer="B", response_time_ms=3000),
+                UserAnswer(item_id="p3", user_answer="C", response_time_ms=3000),
+                UserAnswer(item_id="p4", user_answer="D", response_time_ms=3000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_generate(result, 1)
+        responses = [
+            ScoreAnswerResponse(item_id="p1", correct=True, score=100.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="p2", correct=True, score=100.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="p3", correct=False, score=0.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="p4", correct=False, score=0.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+        ]
 
-        assert isinstance(response, GenerateQuestionsResponse)
+        agent_instance.score_and_explain = AsyncMock(side_effect=responses)
+
+        response = await agent_instance.submit_answers(request)
+
+        assert response.round_stats.correct_count == 2
+        assert response.round_stats.total_count == 4
+        # Average of (100, 100, 0, 0) = 50
+        assert response.round_score == 50.0
 
 
-class TestParseAgentOutputScore:
-    """Test _parse_agent_output_score() parsing logic"""
+class TestSubmitAnswersValidation:
+    """Test input validation for batch submission"""
 
     @pytest.mark.asyncio
-    async def test_parse_score_tool_output_json(self, agent_instance):
+    async def test_submit_answers_empty_batch(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Parse Tool 6 (score_and_explain) output when JSON
+        REQ: REQ-A-ItemGen
+        Handle empty batch submission gracefully
 
         Given:
-            - Tool 6 returns JSON with is_correct, score, explanation
+            - SubmitAnswersRequest with empty answers list
         When:
-            - _parse_agent_output_score() is called
+            - SubmitAnswersRequest is created
         Then:
-            - Fields extracted: is_correct, score, explanation, feedback
-            - keyword_matches populated if present
+            - Request is created (validation not enforced at model level)
+            - submit_answers() would handle empty list appropriately
         """
-        import json
+        # Note: Empty batch creation is allowed at model level
+        # Validation would be enforced at API endpoint level if needed
+        request = SubmitAnswersRequest(
+            round_id="empty_batch",
+            answers=[]
+        )
+        assert request.round_id == "empty_batch"
+        assert len(request.answers) == 0
 
-        tool_output = {
-            "attempt_id": "att_123",
-            "is_correct": True,
-            "score": 92,
-            "explanation": "Excellent understanding",
-            "keyword_matches": ["transformer", "attention"],
-            "feedback": "Great work!",
-            "graded_at": "2025-11-09T10:00:00Z",
-        }
+    @pytest.mark.asyncio
+    async def test_submit_answers_missing_round_id(self, agent_instance):
+        """
+        REQ: REQ-A-ItemGen
+        Handle round_id properly in request
 
-        result = {
-            "messages": [
-                {"role": "user", "content": "Score"},
-                {
-                    "type": "tool",
-                    "name": "score_and_explain",
-                    "content": json.dumps(tool_output),
-                },
-                {"role": "ai", "content": "Graded"},
+        Given:
+            - SubmitAnswersRequest with round_id (required field)
+        When:
+            - object is created
+        Then:
+            - Round_id is accepted (Pydantic Field(...) requires it to be non-None)
+            - Empty string is technically allowed at model level
+        """
+        # Required field check: round_id cannot be omitted
+        with pytest.raises(ValueError):
+            SubmitAnswersRequest(
+                # Missing round_id entirely
+                answers=[
+                    UserAnswer(item_id="test", user_answer="answer", response_time_ms=1000)
+                ]
+            )
+
+    @pytest.mark.asyncio
+    async def test_submit_answers_negative_response_time(self, agent_instance):
+        """
+        REQ: REQ-A-ItemGen
+        Reject negative response times
+
+        Given:
+            - UserAnswer with negative response_time_ms
+        When:
+            - object is created
+        Then:
+            - Raises validation error
+        """
+        with pytest.raises(ValueError):
+            UserAnswer(
+                item_id="test",
+                user_answer="answer",
+                response_time_ms=-1000
+            )
+
+
+class TestSubmitAnswersErrorHandling:
+    """Test error handling in batch submission"""
+
+    @pytest.mark.asyncio
+    async def test_submit_answers_partial_failure_continues(self, agent_instance):
+        """
+        REQ: REQ-A-ItemGen
+        Batch continues on individual item failure
+
+        Given:
+            - 3 items where second item fails during scoring
+        When:
+            - submit_answers() is called
+        Then:
+            - First and third items are scored successfully
+            - Second item has fallback score (0.0)
+            - Batch completes without raising exception
+        """
+        request = SubmitAnswersRequest(
+            round_id="fail_batch",
+            answers=[
+                UserAnswer(item_id="f1", user_answer="A", response_time_ms=1000),
+                UserAnswer(item_id="f2", user_answer="B", response_time_ms=1000),
+                UserAnswer(item_id="f3", user_answer="C", response_time_ms=1000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_score(result, "q_123")
+        # Second call raises exception, others succeed
+        def side_effect(*args, **kwargs):
+            request_arg = args[0]
+            if request_arg.item_id == "f2":
+                raise RuntimeError("Scoring failed")
+            if request_arg.item_id == "f1":
+                return ScoreAnswerResponse(item_id="f1", correct=True, score=90.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat())
+            return ScoreAnswerResponse(item_id="f3", correct=False, score=50.0, extracted_keywords=[], explanation="", feedback=None, graded_at=datetime.now(UTC).isoformat())
 
-        assert isinstance(response, ScoreAnswerResponse)
-        assert response.question_id == "q_123"
+        agent_instance.score_and_explain = AsyncMock(side_effect=side_effect)
+
+        response = await agent_instance.submit_answers(request)
+
+        # Verify batch completed despite partial failure
+        assert len(response.per_item) == 3
+        assert response.per_item[0].score == 90.0
+        # Second item should have fallback score of 0.0
+        assert response.per_item[1].score == 0.0
+        assert response.per_item[1].correct is False
+        assert response.per_item[2].score == 50.0
 
     @pytest.mark.asyncio
-    async def test_parse_score_with_keyword_matches(self, agent_instance):
+    async def test_submit_answers_executor_timeout(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Extract keyword_matches from Tool 6 output
+        REQ: REQ-A-ItemGen
+        Handle executor timeout gracefully
 
         Given:
-            - Short answer scored with keyword matches
+            - Executor times out during batch scoring
         When:
-            - _parse_agent_output_score() is called
+            - submit_answers() is called
         Then:
-            - keyword_matches list extracted and populated
+            - All items get fallback score (0.0)
+            - Response is returned with error indication
         """
-        import json
-
-        tool_output = {
-            "attempt_id": "att_456",
-            "is_correct": False,
-            "score": 75,
-            "explanation": "Partial understanding",
-            "keyword_matches": ["ai", "learning"],
-            "feedback": "You got 2/4 keywords",
-            "graded_at": "2025-11-09T11:00:00Z",
-        }
-
-        result = {
-            "messages": [
-                {"role": "user", "content": "Score"},
-                {
-                    "type": "tool",
-                    "name": "score_and_explain",
-                    "content": json.dumps(tool_output),
-                },
+        request = SubmitAnswersRequest(
+            round_id="timeout_batch",
+            answers=[
+                UserAnswer(item_id="t1", user_answer="A", response_time_ms=1000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_score(result, "q_456")
+        agent_instance.score_and_explain = AsyncMock(
+            side_effect=TimeoutError("Scoring timeout")
+        )
 
-        assert isinstance(response, ScoreAnswerResponse)
+        response = await agent_instance.submit_answers(request)
+
+        # Verify fallback response
+        assert response.per_item[0].score == 0.0
+        assert response.per_item[0].correct is False
+
+
+class TestSubmitAnswersIntegration:
+    """Integration tests for batch submission"""
 
     @pytest.mark.asyncio
-    async def test_parse_score_missing_optional_fields(self, agent_instance):
+    async def test_submit_answers_response_structure(self, agent_instance):
         """
-        REQ: REQ-A-LangChain
-        Handle Tool 6 output with missing optional fields
+        REQ: REQ-A-ItemGen
+        Verify complete response structure
 
         Given:
-            - Tool 6 returns minimal output (missing feedback)
+            - Valid batch submission
         When:
-            - _parse_agent_output_score() is called
+            - submit_answers() returns response
         Then:
-            - Defaults provided for missing fields
-            - Response still valid
+            - All required fields are present
+            - Types are correct
         """
-        import json
-
-        tool_output = {
-            "attempt_id": "att_789",
-            "is_correct": True,
-            "score": 100,
-            "explanation": "Correct!",
-            "graded_at": "2025-11-09T12:00:00Z",
-            # Missing: keyword_matches, feedback
-        }
-
-        result = {
-            "messages": [
-                {"role": "user", "content": "Score"},
-                {
-                    "type": "tool",
-                    "name": "score_and_explain",
-                    "content": json.dumps(tool_output),
-                },
+        request = SubmitAnswersRequest(
+            round_id="struct_test",
+            answers=[
+                UserAnswer(item_id="struct_1", user_answer="Answer", response_time_ms=2000),
+                UserAnswer(item_id="struct_2", user_answer="Answer", response_time_ms=3000),
             ]
-        }
+        )
 
-        response = agent_instance._parse_agent_output_score(result, "q_789")
+        responses = [
+            ScoreAnswerResponse(item_id="struct_1", correct=True, score=95.0, extracted_keywords=["key1"], explanation="Exp1", feedback="FB1", graded_at=datetime.now(UTC).isoformat()),
+            ScoreAnswerResponse(item_id="struct_2", correct=False, score=40.0, extracted_keywords=[], explanation="Exp2", feedback=None, graded_at=datetime.now(UTC).isoformat()),
+        ]
 
-        assert isinstance(response, ScoreAnswerResponse)
+        agent_instance.score_and_explain = AsyncMock(side_effect=responses)
 
+        response = await agent_instance.submit_answers(request)
 
-class TestAgentMessageProcessing:
-    """Test message processing and tool call extraction"""
+        # Verify all fields present
+        assert response.round_id == "struct_test"
+        assert isinstance(response.per_item, list)
+        assert isinstance(response.round_score, float)
+        assert isinstance(response.round_stats, RoundStats)
 
-    @pytest.mark.asyncio
-    async def test_count_tool_messages_accurately(self, agent_instance):
-        """
-        REQ: REQ-A-LangChain
-        Count tool messages for agent_steps field
+        # Verify ItemScore fields
+        item_1 = response.per_item[0]
+        assert item_1.item_id == "struct_1"
+        assert item_1.correct is True
+        assert item_1.score == 95.0
+        assert item_1.extracted_keywords == ["key1"]
+        assert item_1.feedback == "FB1"
 
-        Given:
-            - Messages with mixed types (user, tool, ai)
-        When:
-            - _parse_agent_output_generate() counts messages
-        Then:
-            - agent_steps correctly counts "tool" type messages
-        """
-        result = {
-            "messages": [
-                {"role": "user", "content": "Generate"},
-                {"type": "tool", "name": "get_user_profile", "content": "1"},
-                {"type": "tool", "name": "search_question_templates", "content": "2"},
-                {"role": "ai", "content": "thinking"},  # Should NOT count
-                {"type": "tool", "name": "get_difficulty_keywords", "content": "3"},
-            ]
-        }
-
-        response = agent_instance._parse_agent_output_generate(result, 1)
-
-        # Should count 3 tool messages (not the ai message)
-        assert response.agent_steps >= 3
-
-    @pytest.mark.asyncio
-    async def test_handle_missing_messages_field(self, agent_instance):
-        """
-        REQ: REQ-A-LangChain
-        Handle result without messages field gracefully
-
-        Given:
-            - Result dict missing "messages" key
-        When:
-            - _parse_agent_output_generate() is called
-        Then:
-            - Returns response with agent_steps=0
-            - success=True, questions=[]
-        """
-        result = {"output": "Some text output"}  # No "messages"
-
-        response = agent_instance._parse_agent_output_generate(result, 1)
-
-        assert isinstance(response, GenerateQuestionsResponse)
-        assert response.agent_steps == 0
+        # Verify RoundStats fields
+        assert response.round_stats.avg_response_time == 2500.0
+        assert response.round_stats.correct_count == 1
+        assert response.round_stats.total_count == 2

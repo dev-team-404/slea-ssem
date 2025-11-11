@@ -20,6 +20,7 @@ REQ: REQ-A-ItemGen
 
 import json
 import logging
+import uuid
 from datetime import UTC, datetime
 
 from langgraph.prebuilt import create_react_agent
@@ -38,65 +39,112 @@ logger = logging.getLogger(__name__)
 
 
 class GenerateQuestionsRequest(BaseModel):
-    """문항 생성 요청."""
+    """문항 생성 요청 (REQ: POST /api/v1/items/generate)."""
 
-    user_id: str = Field(..., description="사용자 ID (UUID)")
-    difficulty: int = Field(..., ge=1, le=10, description="난이도 1~10")
-    interests: list[str] = Field(default_factory=list, description="관심분야 (예: ['LLM', 'RAG'])")
-    num_questions: int = Field(default=5, ge=1, le=10, description="생성할 문항 개수")
-    test_session_id: str | None = Field(default=None, description="테스트 세션 ID (Round ID 생성용)")
+    survey_id: str = Field(..., description="설문 ID")
+    round_idx: int = Field(..., ge=1, description="라운드 번호 (1-based)")
+    prev_answers: list[dict] | None = Field(default=None, description="이전 라운드 답변 (적응형 테스트용)")
 
 
-class GeneratedQuestion(BaseModel):
-    """생성된 문항."""
+class AnswerSchema(BaseModel):
+    """답변 검증 스키마."""
 
-    question_id: str = Field(..., description="문항 ID (UUID)")
+    type: str = Field(..., description="답변 유형 (exact_match | keyword_match | semantic_match)")
+    keywords: list[str] | None = Field(default=None, description="정답 키워드 (주관식용)")
+    correct_answer: str | None = Field(default=None, description="정답 (객관식/OX용)")
+
+
+class GeneratedItem(BaseModel):
+    """생성된 문항 아이템."""
+
+    id: str = Field(..., description="문항 ID (UUID)")
+    type: str = Field(..., description="문항 유형 (multiple_choice | true_false | short_answer)")
     stem: str = Field(..., description="문항 내용")
-    item_type: str = Field(..., description="문항 유형")
     choices: list[str] | None = Field(default=None, description="객관식 선택지")
-    correct_answer: str = Field(..., description="정답")
-    difficulty: int = Field(..., description="난이도")
-    category: str = Field(..., description="카테고리")
-    validation_score: float = Field(..., ge=0, le=1, description="검증 점수 (Tool 4)")
-    saved_at: str = Field(..., description="저장 시간")
+    answer_schema: AnswerSchema = Field(..., description="답변 검증 스키마")
+    difficulty: int = Field(..., ge=1, le=10, description="난이도 (1~10)")
+    category: str = Field(..., description="문항 카테고리")
+    validation_score: float = Field(default=0.0, ge=0, le=1, description="검증 점수 (Tool 4) - 내부 메타데이터")
+    saved_at: str | None = Field(default=None, description="저장 시간 - 내부 메타데이터")
 
 
 class GenerateQuestionsResponse(BaseModel):
-    """문항 생성 응답."""
+    """문항 생성 응답 (REQ: POST /api/v1/items/generate)."""
 
-    success: bool = Field(..., description="성공 여부")
-    questions: list[GeneratedQuestion] = Field(default_factory=list, description="생성된 문항 리스트")
-    total_generated: int = Field(..., description="생성된 문항 총 개수")
-    failed_count: int = Field(..., description="실패한 문항 개수")
-    agent_steps: int = Field(..., description="에이전트 반복 횟수 (ReAct 단계)")
+    round_id: str = Field(..., description="생성된 라운드 ID")
+    items: list[GeneratedItem] = Field(..., description="생성된 문항 목록")
+    time_limit_seconds: int = Field(default=1200, description="시간 제한 (초, 기본 20분)")
+    agent_steps: int = Field(default=0, description="에이전트 반복 횟수 - 내부 메타데이터")
+    failed_count: int = Field(default=0, description="실패한 문항 개수 - 내부 메타데이터")
     error_message: str | None = Field(default=None, description="에러 메시지")
 
 
 class ScoreAnswerRequest(BaseModel):
-    """자동 채점 요청."""
+    """자동 채점 요청 (단일 처리, Phase 1)."""
 
-    session_id: str = Field(..., description="시험 세션 ID")
-    user_id: str = Field(..., description="응시자 ID")
-    question_id: str = Field(..., description="문항 ID")
-    question_type: str = Field(..., description="문항 유형")
+    round_id: str = Field(..., description="라운드 ID")
+    item_id: str = Field(..., description="문항 ID")
     user_answer: str = Field(..., description="응시자의 답변")
-    correct_answer: str | None = Field(default=None, description="정답 (객관식/OX용)")
-    correct_keywords: list[str] | None = Field(default=None, description="정답 키워드 (주관식용)")
-    difficulty: int | None = Field(default=None, description="난이도")
-    category: str | None = Field(default=None, description="카테고리")
+    response_time_ms: int = Field(default=0, ge=0, description="응답 시간 (밀리초)")
 
 
 class ScoreAnswerResponse(BaseModel):
-    """자동 채점 응답."""
+    """자동 채점 응답 (단일 처리, Phase 1)."""
 
-    attempt_id: str = Field(..., description="채점 ID (UUID)")
-    question_id: str = Field(..., description="문항 ID")
-    is_correct: bool = Field(..., description="정답 여부")
-    score: int = Field(..., ge=0, le=100, description="점수 0~100")
+    item_id: str = Field(..., description="문항 ID")
+    correct: bool = Field(..., description="정답 여부")
+    score: float = Field(..., ge=0, le=100, description="점수 (0~100)")
     explanation: str = Field(..., description="정답 해설")
     feedback: str | None = Field(default=None, description="부분 정답 피드백")
-    keyword_matches: list[str] = Field(default_factory=list, description="매칭된 키워드 (주관식)")
+    extracted_keywords: list[str] = Field(default_factory=list, description="추출된 키워드 (주관식)")
     graded_at: str = Field(..., description="채점 시간")
+
+
+# ============================================================================
+# Batch Scoring Models (Phase 2)
+# ============================================================================
+
+
+class UserAnswer(BaseModel):
+    """사용자 답변 (배치)."""
+
+    item_id: str = Field(..., description="문항 ID")
+    user_answer: str = Field(..., description="사용자 답변")
+    response_time_ms: int = Field(default=0, ge=0, description="응답 시간 (밀리초)")
+
+
+class SubmitAnswersRequest(BaseModel):
+    """배치 채점 요청 (REQ: POST /api/v1/scoring/submit-answers)."""
+
+    round_id: str = Field(..., description="라운드 ID")
+    answers: list[UserAnswer] = Field(..., description="사용자 답변 배치 (1-50개)")
+
+
+class ItemScore(BaseModel):
+    """채점된 문항 (배치 응답)."""
+
+    item_id: str = Field(..., description="문항 ID")
+    correct: bool = Field(..., description="정답 여부")
+    score: float = Field(..., ge=0, le=100, description="점수 (0~100)")
+    extracted_keywords: list[str] = Field(default_factory=list, description="추출된 키워드 (주관식)")
+    feedback: str | None = Field(default=None, description="부분 정답 피드백")
+
+
+class RoundStats(BaseModel):
+    """라운드 통계."""
+
+    avg_response_time: float = Field(..., ge=0, description="평균 응답 시간 (밀리초)")
+    correct_count: int = Field(..., ge=0, description="정답 개수")
+    total_count: int = Field(..., ge=1, description="전체 문항 개수")
+
+
+class SubmitAnswersResponse(BaseModel):
+    """배치 채점 응답 (REQ: POST /api/v1/scoring/submit-answers)."""
+
+    round_id: str = Field(..., description="라운드 ID")
+    per_item: list[ItemScore] = Field(..., description="문항별 채점 결과")
+    round_score: float = Field(..., ge=0, le=100, description="라운드 총점")
+    round_stats: RoundStats = Field(..., description="라운드 통계")
 
 
 # ============================================================================
@@ -106,12 +154,12 @@ class ScoreAnswerResponse(BaseModel):
 
 class ItemGenAgent:
     """
-    LangChain ReAct 기반 Item-Gen-Agent.
+    LangChain AgentExecutor 기반 Item-Gen-Agent.
 
     설명:
-        - LangChain의 최신 create_react_agent() API 사용
-        - FastMCP 도구 (Tool 1-6) 자동 선택 & 실행
-        - ReAct 패턴: Thought → Action → Observation → Reflection
+        - LangChain의 create_tool_calling_agent() API 사용
+        - AgentExecutor로 도구 호출 및 에러 처리 관리
+        - Tool Calling 방식 (최신 LLM 모델 최적화)
         - 구조화된 입출력 (Pydantic)
         - 상세한 로깅 (디버깅)
 
@@ -122,18 +170,16 @@ class ItemGenAgent:
 
         # Mode 1: 문항 생성
         request = GenerateQuestionsRequest(
-            user_id="123",
-            difficulty=5,
-            interests=["LLM", "RAG"]
+            survey_id="survey_123",
+            round_idx=1,
+            prev_answers=None
         )
         response = await agent.generate_questions(request)
 
         # Mode 2: 자동 채점
         score_request = ScoreAnswerRequest(
-            session_id="sess_123",
-            user_id="user_123",
-            question_id="q_456",
-            question_type="short_answer",
+            round_id="round_123",
+            item_id="item_456",
             user_answer="The answer is..."
         )
         score_response = await agent.score_and_explain(score_request)
@@ -141,19 +187,19 @@ class ItemGenAgent:
 
     참고:
         - LangChain 공식: https://python.langchain.com/docs/concepts/agents
-        - create_react_agent: Thought/Action/Observation 패턴 자동 구현
-        - AgentExecutor: 도구 호출 및 에러 처리 관리
+        - create_tool_calling_agent: Tool Calling 패턴 구현 (최신 LLM 최적화)
+        - AgentExecutor: max_iterations, early_stopping_method, 에러 처리
     """
 
     def __init__(self) -> None:
         """
-        Initialize ItemGenAgent.
+        Initialize ItemGenAgent with LangGraph create_react_agent.
 
         단계:
             1. LLM 생성 (Google Gemini)
-            2. ReAct 프롬프트 로드
+            2. 프롬프트 로드
             3. FastMCP 도구 등록
-            4. create_react_agent()로 에이전트 생성 (LangGraph CompiledStateGraph)
+            4. create_react_agent()로 에이전트 생성 (최신 Tool Calling 지원)
 
         에러 처리:
             - GEMINI_API_KEY 없음: ValueError
@@ -166,7 +212,7 @@ class ItemGenAgent:
             self.llm = create_llm()
             logger.info("✓ LLM (Google Gemini) 생성 완료")
 
-            # 2. ReAct 프롬프트 로드
+            # 2. 프롬프트 로드
             self.prompt = get_react_prompt()
             logger.info("✓ ReAct 프롬프트 로드 완료")
 
@@ -174,16 +220,19 @@ class ItemGenAgent:
             self.tools = TOOLS
             logger.info(f"✓ {len(self.tools)}개 도구 등록 완료: {[t.name for t in self.tools]}")
 
-            # 4. create_react_agent() - LangGraph 최신 API (v0.2.x+)
-            # 반환: CompiledStateGraph (LangGraph v2 호환)
-            # 참고: LangGraph의 create_react_agent는 LangChain의 deprecated initialize_agent를 대체
-            self.agent = create_react_agent(
+            # 4. create_react_agent() - LangGraph 최신 Tool Calling 지원
+            # LangGraph의 create_react_agent는 최신 LLM의 Tool Calling 기능을 자동으로 활용합니다.
+            # ReAct 패턴: Thought → Action → Observation을 반복하며 복잡한 작업을 수행합니다.
+            # AGENT_CONFIG의 max_iterations, early_stopping_method, handle_parsing_errors는
+            # create_react_agent의 래퍼로 활용되거나, CompiledStateGraph 실행 시 config로 전달됩니다.
+            self.executor = create_react_agent(
                 model=self.llm,
                 tools=self.tools,
                 prompt=self.prompt,
-                debug=AGENT_CONFIG.get("debug", False),
+                debug=AGENT_CONFIG.get("verbose", False),
+                version="v2",  # 최신 LangGraph v2 API 사용
             )
-            logger.info("✓ ReAct 에이전트 생성 완료 (LangGraph CompiledStateGraph)")
+            logger.info("✓ ReAct 에이전트 생성 완료 (Tool Calling 최적화 v2)")
 
             logger.info("✅ ItemGenAgent 초기화 성공")
 
@@ -217,54 +266,61 @@ class ItemGenAgent:
             - LLM 오류: 에러 메시지 포함
 
         참고:
-            - AgentExecutor: 도구 호출 및 ReAct 루프 자동 관리
-            - Thought/Action/Observation: 에이전트 로그에서 추적 가능
+            - AgentExecutor: 도구 호출 및 Tool Calling 루프 자동 관리
+            - intermediate_steps: 에이전트의 각 도구 호출 추적
 
         """
-        logger.info(f"📝 문항 생성 시작: user_id={request.user_id}, difficulty={request.difficulty}")
+        logger.info(f"📝 문항 생성 시작: survey_id={request.survey_id}, round_idx={request.round_idx}")
 
         try:
+            # 라운드 ID 생성
+            round_id = f"round_{request.survey_id}_{request.round_idx}_{uuid.uuid4().hex[:8]}"
+
             # 에이전트 입력 구성
             agent_input = f"""
-Generate {request.num_questions} high-quality questions for user {request.user_id}.
-Difficulty level: {request.difficulty} (1~10)
-User interests: {", ".join(request.interests) if request.interests else "general"}
-Test session ID: {request.test_session_id or "new_session"}
+Generate high-quality exam questions for the following survey.
+Survey ID: {request.survey_id}
+Round: {request.round_idx}
+Previous Answers: {json.dumps(request.prev_answers) if request.prev_answers else "None (First round)"}
 
 Follow these steps:
-1. Get user profile (Tool 1)
-2. Search templates for interests (Tool 2) if interests are provided
-3. Get difficulty keywords (Tool 3)
-4. Generate and validate each question (Tool 4)
-5. Save validated questions (Tool 5)
+1. Get survey context and user profile (Tool 1)
+2. Search question templates for similar items (Tool 2) if available
+3. Get keywords for adaptive difficulty (Tool 3)
+4. Generate new questions with appropriate difficulty
+5. Validate each question (Tool 4)
+6. Save validated questions (Tool 5) with round_id={round_id}
 
-Return exactly {request.num_questions} questions with validation scores.
+Important:
+- Generate questions with appropriate answer_schema (exact_match, keyword_match, or semantic_match)
+- Each question must include: id, type, stem, choices (if MC), answer_schema, difficulty, category
+- Return all saved questions with validation scores
 """
 
-            # 에이전트 실행 (ReAct 루프)
-            # CompiledStateGraph (LangGraph)가 다음을 자동으로 수행:
-            # - Thought: 에이전트 추론
-            # - Action: 도구 선택
+            # 에이전트 실행 (Tool Calling 루프)
+            # AgentExecutor가 다음을 자동으로 수행:
+            # - Agent Thought: 에이전트 추론
+            # - Action: 도구 선택 및 호출
             # - Observation: 도구 결과
             # - 반복 또는 종료
-            result = await self.agent.ainvoke({"messages": [{"role": "user", "content": agent_input}]})
+            result = await self.executor.ainvoke({"input": agent_input})
 
-            logger.info(f"✅ 에이전트 실행 완료: {result}")
+            logger.info("✅ 에이전트 실행 완료")
 
             # 결과 파싱
-            response = self._parse_agent_output_generate(result, request.num_questions)
-            logger.info(f"✅ 문항 생성 성공: {response.total_generated}개 생성, {response.failed_count}개 실패")
+            response = self._parse_agent_output_generate(result, round_id)
+            logger.info(f"✅ 문항 생성 성공: {len(response.items)}개 생성")
 
             return response
 
         except Exception as e:
             logger.error(f"❌ 문항 생성 실패: {e}")
             return GenerateQuestionsResponse(
-                success=False,
-                questions=[],
-                total_generated=0,
-                failed_count=request.num_questions,
+                round_id=f"round_error_{uuid.uuid4().hex[:8]}",
+                items=[],
+                time_limit_seconds=1200,
                 agent_steps=0,
+                failed_count=0,
                 error_message=str(e),
             )
 
@@ -292,39 +348,35 @@ Return exactly {request.num_questions} questions with validation scores.
             - 채점 기준: >= 80 → 정답, 70~79 → 부분 정답, < 70 → 오답
 
         """
-        logger.info(f"📋 자동 채점 시작: session_id={request.session_id}, question_id={request.question_id}")
+        logger.info(f"📋 자동 채점 시작: round_id={request.round_id}, item_id={request.item_id}")
 
         try:
             # 에이전트 입력 구성
             agent_input = f"""
 Score and explain the following answer:
 
-Session ID: {request.session_id}
-User ID: {request.user_id}
-Question ID: {request.question_id}
-Question Type: {request.question_type}
+Round ID: {request.round_id}
+Item ID: {request.item_id}
 User Answer: {request.user_answer}
-Correct Answer: {request.correct_answer or "N/A"}
-Correct Keywords: {", ".join(request.correct_keywords) if request.correct_keywords else "N/A"}
-Difficulty: {request.difficulty or "unknown"}
-Category: {request.category or "general"}
+Response Time (ms): {request.response_time_ms}
 
 Use Tool 6 (score_and_explain) to:
 1. Score the answer (0~100)
 2. Generate explanation
 3. Provide feedback if needed
+4. Extract keywords if applicable (for short answer)
 
-Return: is_correct, score, explanation, feedback
+Return: correct (boolean), score (0-100), explanation, feedback, extracted_keywords
 """
 
             # 에이전트 실행
-            result = await self.agent.ainvoke({"messages": [{"role": "user", "content": agent_input}]})
+            result = await self.executor.ainvoke({"input": agent_input})
 
-            logger.info(f"✅ 채점 완료: {result}")
+            logger.info("✅ 채점 완료")
 
             # 결과 파싱
-            response = self._parse_agent_output_score(result, request.question_id)
-            logger.info(f"✅ 채점 성공: score={response.score}, is_correct={response.is_correct}")
+            response = self._parse_agent_output_score(result, request.item_id)
+            logger.info(f"✅ 채점 성공: score={response.score}, correct={response.correct}")
 
             return response
 
@@ -332,87 +384,177 @@ Return: is_correct, score, explanation, feedback
             logger.error(f"❌ 채점 실패: {e}")
             # 기본값 반환
             return ScoreAnswerResponse(
-                attempt_id="error",
-                question_id=request.question_id,
-                is_correct=False,
-                score=0,
+                item_id=request.item_id,
+                correct=False,
+                score=0.0,
                 explanation=f"채점 중 오류 발생: {str(e)}",
                 graded_at=datetime.now(UTC).isoformat(),
             )
 
-    def _parse_agent_output_generate(self, result: dict, num_questions: int) -> GenerateQuestionsResponse:
+    async def submit_answers(self, request: SubmitAnswersRequest) -> SubmitAnswersResponse:
+        """
+        Mode 2 Batch: Auto-grade multiple answers in one round (Tool 6).
+
+        REQ: REQ-B-ItemGen-Batch
+
+        단계:
+            1. 각 답변에 대해 Tool 6 호출 (자동 채점)
+            2. 채점 결과 수집
+            3. 라운드 통계 계산 (평균 응답시간, 정답률 등)
+            4. 배치 응답 반환
+
+        Args:
+            request: SubmitAnswersRequest
+
+        Returns:
+            SubmitAnswersResponse
+
+        에러 처리:
+            - Tool 6 호출 실패: 개별 항목별 재시도
+            - 통계 계산 오류: 안전한 기본값 제공
+
+        """
+        logger.info(f"📝 배치 채점 시작: round_id={request.round_id}, items={len(request.answers)}")
+
+        try:
+            per_item: list[ItemScore] = []
+            response_times: list[int] = []
+
+            # 1. 각 답변을 순차 채점 (병렬화는 Phase 3)
+            for answer in request.answers:
+                try:
+                    # 단일 채점 메서드 활용
+                    single_request = ScoreAnswerRequest(
+                        round_id=request.round_id,
+                        item_id=answer.item_id,
+                        user_answer=answer.user_answer,
+                        response_time_ms=answer.response_time_ms,
+                    )
+
+                    result = await self.score_and_explain(single_request)
+
+                    # 배치 응답 포맷으로 변환
+                    item_score = ItemScore(
+                        item_id=result.item_id,
+                        correct=result.correct,
+                        score=result.score,
+                        extracted_keywords=result.extracted_keywords,
+                        feedback=result.feedback,
+                    )
+                    per_item.append(item_score)
+                    response_times.append(answer.response_time_ms)
+
+                    logger.info(f"✓ 문항 채점 완료: {answer.item_id}, score={result.score}, correct={result.correct}")
+
+                except Exception as e:
+                    logger.error(f"❌ 문항 채점 실패: {answer.item_id}, {str(e)}")
+                    # 실패한 항목도 결과에 포함 (score=0)
+                    item_score = ItemScore(
+                        item_id=answer.item_id,
+                        correct=False,
+                        score=0.0,
+                        feedback=f"채점 오류: {str(e)}",
+                    )
+                    per_item.append(item_score)
+                    response_times.append(answer.response_time_ms)
+
+            # 2. 라운드 통계 계산
+            correct_count = sum(1 for item in per_item if item.correct)
+            total_count = len(per_item)
+            round_score = sum(item.score for item in per_item) / total_count if total_count > 0 else 0.0
+            avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
+
+            round_stats = RoundStats(
+                avg_response_time=avg_response_time,
+                correct_count=correct_count,
+                total_count=total_count,
+            )
+
+            # 3. 배치 응답 생성
+            response = SubmitAnswersResponse(
+                round_id=request.round_id,
+                per_item=per_item,
+                round_score=round_score,
+                round_stats=round_stats,
+            )
+
+            logger.info(
+                f"✅ 배치 채점 완료: "
+                f"round_score={response.round_score:.1f}, "
+                f"correct={correct_count}/{total_count}, "
+                f"avg_time={avg_response_time:.0f}ms"
+            )
+
+            return response
+
+        except Exception as e:
+            logger.error(f"❌ 배치 채점 중 예상치 못한 오류: {e}")
+            # 부분 결과라도 반환하지 않고 전체 실패 표시
+            return SubmitAnswersResponse(
+                round_id=request.round_id,
+                per_item=[],
+                round_score=0.0,
+                round_stats=RoundStats(
+                    avg_response_time=0.0,
+                    correct_count=0,
+                    total_count=len(request.answers),
+                ),
+            )
+
+    def _parse_agent_output_generate(self, result: dict, round_id: str) -> GenerateQuestionsResponse:
         """
         Parse agent output for question generation (REQ-A-LangChain).
 
         Args:
-            result: CompiledStateGraph (LangGraph)의 출력
-            num_questions: 요청한 문항 개수
+            result: AgentExecutor의 출력
+            round_id: 라운드 ID
 
         Returns:
             GenerateQuestionsResponse
 
         로직:
-            1. result["messages"]에서 모든 메시지 추출
-            2. type="tool"인 메시지 필터링
-            3. tool.name이 "save_generated_question"인 메시지에서 question 데이터 파싱
-            4. 각 question을 GeneratedQuestion으로 변환
-            5. 성공/실패 개수 집계
+            1. result["intermediate_steps"]에서 모든 도구 호출 추출
+            2. name이 "save_generated_question"인 호출에서 question 데이터 파싱
+            3. 각 question을 GeneratedItem으로 변환
+            4. 성공/실패 개수 집계
 
         참고:
-            - LangGraph CompiledStateGraph 출력은 {"messages": [...]} 형식
-            - 각 메시지는 {"type": "tool", "name": "...", "content": "..."} 또는
-              {"role": "user/ai", "content": "..."}
+            - AgentExecutor 출력: {"output": "...", "intermediate_steps": [(tool_name, tool_output), ...]}
+            - intermediate_steps는 (tool_name: str, tool_output: str) 튜플의 리스트
             - Tool 출력은 대부분 JSON 문자열 형태
 
         """
-        logger.info("문항 생성 결과 파싱 중...")
+        logger.info(f"문항 생성 결과 파싱 중... round_id={round_id}")
 
         try:
-            # 1. 메시지 추출
-            messages = result.get("messages", [])
-            if not messages:
-                logger.warning("메시지 리스트가 비어있음")
-                return GenerateQuestionsResponse(
-                    success=True,
-                    questions=[],
-                    total_generated=0,
-                    failed_count=num_questions,
-                    agent_steps=0,
-                )
+            # 1. intermediate_steps 추출 (도구 호출 히스토리)
+            intermediate_steps = result.get("intermediate_steps", [])
+            agent_steps = len(intermediate_steps)
+            logger.info(f"도구 호출 {agent_steps}개 발견")
 
-            # 2. Tool 메시지 개수 (agent_steps)
-            tool_messages = [m for m in messages if m.get("type") == "tool"]
-            agent_steps = len(tool_messages)
-            logger.info(f"Tool 메시지 {agent_steps}개 발견")
-
-            # 3. save_generated_question 도구 결과 파싱
-            questions: list[GeneratedQuestion] = []
+            # 2. save_generated_question 도구 결과 파싱
+            items: list[GeneratedItem] = []
             failed_count = 0
             error_messages: list[str] = []
 
-            for message in messages:
-                if message.get("type") != "tool":
-                    continue
-
-                tool_name = message.get("name", "")
+            for tool_name, tool_output_str in intermediate_steps:
                 if tool_name != "save_generated_question":
                     continue
 
-                content = message.get("content", "")
-                if not content:
+                if not tool_output_str:
                     failed_count += 1
                     continue
 
                 # JSON 파싱
                 try:
-                    tool_output = json.loads(content)
+                    tool_output = json.loads(tool_output_str) if isinstance(tool_output_str, str) else tool_output_str
                 except json.JSONDecodeError as e:
-                    logger.warning(f"JSON 파싱 실패: {content[:100]}")
+                    logger.warning(f"JSON 파싱 실패: {str(tool_output_str)[:100]}")
                     failed_count += 1
                     error_messages.append(f"JSON decode error: {str(e)}")
                     continue
 
-                # success 플래그 확인 (없으면 성공으로 간주, error 있으면 실패로 간주)
+                # success 플래그 확인
                 has_error = "error" in tool_output
                 is_success = tool_output.get("success", not has_error)
 
@@ -422,167 +564,155 @@ Return: is_correct, score, explanation, feedback
                         error_messages.append(tool_output["error"])
                     continue
 
-                # GeneratedQuestion 객체 생성
+                # GeneratedItem 객체 생성
                 try:
-                    question = GeneratedQuestion(
-                        question_id=tool_output.get("question_id", f"q_{datetime.now(UTC).timestamp()}"),
+                    # answer_schema 구성
+                    answer_schema = AnswerSchema(
+                        type=tool_output.get("answer_type", "exact_match"),
+                        keywords=tool_output.get("correct_keywords"),
+                        correct_answer=tool_output.get("correct_answer"),
+                    )
+
+                    item = GeneratedItem(
+                        id=tool_output.get("question_id", f"q_{uuid.uuid4().hex[:8]}"),
+                        type=tool_output.get("item_type", "multiple_choice"),
                         stem=tool_output.get("stem", ""),
-                        item_type=tool_output.get("item_type", "unknown"),
                         choices=tool_output.get("choices"),
-                        correct_answer=tool_output.get("correct_answer", ""),
+                        answer_schema=answer_schema,
                         difficulty=tool_output.get("difficulty", 5),
                         category=tool_output.get("category", "general"),
                         validation_score=tool_output.get("validation_score", 0.0),
                         saved_at=tool_output.get("saved_at", datetime.now(UTC).isoformat()),
                     )
-                    questions.append(question)
-                    logger.info(f"✓ 문항 파싱 성공: {question.question_id}")
+                    items.append(item)
+                    logger.info(f"✓ 문항 파싱 성공: {item.id}")
 
                 except Exception as e:
-                    logger.error(f"GeneratedQuestion 생성 실패: {e}")
+                    logger.error(f"GeneratedItem 생성 실패: {e}")
                     failed_count += 1
                     error_messages.append(str(e))
                     continue
 
-            # 4. 응답 생성
-            total_generated = len(questions) + failed_count
+            # 3. 응답 생성
             error_msg = " | ".join(error_messages) if error_messages else None
 
             response = GenerateQuestionsResponse(
-                success=len(questions) > 0,
-                questions=questions,
-                total_generated=total_generated,
-                failed_count=failed_count,
+                round_id=round_id,
+                items=items,
+                time_limit_seconds=1200,  # 기본 20분
                 agent_steps=agent_steps,
+                failed_count=failed_count,
                 error_message=error_msg,
             )
 
-            logger.info(f"✅ 파싱 완료: 성공={len(questions)}, 실패={failed_count}, agent_steps={agent_steps}")
+            logger.info(f"✅ 파싱 완료: 성공={len(items)}, 실패={failed_count}, agent_steps={agent_steps}")
             return response
 
         except Exception as e:
             logger.error(f"❌ 파싱 중 예상치 못한 오류: {e}")
             return GenerateQuestionsResponse(
-                success=False,
-                questions=[],
-                total_generated=0,
-                failed_count=num_questions,
+                round_id=round_id,
+                items=[],
+                time_limit_seconds=1200,
                 agent_steps=0,
+                failed_count=0,
                 error_message=f"Parsing error: {str(e)}",
             )
 
-    def _parse_agent_output_score(self, result: dict, question_id: str) -> ScoreAnswerResponse:
+    def _parse_agent_output_score(self, result: dict, item_id: str) -> ScoreAnswerResponse:
         """
         Parse agent output for auto-grading (REQ-A-LangChain).
 
         Args:
-            result: CompiledStateGraph (LangGraph)의 출력
-            question_id: 문항 ID
+            result: AgentExecutor의 출력
+            item_id: 문항 ID
 
         Returns:
             ScoreAnswerResponse
 
         로직:
-            1. result["messages"]에서 type="tool", name="score_and_explain" 메시지 찾기
-            2. 메시지 content를 JSON으로 파싱
-            3. is_correct, score, explanation, feedback, keyword_matches 추출
+            1. result["intermediate_steps"]에서 tool_name="score_and_explain" 호출 찾기
+            2. Tool 출력을 JSON으로 파싱
+            3. correct, score, explanation, feedback, extracted_keywords 추출
             4. ScoreAnswerResponse로 변환
 
         참고:
+            - AgentExecutor 출력: {"output": "...", "intermediate_steps": [(tool_name, tool_output), ...]}
             - Tool 6 (score_and_explain) 출력 구조:
               {
-                "attempt_id": "str",
-                "is_correct": bool,
+                "correct": bool,
                 "score": float (0-100),
                 "explanation": str,
-                "keyword_matches": list[str] (optional),
-                "feedback": str (optional),
-                "graded_at": str (ISO format)
+                "extracted_keywords": list[str] (optional),
+                "feedback": str (optional)
               }
 
         """
-        logger.info(f"채점 결과 파싱 중... question_id={question_id}")
+        logger.info(f"채점 결과 파싱 중... item_id={item_id}")
 
         try:
-            # 1. 메시지 추출
-            messages = result.get("messages", [])
-            if not messages:
-                logger.warning("메시지 리스트가 비어있음")
+            # 1. intermediate_steps에서 score_and_explain 호출 찾기
+            intermediate_steps = result.get("intermediate_steps", [])
+            if not intermediate_steps:
+                logger.warning("intermediate_steps가 비어있음")
                 return ScoreAnswerResponse(
-                    attempt_id="error",
-                    question_id=question_id,
-                    is_correct=False,
-                    score=0,
-                    explanation="No messages found",
+                    item_id=item_id,
+                    correct=False,
+                    score=0.0,
+                    explanation="No tool steps found",
                     graded_at=datetime.now(UTC).isoformat(),
                 )
 
-            # 2. score_and_explain 도구 메시지 찾기
-            score_message = None
-            for message in messages:
-                if message.get("type") == "tool" and message.get("name") == "score_and_explain":
-                    score_message = message
+            # 2. score_and_explain 도구 호출 찾기
+            score_tool_output = None
+            for tool_name, tool_output_str in intermediate_steps:
+                if tool_name == "score_and_explain":
+                    score_tool_output = tool_output_str
                     break
 
-            if not score_message:
-                logger.warning("score_and_explain 메시지를 찾을 수 없음")
+            if not score_tool_output:
+                logger.warning("score_and_explain 도구 호출을 찾을 수 없음")
                 return ScoreAnswerResponse(
-                    attempt_id="error",
-                    question_id=question_id,
-                    is_correct=False,
-                    score=0,
-                    explanation="Tool not executed",
+                    item_id=item_id,
+                    correct=False,
+                    score=0.0,
+                    explanation="score_and_explain tool not executed",
                     graded_at=datetime.now(UTC).isoformat(),
                 )
 
             # 3. JSON 파싱
-            content = score_message.get("content", "")
-            if not content:
-                logger.warning("Tool 메시지 content가 비어있음")
-                return ScoreAnswerResponse(
-                    attempt_id="error",
-                    question_id=question_id,
-                    is_correct=False,
-                    score=0,
-                    explanation="Empty tool output",
-                    graded_at=datetime.now(UTC).isoformat(),
-                )
-
             try:
-                tool_output = json.loads(content)
+                tool_output = json.loads(score_tool_output) if isinstance(score_tool_output, str) else score_tool_output
             except json.JSONDecodeError as e:
-                logger.warning(f"JSON 파싱 실패: {content[:100]}")
+                logger.warning(f"JSON 파싱 실패: {str(score_tool_output)[:100]}")
                 return ScoreAnswerResponse(
-                    attempt_id="error",
-                    question_id=question_id,
-                    is_correct=False,
-                    score=0,
+                    item_id=item_id,
+                    correct=False,
+                    score=0.0,
                     explanation=f"JSON decode error: {str(e)}",
                     graded_at=datetime.now(UTC).isoformat(),
                 )
 
             # 4. ScoreAnswerResponse 생성
             response = ScoreAnswerResponse(
-                attempt_id=tool_output.get("attempt_id", f"att_{datetime.now(UTC).timestamp()}"),
-                question_id=question_id,
-                is_correct=tool_output.get("is_correct", False),
-                score=int(tool_output.get("score", 0)),
+                item_id=item_id,
+                correct=tool_output.get("correct", False),
+                score=float(tool_output.get("score", 0)),
                 explanation=tool_output.get("explanation", ""),
                 feedback=tool_output.get("feedback"),
-                keyword_matches=tool_output.get("keyword_matches", []),
+                extracted_keywords=tool_output.get("extracted_keywords", []),
                 graded_at=tool_output.get("graded_at", datetime.now(UTC).isoformat()),
             )
 
-            logger.info(f"✅ 채점 파싱 완료: is_correct={response.is_correct}, score={response.score}")
+            logger.info(f"✅ 채점 파싱 완료: correct={response.correct}, score={response.score}")
             return response
 
         except Exception as e:
             logger.error(f"❌ 채점 파싱 중 오류: {e}")
             return ScoreAnswerResponse(
-                attempt_id="error",
-                question_id=question_id,
-                is_correct=False,
-                score=0,
+                item_id=item_id,
+                correct=False,
+                score=0.0,
                 explanation=f"Parsing error: {str(e)}",
                 graded_at=datetime.now(UTC).isoformat(),
             )
