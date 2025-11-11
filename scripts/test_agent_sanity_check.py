@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Agent Sanity Check Script - Step-by-Step Testing
+Agent Sanity Check Script - Step-by-Step Testing.
 
 REQ: REQ-A-Agent-Sanity-0 - Agent 기본 동작 검증
 
@@ -54,11 +54,11 @@ console = Console()
 
 
 class AgentSanityCheck:
-    """Agent Sanity Check - 5개 단계 실행"""
+    """Agent Sanity Check - 5개 단계 실행."""
 
     def __init__(self, target_step: int = 5) -> None:
         """
-        초기화
+        초기화.
 
         Args:
             target_step: 실행할 최대 단계 (1-5)
@@ -70,7 +70,7 @@ class AgentSanityCheck:
         self.response = None
 
     def print_header(self) -> None:
-        """헤더 출력"""
+        """헤더 출력."""
         header_text = f"🔍 Agent Sanity Check - Step 1-{self.target_step}/{5}"
         console.print(Panel(header_text, style="cyan"))
         console.print()
@@ -81,7 +81,7 @@ class AgentSanityCheck:
 
     def run_step_1(self) -> bool:
         """
-        Step 1: GEMINI_API_KEY 확인
+        Step 1: GEMINI_API_KEY 확인.
 
         Returns:
             True if success, False otherwise
@@ -112,7 +112,7 @@ class AgentSanityCheck:
 
     async def run_step_2(self) -> bool:
         """
-        Step 2: ItemGenAgent 초기화
+        Step 2: ItemGenAgent 초기화.
 
         Returns:
             True if success, False otherwise
@@ -158,7 +158,7 @@ class AgentSanityCheck:
 
     def run_step_3(self) -> bool:
         """
-        Step 3: GenerateQuestionsRequest 생성
+        Step 3: GenerateQuestionsRequest 생성.
 
         Returns:
             True if success, False otherwise
@@ -193,7 +193,7 @@ class AgentSanityCheck:
 
     async def run_step_4(self) -> bool:
         """
-        Step 4: agent.generate_questions() 호출
+        Step 4: agent.generate_questions() 호출.
 
         Returns:
             True if success, False otherwise
@@ -235,7 +235,7 @@ class AgentSanityCheck:
 
     def run_step_5(self) -> bool:
         """
-        Step 5: JSON 파싱 및 결과 표시
+        Step 5: JSON 파싱 및 결과 표시.
 
         Returns:
             True if success, False otherwise
@@ -313,7 +313,7 @@ class AgentSanityCheck:
 
     async def run(self) -> bool:
         """
-        모든 단계 실행
+        모든 단계 실행.
 
         Returns:
             True if all steps passed, False otherwise
@@ -356,7 +356,7 @@ class AgentSanityCheck:
 
 
 def main() -> None:
-    """메인 함수"""
+    """메인 함수."""
     parser = argparse.ArgumentParser(
         description="Agent Sanity Check - Step-by-Step Testing",
         formatter_class=argparse.RawDescriptionHelpFormatter,
