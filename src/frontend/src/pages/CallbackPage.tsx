@@ -92,12 +92,8 @@ const CallbackPage: React.FC = () => {
         // Save JWT token to localStorage
         saveToken(data.access_token)
 
-        // Redirect based on user status
-        if (data.is_new_user) {
-          navigate('/signup')
-        } else {
-          navigate('/dashboard')
-        }
+        // REQ-F-A1-2: All users (new and existing) redirect to home screen
+        navigate('/home')
       } catch (err) {
         console.error('Authentication error:', err)
         setError(
