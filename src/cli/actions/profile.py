@@ -317,7 +317,9 @@ def reset_surveys(context: CLIContext, *args: str) -> None:
         db = SessionLocal()
 
         # Convert user_id to int if it's a string
-        user_id_int = int(context.session.user_id) if isinstance(context.session.user_id, str) else context.session.user_id
+        user_id_int = (
+            int(context.session.user_id) if isinstance(context.session.user_id, str) else context.session.user_id
+        )
 
         context.console.print(f"[dim]Deleting surveys for user_id={user_id_int}...[/dim]")
 
@@ -348,7 +350,9 @@ def reset_surveys(context: CLIContext, *args: str) -> None:
 
             # Step 2.2: Delete questions (references test_sessions)
             q_result = db.execute(
-                text("DELETE FROM questions WHERE session_id IN (SELECT id FROM test_sessions WHERE survey_id = :survey_id)"),
+                text(
+                    "DELETE FROM questions WHERE session_id IN (SELECT id FROM test_sessions WHERE survey_id = :survey_id)"
+                ),
                 {"survey_id": survey_id},
             )
             deleted_questions += q_result.rowcount

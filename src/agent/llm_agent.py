@@ -865,7 +865,8 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
 
                             # Convert Python None to JSON null
                             import re
-                            json_str = re.sub(r'\bNone\b', 'null', json_str)
+
+                            json_str = re.sub(r"\bNone\b", "null", json_str)
 
                             logger.info(f"📋 Extracted JSON (first 300 chars): {json_str[:300]}...")
 
@@ -874,16 +875,20 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                 questions_data = json.loads(json_str)
                             except json.JSONDecodeError as e:
                                 # Additional cleaning if initial parse fails
-                                logger.warning(f"⚠️  Initial JSON parse failed at char {e.pos}, applying additional cleanup")
+                                logger.warning(
+                                    f"⚠️  Initial JSON parse failed at char {e.pos}, applying additional cleanup"
+                                )
                                 # More aggressive cleanup for edge cases
                                 json_str = re.sub(r"\\\'", "'", json_str)
                                 json_str = re.sub(r'\\\\"', '"', json_str)
-                                json_str = re.sub(r"\\(?![ubnftr/])", "", json_str)  # Remove backslashes not part of valid escape sequences
+                                json_str = re.sub(
+                                    r"\\(?![ubnftr/])", "", json_str
+                                )  # Remove backslashes not part of valid escape sequences
                                 # Convert Python True/False to JSON true/false
-                                json_str = re.sub(r'\bTrue\b', 'true', json_str)
-                                json_str = re.sub(r'\bFalse\b', 'false', json_str)
+                                json_str = re.sub(r"\bTrue\b", "true", json_str)
+                                json_str = re.sub(r"\bFalse\b", "false", json_str)
                                 # Convert Python None to JSON null (redundant but safe)
-                                json_str = re.sub(r'\bNone\b', 'null', json_str)
+                                json_str = re.sub(r"\bNone\b", "null", json_str)
                                 logger.info(f"📋 Cleaned JSON (first 300 chars): {json_str[:300]}...")
                                 questions_data = json.loads(json_str)
 

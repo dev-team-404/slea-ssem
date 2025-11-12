@@ -335,7 +335,7 @@ class QuestionGenerationService:
 
             agent_response = await agent.generate_questions(agent_request)
             logger.info(f"✅ Agent response received: {len(agent_response.items)} items generated")
-            logger.debug(f"📊 Agent response structure:")
+            logger.debug("📊 Agent response structure:")
             logger.debug(f"  - type: {type(agent_response)}")
             logger.debug(f"  - round_id: {agent_response.round_id}")
             logger.debug(f"  - items count: {len(agent_response.items)}")
@@ -344,7 +344,9 @@ class QuestionGenerationService:
             logger.debug(f"  - error_message: {agent_response.error_message}")
             if agent_response.items:
                 first_item = agent_response.items[0]
-                logger.debug(f"  - first item id: {first_item.id}, type: {first_item.type}, stem: {first_item.stem[:50] if first_item.stem else 'N/A'}")
+                logger.debug(
+                    f"  - first item id: {first_item.id}, type: {first_item.type}, stem: {first_item.stem[:50] if first_item.stem else 'N/A'}"
+                )
             else:
                 logger.warning(f"⚠️  Agent response has no items! error_message: {agent_response.error_message}")
 

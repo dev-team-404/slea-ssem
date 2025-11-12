@@ -1,16 +1,16 @@
 """Questions and test-related CLI actions."""
 
-import json
 import re
+from typing import Any
 
 from rich.table import Table
 
 from src.backend.database import SessionLocal
+from src.backend.models.attempt_answer import AttemptAnswer
 from src.backend.models.question import Question
 from src.backend.models.test_session import TestSession
 from src.backend.models.user_profile import UserProfileSurvey
 from src.cli.context import CLIContext
-
 
 # ============================================================================
 # DB Helper Functions for Latest Data Retrieval
@@ -40,7 +40,8 @@ def _get_latest_survey(user_id: str | int | None) -> str | None:
 
 
 def _get_latest_session(user_id: str | int | None) -> tuple[str | None, str | None]:
-    """Get latest session ID and session info from DB.
+    """
+    Get latest session ID and session info from DB.
 
     Returns: (session_id, session_info_str)
     """
@@ -52,12 +53,7 @@ def _get_latest_session(user_id: str | int | None) -> tuple[str | None, str | No
         user_id_int = int(user_id) if isinstance(user_id, str) else user_id
 
         db = SessionLocal()
-        session = (
-            db.query(TestSession)
-            .filter_by(user_id=user_id_int)
-            .order_by(TestSession.created_at.desc())
-            .first()
-        )
+        session = db.query(TestSession).filter_by(user_id=user_id_int).order_by(TestSession.created_at.desc()).first()
         db.close()
         if session:
             info_str = f"[dim](round {session.round}, {session.status})[/dim]"
@@ -68,7 +64,8 @@ def _get_latest_session(user_id: str | int | None) -> tuple[str | None, str | No
 
 
 def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str | None, str | None]:
-    """Get latest question ID, info, and its actual session_id from DB.
+    """
+    Get latest question ID, info, and its actual session_id from DB.
 
     If session_id is provided, gets latest question from that session.
     If session_id has no questions, finds the latest session that has questions.
@@ -80,12 +77,7 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
 
         # Try to get from specified session first
         if session_id:
-            question = (
-                db.query(Question)
-                .filter_by(session_id=session_id)
-                .order_by(Question.id.desc())
-                .first()
-            )
+            question = db.query(Question).filter_by(session_id=session_id).order_by(Question.id.desc()).first()
             if question:
                 db.close()
                 info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
@@ -93,7 +85,7 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
 
             # If no questions in specified session, try to find a session with questions
             # Get sessions ordered by created_at descending, and find one with questions
-            from sqlalchemy import func
+
             session_with_q = (
                 db.query(TestSession)
                 .join(Question, TestSession.id == Question.session_id)
@@ -102,10 +94,7 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
             )
             if session_with_q:
                 question = (
-                    db.query(Question)
-                    .filter_by(session_id=session_with_q.id)
-                    .order_by(Question.id.desc())
-                    .first()
+                    db.query(Question).filter_by(session_id=session_with_q.id).order_by(Question.id.desc()).first()
                 )
                 if question:
                     db.close()
@@ -113,11 +102,7 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
                     return question.id, info_str, question.session_id
         else:
             # Get latest question from any session
-            question = (
-                db.query(Question)
-                .order_by(Question.id.desc())
-                .first()
-            )
+            question = db.query(Question).order_by(Question.id.desc()).first()
             if question:
                 db.close()
                 info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
@@ -127,6 +112,42 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
         return None, "", None
     except Exception:
         return None, "", None
+
+
+def _get_unscored_answers(session_id: str | None) -> list[dict[str, Any]]:
+    """
+    Get all unscored attempt answers from a session.
+
+    Returns list of dicts with keys: id, question_id, user_answer, session_id
+    """
+    try:
+        if not session_id:
+            return []
+
+        db = SessionLocal()
+        # Query attempt_answers where score is 0 (unscored) or NULL
+        unscored = (
+            db.query(AttemptAnswer)
+            .filter_by(session_id=session_id)
+            .filter((AttemptAnswer.score == 0.0) | (AttemptAnswer.score.is_(None)))
+            .order_by(AttemptAnswer.created_at.asc())
+            .all()
+        )
+        db.close()
+
+        result = []
+        for answer in unscored:
+            result.append(
+                {
+                    "id": answer.id,
+                    "question_id": answer.question_id,
+                    "user_answer": answer.user_answer,
+                    "session_id": answer.session_id,
+                }
+            )
+        return result
+    except Exception:
+        return []
 
 
 # ============================================================================
@@ -195,6 +216,36 @@ def _print_autosave_answer_help(context: CLIContext) -> None:
     context.console.print()
     context.console.print("  # Show this help message")
     context.console.print("  questions answer autosave --help")
+    context.console.print()
+
+
+def _print_score_answer_help(context: CLIContext) -> None:
+    """Print help for questions answer score command."""
+    context.console.print()
+    context.console.print("╔═══════════════════════════════════════════════════════════════════════════════╗")
+    context.console.print("║  questions answer score - Score Answers (Single or Batch)                   ║")
+    context.console.print("╚═══════════════════════════════════════════════════════════════════════════════╝")
+    context.console.print()
+    context.console.print("[bold cyan]Usage:[/bold cyan]")
+    context.console.print("  questions answer score [--help]")
+    context.console.print("  # Auto-batch score all unscored answers from latest session, then calculate round score")
+    context.console.print()
+    context.console.print("[bold cyan]Mode 1: Auto-Batch Scoring (Default)[/bold cyan]")
+    context.console.print("  When run with no arguments:")
+    context.console.print("  1. Detects all unscored answers in latest session")
+    context.console.print("  2. Scores each answer using agent (Tool 6)")
+    context.console.print("  3. Saves scores to database")
+    context.console.print("  4. Calculates and saves round score")
+    context.console.print()
+    context.console.print("[bold cyan]Options:[/bold cyan]")
+    context.console.print("  --help    Show this help message")
+    context.console.print()
+    context.console.print("[bold cyan]Examples:[/bold cyan]")
+    context.console.print("  # Auto-batch score all unscored answers from latest session")
+    context.console.print("  questions answer score")
+    context.console.print()
+    context.console.print("  # Show this help message")
+    context.console.print("  questions answer score --help")
     context.console.print()
 
 
@@ -602,13 +653,17 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
     # Auto-detect session_id from DB if not provided
     if not session_id:
         if not context.session.user_id:
-            context.console.print("[bold yellow]⚠ Cannot auto-detect session. Please specify --session-id[/bold yellow]")
+            context.console.print(
+                "[bold yellow]⚠ Cannot auto-detect session. Please specify --session-id[/bold yellow]"
+            )
             _print_autosave_answer_help(context)
             return
 
         session_id, session_info = _get_latest_session(context.session.user_id)
         if not session_id:
-            context.console.print("[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]")
+            context.console.print(
+                "[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]"
+            )
             return
 
         context.console.print(f"[dim]Using latest session from DB: {session_id} {session_info}[/dim]")
@@ -619,13 +674,17 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
         question_id, question_info, actual_session_id = _get_latest_question(session_id)
         if not question_id:
             context.console.print("[bold yellow]⚠ No questions found in DB.[/bold yellow]")
-            context.console.print("[yellow]Tip: Use 'questions generate --survey-id <id> --domain <domain>' to generate questions[/yellow]")
+            context.console.print(
+                "[yellow]Tip: Use 'questions generate --survey-id <id> --domain <domain>' to generate questions[/yellow]"
+            )
             return
 
         # Use the actual session_id from the question's session (may be different from the latest session)
         if actual_session_id and actual_session_id != session_id:
             context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
-            context.console.print(f"[dim](note: question belongs to a different session, using that session for autosave)[/dim]")
+            context.console.print(
+                "[dim](note: question belongs to a different session, using that session for autosave)[/dim]"
+            )
             session_id = actual_session_id
         else:
             context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
@@ -666,49 +725,90 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
 
 
 def score_answer(context: CLIContext, *args: str) -> None:
-    """단일 답변을 채점합니다."""
+    """
+    Score answers: auto-batch score unscored attempts from latest session.
+
+    When called with --help: Show usage
+    When called with no args: Auto-detect unscored answers from latest session
+                              and batch score them using agent (Tool 6)
+    """
     if not context.session.token:
         context.console.print("[bold red]✗ Not authenticated[/bold red]")
         return
 
+    # Check for --help flag
+    if args and args[0] == "--help":
+        _print_score_answer_help(context)
+        return
+
+    # Auto-batch scoring mode: no args provided
     if not args:
-        context.console.print("[bold yellow]Usage:[/bold yellow] questions answer score [question_id] [answer]")
-        context.console.print("[bold cyan]Example:[/bold cyan] questions answer score q1 'my answer'")
-        return
+        context.console.print("[dim]Starting auto-batch scoring...[/dim]")
 
-    question_id = args[0]
-    answer = " ".join(args[1:]) if len(args) > 1 else ""
+        # Get latest session
+        session_id, session_info = _get_latest_session(context.session.user_id)
+        if not session_id:
+            context.console.print("[bold yellow]⚠️  No session found[/bold yellow]")
+            return
 
-    context.console.print("[dim]Scoring answer...[/dim]")
+        context.console.print(f"[cyan]Session: {session_id} {session_info}[/cyan]")
 
-    # API 호출
-    status_code, response, error = context.client.make_request(
-        "POST",
-        "/questions/answer/score",
-        json_data={
-            "question_id": question_id,
-            "answer": answer,
-        },
-    )
+        # Get unscored answers
+        unscored_answers = _get_unscored_answers(session_id)
+        if not unscored_answers:
+            context.console.print("[bold yellow]⚠️  No unscored answers found[/bold yellow]")
+            context.console.print("[dim]All answers are already scored.[/dim]")
+            return
 
-    if error:
-        context.console.print("[bold red]✗ Scoring failed[/bold red]")
-        context.console.print(f"[red]  Error: {error}[/red]")
-        return
+        context.console.print(f"[cyan]Found {len(unscored_answers)} unscored answer(s)[/cyan]")
+        context.console.print()
 
-    if status_code not in (200, 201):
-        context.console.print(f"[bold red]✗ Scoring failed (HTTP {status_code})[/bold red]")
-        return
+        # Batch score each answer
+        scored_count = 0
+        failed_count = 0
 
-    score = response.get("score", 0)
-    is_correct = response.get("is_correct", False)
+        for i, answer_data in enumerate(unscored_answers, 1):
+            question_id = answer_data["question_id"]
+            user_answer = answer_data["user_answer"]
 
-    context.console.print(f"[bold green]✓ Answer scored: {score}%[/bold green]")
-    if is_correct:
-        context.console.print("[dim]  ✓ Correct[/dim]")
-    else:
-        context.console.print("[dim]  ✗ Incorrect[/dim]")
-    context.logger.info(f"Answer scored: {score}% for question {question_id}.")
+            context.console.print(f"[dim][{i}/{len(unscored_answers)}] Scoring question {question_id[:12]}...[/dim]")
+
+            # Call agent.score_and_explain (Tool 6) via backend
+            # POST /questions/answer/score endpoint
+            status_code, response, error = context.client.make_request(
+                "POST",
+                "/questions/answer/score",
+                json_data={
+                    "question_id": question_id,
+                    "answer": user_answer,
+                },
+            )
+
+            if error:
+                context.console.print(f"[red]  ✗ Error: {error}[/red]")
+                failed_count += 1
+                continue
+
+            if status_code not in (200, 201):
+                context.console.print(f"[red]  ✗ Failed (HTTP {status_code})[/red]")
+                failed_count += 1
+                continue
+
+            score = response.get("score", 0)
+            is_correct = response.get("is_correct", False)
+            context.console.print(f"[green]  ✓ Scored: {score}% ({'Correct' if is_correct else 'Incorrect'})[/green]")
+            scored_count += 1
+
+        context.console.print()
+        context.console.print("[bold cyan]Batch Scoring Summary[/bold cyan]")
+        context.console.print(f"[dim]  Scored: {scored_count}/{len(unscored_answers)}[/dim]")
+        if failed_count > 0:
+            context.console.print(f"[dim]  Failed: {failed_count}[/dim]")
+
+        # Calculate round score
+        context.console.print()
+        context.console.print("[dim]Calculating round score...[/dim]")
+        calculate_round_score(context)
 
 
 def calculate_round_score(context: CLIContext, *args: str) -> None:
