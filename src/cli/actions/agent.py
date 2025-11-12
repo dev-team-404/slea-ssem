@@ -697,116 +697,438 @@ def t1_get_user_profile(context: CLIContext, *args: str) -> None:
 
     Args:
         context: CLI context with console and logger.
-        *args: Additional arguments (user_id - reserved for future).
+        *args: Additional arguments (--user-id, --help).
+
+    REQ: REQ-CLI-Agent-5
 
     """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t1 (get_user_profile) "
-    msg1 += "implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 1 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    # Parse arguments
+    user_id = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--user-id" and i + 1 < len(args):
+            user_id = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t1_help(context)
+            return
+        else:
+            i += 1
+
+    # Validate required parameters
+    if not user_id:
+        context.console.print("[bold red]❌ Error:[/bold red] --user-id is required")
+        _print_t1_help(context)
+        return
+
+    # Initialize agent
+    context.console.print("🔍 Tool 1: Get User Profile")
+    context.console.print("━" * 88)
+    context.console.print()
+    context.console.print(f"🚀 Retrieving profile for user: {user_id}")
+
+    try:
+        agent = ItemGenAgent()
+    except Exception as e:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        context.console.print(f"[dim]Reason: {e}[/dim]")
+        return
+
+    # Execute tool
+    try:
+        response = asyncio.run(agent.get_user_profile(user_id))
+    except Exception as e:
+        context.console.print()
+        context.console.print("[bold red]❌ Error:[/bold red] Tool 1 invocation failed")
+        context.console.print(f"[dim]Reason: {e}[/dim]")
+        return
+
+    # Display results
+    context.console.print()
+    if hasattr(response, "user_id"):
+        context.console.print(f"User ID: {response.user_id}")
+    if hasattr(response, "skill_level"):
+        context.console.print(f"Skill Level: {response.skill_level}/10")
+    if hasattr(response, "experience_years"):
+        context.console.print(f"Experience (Years): {response.experience_years}")
+    if hasattr(response, "interests"):
+        interests_str = ", ".join(response.interests) if response.interests else "N/A"
+        context.console.print(f"Interests: {interests_str}")
+    if hasattr(response, "job_role"):
+        context.console.print(f"Job Role: {response.job_role}")
+
+    context.console.print()
 
 
 def t2_search_question_templates(context: CLIContext, *args: str) -> None:
-    """
-    Tool 2: Search Question Templates (debugging interface).
+    """Tool 2: Search Question Templates (debugging interface). REQ: REQ-CLI-Agent-5."""
+    interests = None
+    difficulty = None
+    category = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--interests" and i + 1 < len(args):
+            interests = args[i + 1]
+            i += 2
+        elif arg == "--difficulty" and i + 1 < len(args):
+            try:
+                difficulty = int(args[i + 1])
+                i += 2
+            except ValueError:
+                context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be integer")
+                return
+        elif arg == "--category" and i + 1 < len(args):
+            category = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t2_help(context)
+            return
+        else:
+            i += 1
 
-    Invokes FastMCP Tool 2: search_question_templates
-    Returns templates matching interests, difficulty, and category.
+    if not interests or difficulty is None:
+        context.console.print("[bold red]❌ Error:[/bold red] --interests and --difficulty required")
+        _print_t2_help(context)
+        return
 
-    Args:
-        context: CLI context with console and logger.
-        *args: Additional arguments (interests, difficulty, category).
+    if difficulty < 1 or difficulty > 10:
+        context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be 1-10")
+        return
 
-    """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t2 "
-    msg1 += "(search_question_templates) implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 2 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    context.console.print("📚 Tool 2: Search Question Templates")
+    context.console.print("━" * 88)
+    context.console.print(f"🔍 Searching templates for: {interests}, Difficulty: {difficulty}")
+
+    try:
+        agent = ItemGenAgent()
+    except Exception:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        return
+
+    try:
+        response = asyncio.run(agent.search_question_templates(interests, difficulty, category))
+    except Exception as e:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Tool 2 invocation failed: {e}")
+        return
+
+    context.console.print()
+    if hasattr(response, "templates"):
+        context.console.print(f"Templates Found: {len(response.templates)}")
+        for tmpl in response.templates[:5]:
+            if hasattr(tmpl, "id") and hasattr(tmpl, "stem"):
+                context.console.print(f"  • {tmpl.id}: {tmpl.stem}")
+    context.console.print()
 
 
 def t3_get_difficulty_keywords(context: CLIContext, *args: str) -> None:
-    """
-    Tool 3: Get Difficulty Keywords (debugging interface).
+    """Tool 3: Get Difficulty Keywords (debugging interface). REQ: REQ-CLI-Agent-5."""
+    difficulty = None
+    category = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--difficulty" and i + 1 < len(args):
+            try:
+                difficulty = int(args[i + 1])
+                i += 2
+            except ValueError:
+                context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be integer")
+                return
+        elif arg == "--category" and i + 1 < len(args):
+            category = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t3_help(context)
+            return
+        else:
+            i += 1
 
-    Invokes FastMCP Tool 3: get_difficulty_keywords
-    Returns keywords and concepts for specified difficulty level.
+    if difficulty is None:
+        context.console.print("[bold red]❌ Error:[/bold red] --difficulty required")
+        _print_t3_help(context)
+        return
 
-    Args:
-        context: CLI context with console and logger.
-        *args: Additional arguments (difficulty, category).
+    if difficulty < 1 or difficulty > 10:
+        context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be 1-10")
+        return
 
-    """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t3 "
-    msg1 += "(get_difficulty_keywords) implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 3 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    context.console.print("📊 Tool 3: Get Difficulty Keywords")
+    context.console.print("━" * 88)
+    context.console.print(f"🔍 Keywords for difficulty: {difficulty}")
+
+    try:
+        agent = ItemGenAgent()
+    except Exception:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        return
+
+    try:
+        response = asyncio.run(agent.get_difficulty_keywords(difficulty, category))
+    except Exception as e:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Tool 3 invocation failed: {e}")
+        return
+
+    context.console.print()
+    if hasattr(response, "keywords"):
+        context.console.print(f"Keywords ({len(response.keywords)} total):")
+        for keyword in response.keywords[:10]:
+            context.console.print(f"  • {keyword}")
+        if len(response.keywords) > 10:
+            context.console.print(f"  ... and {len(response.keywords) - 10} more")
+    context.console.print()
 
 
 def t4_validate_question_quality(context: CLIContext, *args: str) -> None:
-    """
-    Tool 4: Validate Question Quality (debugging interface).
+    """Tool 4: Validate Question Quality (debugging interface). REQ: REQ-CLI-Agent-5."""
+    question = None
+    question_type = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--question" and i + 1 < len(args):
+            question = args[i + 1]
+            i += 2
+        elif arg == "--type" and i + 1 < len(args):
+            question_type = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t4_help(context)
+            return
+        else:
+            i += 1
 
-    Invokes FastMCP Tool 4: validate_question_quality
-    Returns validation score and feedback for a question stem.
+    if not question or not question_type:
+        context.console.print("[bold red]❌ Error:[/bold red] --question and --type required")
+        _print_t4_help(context)
+        return
 
-    Args:
-        context: CLI context with console and logger.
-        *args: Additional arguments (question_stem, question_type).
+    valid_types = ["multiple_choice", "short_answer", "true_false"]
+    if question_type not in valid_types:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Invalid type: {question_type}")
+        return
 
-    """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t4 "
-    msg1 += "(validate_question_quality) implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 4 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    context.console.print("✅ Tool 4: Validate Question Quality")
+    context.console.print("━" * 88)
+
+    try:
+        agent = ItemGenAgent()
+    except Exception:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        return
+
+    try:
+        response = asyncio.run(agent.validate_question_quality(question, question_type))
+    except Exception as e:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Tool 4 invocation failed: {e}")
+        return
+
+    context.console.print()
+    if hasattr(response, "score"):
+        context.console.print(f"Score: {response.score:.2f}/1.0")
+    if hasattr(response, "status"):
+        context.console.print(f"Status: {response.status}")
+    if hasattr(response, "feedback"):
+        context.console.print(f"Feedback: {response.feedback}")
+    context.console.print()
 
 
 def t5_save_generated_question(context: CLIContext, *args: str) -> None:
-    """
-    Tool 5: Save Generated Question (debugging interface).
+    """Tool 5: Save Generated Question (debugging interface). REQ: REQ-CLI-Agent-5."""
+    stem = None
+    q_type = None
+    difficulty = None
+    categories = None
+    round_id = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--stem" and i + 1 < len(args):
+            stem = args[i + 1]
+            i += 2
+        elif arg == "--type" and i + 1 < len(args):
+            q_type = args[i + 1]
+            i += 2
+        elif arg == "--difficulty" and i + 1 < len(args):
+            try:
+                difficulty = int(args[i + 1])
+                i += 2
+            except ValueError:
+                context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be integer")
+                return
+        elif arg == "--categories" and i + 1 < len(args):
+            categories = args[i + 1]
+            i += 2
+        elif arg == "--round-id" and i + 1 < len(args):
+            round_id = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t5_help(context)
+            return
+        else:
+            i += 1
 
-    Invokes FastMCP Tool 5: save_generated_question
-    Saves a validated question with metadata to database.
+    if not all([stem, q_type, difficulty, categories, round_id]):
+        context.console.print("[bold red]❌ Error:[/bold red] All parameters required")
+        _print_t5_help(context)
+        return
 
-    Args:
-        context: CLI context with console and logger.
-        *args: Additional arguments (item_type, stem, difficulty, categories,
-                round_id).
+    if difficulty < 1 or difficulty > 10:
+        context.console.print("[bold red]❌ Error:[/bold red] --difficulty must be 1-10")
+        return
 
-    """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t5 "
-    msg1 += "(save_generated_question) implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 5 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    context.console.print("💾 Tool 5: Save Generated Question")
+    context.console.print("━" * 88)
+
+    try:
+        agent = ItemGenAgent()
+    except Exception:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        return
+
+    try:
+        cats = [c.strip() for c in categories.split(",")]
+        response = asyncio.run(agent.save_generated_question(stem, q_type, difficulty, cats, round_id))
+    except Exception as e:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Tool 5 invocation failed: {e}")
+        return
+
+    context.console.print()
+    context.console.print("✅ Question Saved Successfully")
+    if hasattr(response, "item_id"):
+        context.console.print(f"Item ID: {response.item_id}")
+    if hasattr(response, "status"):
+        context.console.print(f"Status: {response.status}")
+    context.console.print()
 
 
 def t6_score_and_explain(context: CLIContext, *args: str) -> None:
-    """
-    Tool 6: Score Answer & Generate Explanation (debugging interface).
+    """Tool 6: Score & Generate Explanation (debugging interface). REQ: REQ-CLI-Agent-5."""
+    question_id = None
+    question = None
+    answer_type = None
+    user_answer = None
+    correct_answer = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--question-id" and i + 1 < len(args):
+            question_id = args[i + 1]
+            i += 2
+        elif arg == "--question" and i + 1 < len(args):
+            question = args[i + 1]
+            i += 2
+        elif arg == "--answer-type" and i + 1 < len(args):
+            answer_type = args[i + 1]
+            i += 2
+        elif arg == "--user-answer" and i + 1 < len(args):
+            user_answer = args[i + 1]
+            i += 2
+        elif arg == "--correct-answer" and i + 1 < len(args):
+            correct_answer = args[i + 1]
+            i += 2
+        elif arg == "--help":
+            _print_t6_help(context)
+            return
+        else:
+            i += 1
 
-    Invokes FastMCP Tool 6: score_and_explain
-    Scores an answer using LLM and generates detailed explanation.
+    required = [question_id, question, answer_type, user_answer, correct_answer]
+    if not all(required):
+        context.console.print("[bold red]❌ Error:[/bold red] All parameters required")
+        _print_t6_help(context)
+        return
 
-    Args:
-        context: CLI context with console and logger.
-        *args: Additional arguments (question_id, answer, question_context).
+    valid_types = ["multiple_choice", "short_answer", "true_false"]
+    if answer_type not in valid_types:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Invalid answer_type: {answer_type}")
+        return
 
-    """
-    msg1 = "[bold yellow]⚠️  Placeholder:[/bold yellow] t6 (score_and_explain) "
-    msg1 += "implementation pending (REQ-CLI-Agent-5)"
-    context.console.print(msg1)
-    msg2 = "[dim]REQ-CLI-Agent-5 will implement: Direct FastMCP Tool 6 "
-    msg2 += "invocation[/dim]"
-    context.console.print(msg2)
+    context.console.print("🎯 Tool 6: Score & Generate Explanation")
+    context.console.print("━" * 88)
+
+    try:
+        agent = ItemGenAgent()
+    except Exception:
+        context.console.print("[bold red]❌ Error:[/bold red] Agent initialization failed")
+        return
+
+    try:
+        from src.agent.llm_agent import ScoreAnswerRequest
+
+        request = ScoreAnswerRequest(
+            item_id=question_id,
+            question_stem=question,
+            question_type=answer_type,
+            user_answer=user_answer,
+            correct_answer=correct_answer,
+        )
+        response = asyncio.run(agent.score_answer(request))
+    except Exception as e:
+        context.console.print(f"[bold red]❌ Error:[/bold red] Tool 6 invocation failed: {e}")
+        return
+
+    context.console.print()
+    if hasattr(response, "score"):
+        status = "✅ CORRECT" if response.correct else "❌ INCORRECT"
+        context.console.print(f"Score: {response.score}/100 {status}")
+    if hasattr(response, "explanation"):
+        context.console.print(f"Explanation: {response.explanation}")
+    context.console.print()
+
+
+def _print_t1_help(context: CLIContext) -> None:
+    """Display help for Tool 1."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 1: Get User Profile[/bold cyan]")
+    context.console.print("Usage: agent tools t1 --user-id USER_ID")
+    context.console.print()
+
+
+def _print_t2_help(context: CLIContext) -> None:
+    """Display help for Tool 2."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 2: Search Question Templates[/bold cyan]")
+    context.console.print("Usage: agent tools t2 --interests TEXT --difficulty INT [--category TEXT]")
+    context.console.print()
+
+
+def _print_t3_help(context: CLIContext) -> None:
+    """Display help for Tool 3."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 3: Get Difficulty Keywords[/bold cyan]")
+    context.console.print("Usage: agent tools t3 --difficulty INT [--category TEXT]")
+    context.console.print()
+
+
+def _print_t4_help(context: CLIContext) -> None:
+    """Display help for Tool 4."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 4: Validate Question Quality[/bold cyan]")
+    context.console.print("Usage: agent tools t4 --question TEXT --type TYPE")
+    context.console.print()
+
+
+def _print_t5_help(context: CLIContext) -> None:
+    """Display help for Tool 5."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 5: Save Generated Question[/bold cyan]")
+    context.console.print(
+        "Usage: agent tools t5 --stem TEXT --type TYPE --difficulty INT --categories TEXT --round-id TEXT"
+    )
+    context.console.print()
+
+
+def _print_t6_help(context: CLIContext) -> None:
+    """Display help for Tool 6."""
+    context.console.print()
+    context.console.print("[bold cyan]Tool 6: Score & Generate Explanation[/bold cyan]")
+    context.console.print(
+        "Usage: agent tools t6 --question-id ID --question TEXT --answer-type TYPE "
+        "--user-answer TEXT --correct-answer TEXT"
+    )
+    context.console.print()
 
 
 def _print_generate_questions_help(context: CLIContext) -> None:
