@@ -92,8 +92,8 @@ class TestGenerateQuestionsSuccess:
         console = Console(file=buffer, force_terminal=True, width=88)
         context = CLIContext(console=console, logger=None)
         context._buffer = buffer
-        # Set user_id for Backend Service integration test
-        context.session.user_id = "123"
+        # Set user_id as integer (from /auth/login API response)
+        context.session.user_id = 123
         return context
 
     @pytest.fixture

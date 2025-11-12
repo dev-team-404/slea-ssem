@@ -147,10 +147,10 @@ def generate_questions(context: CLIContext, *args: str) -> None:
         context.console.print("[dim]Please run 'auth login' first[/dim]")
         return
 
-    try:
-        user_id = int(context.session.user_id)
-    except (ValueError, TypeError):
-        context.console.print(f"[bold red]❌ Error:[/bold red] Invalid user_id: {context.session.user_id}")
+    # user_id is now an integer from /auth/login API
+    user_id = context.session.user_id
+    if not isinstance(user_id, int):
+        context.console.print(f"[bold red]❌ Error:[/bold red] Invalid user_id type: {type(user_id).__name__}")
         return
 
     # Generate questions via Backend Service (saves to DB)
