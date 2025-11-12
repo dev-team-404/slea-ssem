@@ -135,7 +135,7 @@ class ScoringService:
 
         Args:
             user_answer: User's answer dict with "selected_key"
-            answer_schema: Answer schema with "correct_key"
+            answer_schema: Answer schema with "correct_key" or "correct_answer"
 
         Returns:
             Tuple of (is_correct: bool, score: float)
@@ -151,7 +151,9 @@ class ScoringService:
             raise ValueError("user_answer missing 'selected_key' field")
 
         selected_key = str(user_answer["selected_key"]).strip()
-        correct_key = str(answer_schema.get("correct_key", "")).strip()
+
+        # Try correct_key first (standard format), fallback to correct_answer (agent format)
+        correct_key = str(answer_schema.get("correct_key") or answer_schema.get("correct_answer", "")).strip()
 
         is_correct = selected_key == correct_key
         score = 1.0 if is_correct else 0.0
