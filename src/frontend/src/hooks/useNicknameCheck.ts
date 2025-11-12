@@ -25,6 +25,7 @@ export interface UseNicknameCheckResult {
   errorMessage: string | null
   suggestions: string[]
   checkNickname: () => Promise<void>
+  setManualError: (message: string) => void
 }
 
 /**
@@ -45,10 +46,26 @@ export interface UseNicknameCheckResult {
  * ```
  */
 export function useNicknameCheck(): UseNicknameCheckResult {
-  const [nickname, setNickname] = useState('')
+  const [nickname, setNicknameState] = useState('')
   const [checkStatus, setCheckStatus] = useState<CheckStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<string[]>([])
+
+  const setNickname = useCallback(
+    (value: string) => {
+      setNicknameState(value)
+      setCheckStatus('idle')
+      setErrorMessage(null)
+      setSuggestions([])
+    },
+    [setNicknameState, setCheckStatus, setErrorMessage, setSuggestions]
+  )
+
+  const setManualError = useCallback((message: string) => {
+    setCheckStatus('error')
+    setErrorMessage(message)
+    setSuggestions([])
+  }, [])
 
   const checkNickname = useCallback(async (): Promise<void> => {
     // Reset state
@@ -105,5 +122,6 @@ export function useNicknameCheck(): UseNicknameCheckResult {
     errorMessage,
     suggestions,
     checkNickname,
+    setManualError,
   }
 }

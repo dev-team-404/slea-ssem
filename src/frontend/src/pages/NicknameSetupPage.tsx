@@ -1,6 +1,8 @@
 // REQ: REQ-F-A2-2
-import React from 'react'
+import React, { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
+import { transport } from '../lib/transport'
 import './NicknameSetupPage.css'
 
 /**
@@ -24,11 +26,33 @@ const NicknameSetupPage: React.FC = () => {
     errorMessage,
     suggestions,
     checkNickname,
+    setManualError,
   } = useNicknameCheck()
+  const navigate = useNavigate()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleCheckClick = () => {
+  const handleCheckClick = useCallback(() => {
+    if (isSubmitting) return
     checkNickname()
-  }
+  }, [checkNickname, isSubmitting])
+
+  const handleNextClick = useCallback(async () => {
+    if (isSubmitting || checkStatus !== 'available') {
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await transport.post('/profile/register', { nickname })
+      setIsSubmitting(false)
+      navigate('/self-assessment', { replace: true })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '닉네임 등록에 실패했습니다.'
+      setManualError(message)
+      setIsSubmitting(false)
+    }
+  }, [checkStatus, isSubmitting, navigate, nickname, setManualError])
 
   const getStatusMessage = () => {
     if (checkStatus === 'available') {
@@ -54,6 +78,10 @@ const NicknameSetupPage: React.FC = () => {
 
   const statusMessage = getStatusMessage()
   const isChecking = checkStatus === 'checking'
+  const isNextEnabled = checkStatus === 'available'
+  const isInputDisabled = isChecking || isSubmitting
+  const isCheckButtonDisabled = isInputDisabled || nickname.length === 0
+  const isNextDisabled = !isNextEnabled || isInputDisabled
 
   return (
     <main className="nickname-setup-page">
@@ -76,12 +104,12 @@ const NicknameSetupPage: React.FC = () => {
               onChange={(e) => setNickname(e.target.value)}
               placeholder="영문자, 숫자, 언더스코어 (3-30자)"
               maxLength={30}
-              disabled={isChecking}
+              disabled={isInputDisabled}
             />
             <button
               className="check-button"
               onClick={handleCheckClick}
-              disabled={isChecking || nickname.length === 0}
+              disabled={isCheckButtonDisabled}
             >
               {isChecking ? '확인 중...' : '중복 확인'}
             </button>
@@ -108,6 +136,17 @@ const NicknameSetupPage: React.FC = () => {
               </ul>
             </div>
           )}
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="next-button"
+            onClick={handleNextClick}
+            disabled={isNextDisabled}
+          >
+            {isSubmitting ? '저장 중...' : '다음'}
+          </button>
         </div>
 
         <div className="info-box">
