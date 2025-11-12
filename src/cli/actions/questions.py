@@ -87,7 +87,10 @@ def show_session_questions(context: CLIContext, *args: str) -> None:
             # Format answer from answer_schema
             answer_str = ""
             if isinstance(q.answer_schema, dict):
-                if "correct_key" in q.answer_schema:
+                # Try correct_answer first (newer format), then correct_key (legacy)
+                if "correct_answer" in q.answer_schema:
+                    answer_str = str(q.answer_schema["correct_answer"])[:40]  # Truncate long answers
+                elif "correct_key" in q.answer_schema:
                     answer_str = q.answer_schema["correct_key"]
                     validation_score = q.answer_schema.get("validation_score")
                     if validation_score is not None:

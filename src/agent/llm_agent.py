@@ -352,9 +352,9 @@ class ItemGenAgent:
                 logger.info(f"       content_preview={content_preview}...")
                 if tool_call_id:
                     tool_messages_by_id[tool_call_id] = message
-                    logger.info(f"       ✓ Added to map")
+                    logger.info("       ✓ Added to map")
                 else:
-                    logger.info(f"       ⚠️  No tool_call_id!")
+                    logger.info("       ⚠️  No tool_call_id!")
             elif msg_type == "AIMessage":
                 logger.info(f"  [{i}] AIMessage (checking for tool_calls...)")
             else:
@@ -375,7 +375,7 @@ class ItemGenAgent:
                 logger.info(f"       tool_calls: {len(tool_calls)} found")
 
                 if not tool_calls:
-                    logger.info(f"       ⚠️  No tool_calls in this message")
+                    logger.info("       ⚠️  No tool_calls in this message")
                     continue
 
                 for j, tool_call in enumerate(tool_calls):
@@ -389,7 +389,7 @@ class ItemGenAgent:
 
                         # Check if this tool call matches what we're looking for
                         if call_name == tool_name:
-                            logger.info(f"              ✓ NAME MATCHED!")
+                            logger.info("              ✓ NAME MATCHED!")
                             # Find the corresponding ToolMessage
                             if call_id in tool_messages_by_id:
                                 tool_msg = tool_messages_by_id[call_id]
@@ -814,7 +814,7 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                         ai_content = getattr(msg, "content", "")
                         if ai_content:
                             content_preview = str(ai_content)[:500]
-                            logger.info(f"      AIMessage.content (first 500 chars):")
+                            logger.info("      AIMessage.content (first 500 chars):")
                             logger.info(f"        {content_preview}...")
 
                     # ToolMessage의 경우 내용 확인
@@ -856,6 +856,11 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                             elif "```" in json_str:
                                 json_str = json_str.split("```")[1].split("```")[0].strip()
 
+                            # Unescape 처리: Agent가 escaped quotes를 사용할 수 있음
+                            # Final Answer: [{\"question_id\": ... → [{\"question_id\": ...
+                            # Replace escaped quotes with regular quotes for JSON parsing
+                            json_str = json_str.replace('\\"', '"')
+
                             logger.info(f"📋 Extracted JSON (first 300 chars): {json_str[:300]}...")
 
                             # JSON 파싱
@@ -876,7 +881,9 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                         keywords=q.get("correct_keywords"),  # From Tool 5 response
                                         correct_answer=q.get("correct_answer"),  # From Tool 5 response
                                     )
-                                    logger.info(f"  ✓ answer_schema populated: type={answer_schema.type}, keywords={answer_schema.keywords is not None}, correct_answer={answer_schema.correct_answer is not None}")
+                                    logger.info(
+                                        f"  ✓ answer_schema populated: type={answer_schema.type}, keywords={answer_schema.keywords is not None}, correct_answer={answer_schema.correct_answer is not None}"
+                                    )
 
                                     item = GeneratedItem(
                                         id=q.get("question_id", f"q_{uuid.uuid4().hex[:8]}"),
@@ -903,7 +910,10 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                 logger.info(f"\n✅ Successfully parsed {len(items)} items from Final Answer JSON")
                                 logger.info("Skipping tool results extraction (using Final Answer format)")
                                 # Update agent_steps when Final Answer JSON is found
-                                agent_steps = max(agent_steps, len(result.get("intermediate_steps", [])) or len(result.get("messages", [])))
+                                agent_steps = max(
+                                    agent_steps,
+                                    len(result.get("intermediate_steps", [])) or len(result.get("messages", [])),
+                                )
                                 break
 
                         except json.JSONDecodeError as e:
@@ -919,7 +929,9 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
             if not items:
                 logger.info("\n📊 Extracting save_generated_question tool results (LangGraph format)...")
                 tool_results = self._extract_tool_results(result, "save_generated_question")
-                agent_steps = max(agent_steps, len(result.get("intermediate_steps", [])) or len(result.get("messages", [])))
+                agent_steps = max(
+                    agent_steps, len(result.get("intermediate_steps", [])) or len(result.get("messages", []))
+                )
                 logger.info(f"✓ 도구 호출 {agent_steps}개 발견, save_generated_question {len(tool_results)}개")
 
                 # DEBUG: 추출된 tool_results 상세 출력
@@ -944,7 +956,9 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
 
                     # JSON 파싱
                     try:
-                        tool_output = json.loads(tool_output_str) if isinstance(tool_output_str, str) else tool_output_str
+                        tool_output = (
+                            json.loads(tool_output_str) if isinstance(tool_output_str, str) else tool_output_str
+                        )
                     except json.JSONDecodeError as e:
                         logger.warning(f"JSON 파싱 실패: {str(tool_output_str)[:100]}")
                         failed_count += 1

@@ -80,6 +80,10 @@ IMPORTANT INSTRUCTIONS:
    - Questions must match the user's difficulty level
    - Questions must align with the user's interests
    - Avoid biased or offensive language
+   - For multiple-choice questions: AVOID "All of the above" answers (limit to <5% of questions)
+     * Reason: "All of the above" reduces question discrimination power
+     * Design choices where each option has independent validity
+     * Use meaningful distractors that test specific misconceptions
 
 5. Tool 5 (save_generated_question) Response Usage:
    - Tool 5 returns response with: question_id, type, stem, choices, difficulty, category, answer_schema, correct_answer, correct_keywords, validation_score
