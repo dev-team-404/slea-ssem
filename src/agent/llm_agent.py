@@ -54,6 +54,7 @@ class GenerateQuestionsRequest(BaseModel):
     question_types: list[str] | None = Field(
         default=None, description="생성할 문항 유형 (multiple_choice | true_false | short_answer), None이면 모두 생성"
     )
+    domain: str = Field(default="AI", description="문항 도메인/주제 (예: AI, food, science)")
 
 
 class AnswerSchema(BaseModel):
@@ -422,6 +423,7 @@ Generate high-quality exam questions for the following survey.
 Session ID: {request.session_id}
 Survey ID: {request.survey_id}
 Round: {request.round_idx}
+Domain: {request.domain}
 Previous Answers: {json.dumps(request.prev_answers) if request.prev_answers else "None (First round)"}
 Question Count: {request.question_count}
 Question Types: {question_types_str}
@@ -430,12 +432,13 @@ Follow these steps:
 1. Get survey context and user profile (Tool 1)
 2. Search question templates for similar items (Tool 2) if available
 3. Get keywords for adaptive difficulty (Tool 3)
-4. Generate new questions with appropriate difficulty
+4. Generate new questions with appropriate difficulty (focused on {request.domain} domain)
 5. Validate each question (Tool 4)
 6. Save validated questions (Tool 5) with session_id={request.session_id} and round_id={round_id}
 
 Important:
 - Generate EXACTLY {request.question_count} questions with the specified types
+- All questions should be related to {request.domain} domain/topic
 - Generate questions with appropriate answer_schema (exact_match, keyword_match, or semantic_match)
 - Each question must include: id, type, stem, choices (if MC), answer_schema, difficulty, category
 - Return all saved questions with validation scores

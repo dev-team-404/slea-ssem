@@ -84,12 +84,13 @@ def generate_questions(context: CLIContext, *args: str) -> None:
 
     Args:
         context: CLI context with console and logger.
-        *args: Parsed arguments (--survey-id, --round, --prev-answers).
+        *args: Parsed arguments (domain, --survey-id, --round, --prev-answers).
 
     REQ: REQ-CLI-Agent-2
 
     """
     # Parse arguments
+    domain = "AI"  # Default domain
     survey_id = None
     round_idx = 1
     prev_answers_json = None
@@ -97,7 +98,11 @@ def generate_questions(context: CLIContext, *args: str) -> None:
     i = 0
     while i < len(args):
         arg = args[i]
-        if arg == "--survey-id" and i + 1 < len(args):
+        # First positional argument is domain
+        if not arg.startswith("--") and domain == "AI" and i == 0:
+            domain = arg
+            i += 1
+        elif arg == "--survey-id" and i + 1 < len(args):
             survey_id = args[i + 1]
             i += 2
         elif arg == "--round" and i + 1 < len(args):
@@ -174,7 +179,7 @@ def generate_questions(context: CLIContext, *args: str) -> None:
     # Generate questions via Backend Service (saves to DB)
     context.console.print()
     context.console.print("📝 Generating questions...")
-    context.console.print(f"   survey_id={survey_id}, round={round_idx}")
+    context.console.print(f"   survey_id={survey_id}, round={round_idx}, domain={domain}")
 
     # REQ-A-Agent-Backend-1: CLI → Backend Service → DB integration
     # TEST DEFAULT: 2 multiple-choice questions (will be 5 mixed after testing)
@@ -188,6 +193,7 @@ def generate_questions(context: CLIContext, *args: str) -> None:
                 round_num=round_idx,
                 question_count=2,  # TEST: 2 questions for quick testing
                 question_types=["multiple_choice"],  # TEST: only MC for now
+                domain=domain,
             )
         )
     except Exception as e:

@@ -29,11 +29,13 @@ class GenerateQuestionsRequest(BaseModel):
     Attributes:
         survey_id: UserProfileSurvey ID to determine user interests
         round: Test round number (1 or 2, default 1)
+        domain: Question domain/topic (e.g., "AI", "food", default "AI")
 
     """
 
     survey_id: str = Field(..., description="UserProfileSurvey ID")
     round: int = Field(default=1, ge=1, le=2, description="Test round (1 or 2)")
+    domain: str = Field(default="AI", description="Question domain/topic (e.g., AI, food, science)")
 
 
 class QuestionResponse(BaseModel):

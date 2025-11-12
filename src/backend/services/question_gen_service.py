@@ -253,6 +253,7 @@ class QuestionGenerationService:
         round_num: int = 1,
         question_count: int = 5,
         question_types: list[str] | None = None,
+        domain: str = "AI",
     ) -> dict[str, Any]:
         """
         Generate questions using Real Agent (async).
@@ -274,6 +275,7 @@ class QuestionGenerationService:
             round_num: Round number (1 or 2, default 1)
             question_count: Number of questions to generate (default 5, test 2)
             question_types: List of question types to generate (e.g., ["multiple_choice"])
+            domain: Question domain/topic (e.g., "AI", "food", default "AI")
 
         Returns:
             Dictionary with:
@@ -284,7 +286,7 @@ class QuestionGenerationService:
             Exception: If survey not found
 
         """
-        logger.info(f"📝 Question generation started: survey_id={survey_id}, round={round_num}")
+        logger.info(f"📝 Question generation started: survey_id={survey_id}, round={round_num}, domain={domain}")
 
         try:
             # Step 1: Validate survey and get context
@@ -325,6 +327,7 @@ class QuestionGenerationService:
                 prev_answers=prev_answers,
                 question_count=question_count,
                 question_types=question_types,
+                domain=domain,
             )
             logger.debug(
                 f"✓ GenerateQuestionsRequest created: session_id={session_id}, count={question_count}, types={question_types}"
