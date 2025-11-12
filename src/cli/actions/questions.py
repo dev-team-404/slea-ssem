@@ -1,12 +1,201 @@
 """Questions and test-related CLI actions."""
 
+import json
 import re
 
 from rich.table import Table
 
 from src.backend.database import SessionLocal
 from src.backend.models.question import Question
+from src.backend.models.test_session import TestSession
+from src.backend.models.user_profile import UserProfileSurvey
 from src.cli.context import CLIContext
+
+
+# ============================================================================
+# DB Helper Functions for Latest Data Retrieval
+# ============================================================================
+
+
+def _get_latest_survey(user_id: str | int | None) -> str | None:
+    """Get latest survey ID for user from DB."""
+    try:
+        if not user_id:
+            return None
+
+        # Convert to int if string
+        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
+
+        db = SessionLocal()
+        survey = (
+            db.query(UserProfileSurvey)
+            .filter_by(user_id=user_id_int)
+            .order_by(UserProfileSurvey.submitted_at.desc())
+            .first()
+        )
+        db.close()
+        return survey.id if survey else None
+    except Exception:
+        return None
+
+
+def _get_latest_session(user_id: str | int | None) -> tuple[str | None, str | None]:
+    """Get latest session ID and session info from DB.
+
+    Returns: (session_id, session_info_str)
+    """
+    try:
+        if not user_id:
+            return None, ""
+
+        # Convert to int if string
+        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
+
+        db = SessionLocal()
+        session = (
+            db.query(TestSession)
+            .filter_by(user_id=user_id_int)
+            .order_by(TestSession.created_at.desc())
+            .first()
+        )
+        db.close()
+        if session:
+            info_str = f"[dim](round {session.round}, {session.status})[/dim]"
+            return session.id, info_str
+        return None, ""
+    except Exception:
+        return None, ""
+
+
+def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str | None, str | None]:
+    """Get latest question ID, info, and its actual session_id from DB.
+
+    If session_id is provided, gets latest question from that session.
+    If session_id has no questions, finds the latest session that has questions.
+
+    Returns: (question_id, question_info_str, actual_session_id)
+    """
+    try:
+        db = SessionLocal()
+
+        # Try to get from specified session first
+        if session_id:
+            question = (
+                db.query(Question)
+                .filter_by(session_id=session_id)
+                .order_by(Question.id.desc())
+                .first()
+            )
+            if question:
+                db.close()
+                info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
+                return question.id, info_str, question.session_id
+
+            # If no questions in specified session, try to find a session with questions
+            # Get sessions ordered by created_at descending, and find one with questions
+            from sqlalchemy import func
+            session_with_q = (
+                db.query(TestSession)
+                .join(Question, TestSession.id == Question.session_id)
+                .order_by(TestSession.created_at.desc())
+                .first()
+            )
+            if session_with_q:
+                question = (
+                    db.query(Question)
+                    .filter_by(session_id=session_with_q.id)
+                    .order_by(Question.id.desc())
+                    .first()
+                )
+                if question:
+                    db.close()
+                    info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
+                    return question.id, info_str, question.session_id
+        else:
+            # Get latest question from any session
+            question = (
+                db.query(Question)
+                .order_by(Question.id.desc())
+                .first()
+            )
+            if question:
+                db.close()
+                info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
+                return question.id, info_str, question.session_id
+
+        db.close()
+        return None, "", None
+    except Exception:
+        return None, "", None
+
+
+# ============================================================================
+# Help Functions
+# ============================================================================
+
+
+def _print_generate_questions_help(context: CLIContext) -> None:
+    """Print help for questions generate command."""
+    context.console.print()
+    context.console.print("╔═══════════════════════════════════════════════════════════════════════════════╗")
+    context.console.print("║  questions generate - Generate Test Questions (Round 1)                     ║")
+    context.console.print("╚═══════════════════════════════════════════════════════════════════════════════╝")
+    context.console.print()
+    context.console.print("[bold cyan]Usage:[/bold cyan]")
+    context.console.print("  questions generate [--survey-id ID] [--domain DOMAIN] [--round 1|2]")
+    context.console.print()
+    context.console.print("[bold cyan]Options:[/bold cyan]")
+    context.console.print("  --survey-id TEXT   Survey ID (auto-uses latest if not provided)")
+    context.console.print("  --domain TEXT      Question domain: AI, food, science, etc.")
+    context.console.print("                     Default: AI")
+    context.console.print("  --round INTEGER    Round number: 1 (initial) or 2 (adaptive)")
+    context.console.print("                     Default: 1")
+    context.console.print("  --help             Show this help message")
+    context.console.print()
+    context.console.print("[bold cyan]Examples:[/bold cyan]")
+    context.console.print("  # Generate Round 1 with default AI domain, using latest survey")
+    context.console.print("  questions generate")
+    context.console.print()
+    context.console.print("  # Generate with specific domain")
+    context.console.print("  questions generate --domain food")
+    context.console.print()
+    context.console.print("  # Generate with specific survey and domain")
+    context.console.print("  questions generate --survey-id survey_abc --domain science")
+    context.console.print()
+    context.console.print("  # Show this help message")
+    context.console.print("  questions generate --help")
+    context.console.print()
+
+
+def _print_autosave_answer_help(context: CLIContext) -> None:
+    """Print help for questions answer autosave command."""
+    context.console.print()
+    context.console.print("╔═══════════════════════════════════════════════════════════════════════════════╗")
+    context.console.print("║  questions answer autosave - Auto-save Answer                               ║")
+    context.console.print("╚═══════════════════════════════════════════════════════════════════════════════╝")
+    context.console.print()
+    context.console.print("[bold cyan]Usage:[/bold cyan]")
+    context.console.print("  questions answer autosave [--session-id ID] [--question-id ID] [--answer TEXT]")
+    context.console.print()
+    context.console.print("[bold cyan]Options:[/bold cyan]")
+    context.console.print("  --session-id ID     Session ID (auto-uses latest if not provided)")
+    context.console.print("  --question-id ID    Question ID (auto-uses latest if not provided)")
+    context.console.print("  --answer TEXT       Answer text (required)")
+    context.console.print("  --help              Show this help message")
+    context.console.print()
+    context.console.print("[bold cyan]Examples:[/bold cyan]")
+    context.console.print("  # Auto-save using latest session and question from DB")
+    context.console.print("  questions answer autosave --answer 'A'")
+    context.console.print()
+    context.console.print("  # Auto-save with specific question ID, latest session")
+    context.console.print("  questions answer autosave --question-id q_abc --answer 'keyword1'")
+    context.console.print()
+    context.console.print("  # Auto-save with all parameters")
+    context.console.print("  questions answer autosave --session-id s_xyz --question-id q_abc --answer 'my answer'")
+    context.console.print()
+    context.console.print("  # Show this help message")
+    context.console.print("  questions answer autosave --help")
+    context.console.print()
 
 
 def _is_valid_session_id(value: str) -> bool:
@@ -255,16 +444,66 @@ def check_time_status(context: CLIContext, *args: str) -> None:
 
 def generate_questions(context: CLIContext, *args: str) -> None:
     """테스트 문항을 생성합니다 (Round 1)."""
+    # Check for help first
+    if args and args[0] == "help":
+        _print_generate_questions_help(context)
+        return
+
     if not context.session.token:
         context.console.print("[bold red]✗ Not authenticated[/bold red]")
         return
 
-    context.console.print("[dim]Generating Round 1 questions...[/dim]")
+    # Parse arguments with flags
+    survey_id = None
+    domain = "AI"  # Default domain
+    round_num = 1  # Default round
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--survey-id" and i + 1 < len(args):
+            survey_id = args[i + 1]
+            i += 2
+        elif args[i] == "--domain" and i + 1 < len(args):
+            domain = args[i + 1]
+            i += 2
+        elif args[i] == "--round" and i + 1 < len(args):
+            try:
+                round_num = int(args[i + 1])
+            except ValueError:
+                context.console.print(f"[yellow]⚠ Invalid round number: {args[i + 1]}. Using default: 1[/yellow]")
+            i += 2
+        elif args[i] == "--help":
+            _print_generate_questions_help(context)
+            return
+        else:
+            i += 1
+
+    # Auto-detect survey_id from DB if not provided
+    if not survey_id:
+        if not context.session.user_id:
+            context.console.print("[bold yellow]⚠ Cannot auto-detect survey. Please specify --survey-id[/bold yellow]")
+            _print_generate_questions_help(context)
+            return
+
+        survey_id = _get_latest_survey(context.session.user_id)
+
+        if not survey_id:
+            context.console.print("[bold yellow]⚠ No survey found in DB. Please create a survey first.[/bold yellow]")
+            return
+
+        context.console.print(f"[dim]Using latest survey from DB: {survey_id}[/dim]")
+
+    context.console.print(f"[dim]Generating Round {round_num} questions ({domain})...[/dim]")
 
     # API 호출
     status_code, response, error = context.client.make_request(
         "POST",
         "/questions/generate",
+        json_data={
+            "survey_id": survey_id,
+            "domain": domain,
+            "round": round_num,
+        },
     )
 
     if error:
@@ -274,12 +513,14 @@ def generate_questions(context: CLIContext, *args: str) -> None:
 
     if status_code not in (200, 201):
         context.console.print(f"[bold red]✗ Generation failed (HTTP {status_code})[/bold red]")
+        if isinstance(response, dict) and "detail" in response:
+            context.console.print(f"[red]  {response['detail']}[/red]")
         return
 
     session_id = response.get("session_id")
     questions_count = response.get("questions_count", 0)
     context.session.current_session_id = session_id
-    context.session.current_round = 1
+    context.session.current_round = round_num
 
     context.console.print("[bold green]✓ Round 1 questions generated[/bold green]")
     context.console.print(f"[dim]  Session: {session_id}[/dim]")
@@ -327,31 +568,82 @@ def generate_adaptive_questions(context: CLIContext, *args: str) -> None:
 
 def autosave_answer(context: CLIContext, *args: str) -> None:
     """답변을 자동 저장합니다."""
+    # Check for help first
+    if args and args[0] == "help":
+        _print_autosave_answer_help(context)
+        return
+
     if not context.session.token:
         context.console.print("[bold red]✗ Not authenticated[/bold red]")
         return
 
-    if not context.session.current_session_id:
-        context.console.print("[bold red]✗ No active session[/bold red]")
-        context.console.print("[yellow]Please run 'questions generate' first to create a session[/yellow]")
+    # Parse arguments with flags
+    session_id = None
+    question_id = None
+    user_answer = None
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--session-id" and i + 1 < len(args):
+            session_id = args[i + 1]
+            i += 2
+        elif args[i] == "--question-id" and i + 1 < len(args):
+            question_id = args[i + 1]
+            i += 2
+        elif args[i] == "--answer" and i + 1 < len(args):
+            user_answer = args[i + 1]
+            i += 2
+        elif args[i] == "--help":
+            _print_autosave_answer_help(context)
+            return
+        else:
+            i += 1
+
+    # Auto-detect session_id from DB if not provided
+    if not session_id:
+        if not context.session.user_id:
+            context.console.print("[bold yellow]⚠ Cannot auto-detect session. Please specify --session-id[/bold yellow]")
+            _print_autosave_answer_help(context)
+            return
+
+        session_id, session_info = _get_latest_session(context.session.user_id)
+        if not session_id:
+            context.console.print("[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]")
+            return
+
+        context.console.print(f"[dim]Using latest session from DB: {session_id} {session_info}[/dim]")
+
+    # Auto-detect question_id from DB if not provided
+    if not question_id:
+        # Get latest question from the detected session (or find one with questions)
+        question_id, question_info, actual_session_id = _get_latest_question(session_id)
+        if not question_id:
+            context.console.print("[bold yellow]⚠ No questions found in DB.[/bold yellow]")
+            context.console.print("[yellow]Tip: Use 'questions generate --survey-id <id> --domain <domain>' to generate questions[/yellow]")
+            return
+
+        # Use the actual session_id from the question's session (may be different from the latest session)
+        if actual_session_id and actual_session_id != session_id:
+            context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
+            context.console.print(f"[dim](note: question belongs to a different session, using that session for autosave)[/dim]")
+            session_id = actual_session_id
+        else:
+            context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
+
+    # Require answer text
+    if not user_answer:
+        context.console.print("[bold red]✗ Answer text is required[/bold red]")
+        _print_autosave_answer_help(context)
         return
 
-    if len(args) < 2:
-        context.console.print("[bold yellow]Usage:[/bold yellow] questions answer autosave [question_id] [answer]")
-        context.console.print("[bold cyan]Example:[/bold cyan] questions answer autosave q1 'my answer'")
-        return
-
-    question_id = args[0]
-    user_answer = " ".join(args[1:]) if len(args) > 1 else ""
-
-    context.console.print("[dim]Autosaving answer...[/dim]")
+    context.console.print(f"[dim]Autosaving answer for question {question_id}...[/dim]")
 
     # API 호출
     status_code, response, error = context.client.make_request(
         "POST",
         "/questions/autosave",
         json_data={
-            "session_id": context.session.current_session_id,
+            "session_id": session_id,
             "question_id": question_id,
             "user_answer": {"answer": user_answer},  # user_answer는 dict 형식
             "response_time_ms": 0,  # CLI에서는 타이밍 측정 안 함, 기본값 0
@@ -365,6 +657,8 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
 
     if status_code not in (200, 201):
         context.console.print(f"[bold red]✗ Autosave failed (HTTP {status_code})[/bold red]")
+        if isinstance(response, dict) and "detail" in response:
+            context.console.print(f"[red]  {response['detail']}[/red]")
         return
 
     context.console.print("[bold green]✓ Answer autosaved[/bold green]")

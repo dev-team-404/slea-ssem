@@ -308,9 +308,14 @@ class ProfileService:
         """
         # Validate self_level if provided
         if "self_level" in survey_data and survey_data["self_level"] is not None:
-            valid_levels = ("beginner", "intermediate", "advanced")
-            if survey_data["self_level"] not in valid_levels:
+            # Valid levels (lowercase for validation, converted to capitalized for DB)
+            valid_levels = ("beginner", "intermediate", "intermediate-advanced", "advanced", "elite")
+            level_lower = survey_data["self_level"].lower()
+            if level_lower not in valid_levels:
                 raise ValueError(f"Invalid self_level. Must be one of: {', '.join(valid_levels)}")
+            # Capitalize for PostgreSQL enum (Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite)
+            level_capitalized = "-".join(word.capitalize() for word in level_lower.split("-"))
+            survey_data["self_level"] = level_capitalized
 
         # Validate years_experience if provided
         if "years_experience" in survey_data and survey_data["years_experience"] is not None:

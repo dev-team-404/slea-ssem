@@ -78,6 +78,11 @@ COMMAND_LAYOUT = {
                 "usage": "profile update_survey",
                 "target": "src.cli.actions.profile.update_survey",
             },
+            "reset_surveys": {
+                "description": "모든 Survey 기록 강제 삭제 (FK 무시, DEV용)",
+                "usage": "profile reset_surveys",
+                "target": "src.cli.actions.profile.reset_surveys",
+            },
         },
     },
     "agent": {
