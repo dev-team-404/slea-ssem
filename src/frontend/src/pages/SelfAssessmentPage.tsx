@@ -67,12 +67,15 @@ const SelfAssessmentPage: React.FC = () => {
 
     try {
       const backendLevel = convertLevelToBackend(level)
-      await transport.put('/profile/survey', {
+      const response = await transport.put<{ survey_id: string }>('/profile/survey', {
         level: backendLevel,
       })
 
       setIsSubmitting(false)
-      navigate('/profile-review', { replace: true, state: { level } })
+      navigate('/profile-review', {
+        replace: true,
+        state: { level, surveyId: response.survey_id },
+      })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '자기평가 정보 저장에 실패했습니다.'

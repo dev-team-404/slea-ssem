@@ -28,6 +28,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-A3 | 개인정보 수집 및 이용 동의 | 0 | ⏳ Backlog | 5개 sub-tasks |
 | REQ-F-B1 | ⚠️ Deprecated - REQ-F-A2-2 참조 | N/A | ⚠️ Merged | REQ-F-A2-2로 통합됨 |
 | REQ-F-B2 | 문항 풀이 화면 | 0 | ⏳ Backlog | 7개 sub-tasks |
+| REQ-F-B2-1 | 문항 순차 표시 및 답변 제출 UI | 4 | ✅ Done | 9 tests (100%), Commit: (pending), Progress: docs/progress/REQ-F-B2-1.md |
 | REQ-F-B3 | 해설 화면 | 0 | ⏳ Backlog | 2개 sub-tasks |
 | REQ-F-B4 | 최종 결과 페이지 | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-F-B5 | 재응시 및 비교 화면 | 0 | ⏳ Backlog | 3개 sub-tasks |
