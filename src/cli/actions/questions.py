@@ -102,7 +102,7 @@ def show_session_questions(context: CLIContext, *args: str) -> None:
             context.console.print()
 
     except Exception as e:
-        context.console.print(f"[bold red]✗ Error retrieving questions[/bold red]")
+        context.console.print("[bold red]✗ Error retrieving questions[/bold red]")
         context.console.print(f"[red]  {str(e)}[/red]")
         context.logger.error(f"Error retrieving questions for session {session_id}: {e}", exc_info=True)
     finally:

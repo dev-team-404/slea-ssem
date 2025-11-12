@@ -122,9 +122,12 @@ def generate_questions(context: CLIContext, *args: str) -> None:
 
         db_check_session = SessionLocal()
         try:
-            latest_survey = db_check_session.query(UserProfileSurvey).filter_by(
-                user_id=context.session.user_id
-            ).order_by(UserProfileSurvey.submitted_at.desc()).first()
+            latest_survey = (
+                db_check_session.query(UserProfileSurvey)
+                .filter_by(user_id=context.session.user_id)
+                .order_by(UserProfileSurvey.submitted_at.desc())
+                .first()
+            )
 
             if not latest_survey:
                 context.console.print("[bold red]❌ Error:[/bold red] No surveys found")
@@ -178,13 +181,15 @@ def generate_questions(context: CLIContext, *args: str) -> None:
     db_session = SessionLocal()
     try:
         service = QuestionGenerationService(db_session)
-        response = asyncio.run(service.generate_questions(
-            user_id=user_id,
-            survey_id=survey_id,
-            round_num=round_idx,
-            question_count=2,  # TEST: 2 questions for quick testing
-            question_types=["multiple_choice"],  # TEST: only MC for now
-        ))
+        response = asyncio.run(
+            service.generate_questions(
+                user_id=user_id,
+                survey_id=survey_id,
+                round_num=round_idx,
+                question_count=2,  # TEST: 2 questions for quick testing
+                question_types=["multiple_choice"],  # TEST: only MC for now
+            )
+        )
     except Exception as e:
         context.console.print()
         context.console.print("[bold red]❌ Error:[/bold red] Question generation failed")
@@ -1202,9 +1207,7 @@ def _print_generate_questions_help(context: CLIContext) -> None:
     context.console.print("  agent generate-questions --survey-id survey_123")
     context.console.print()
     context.console.print("  # Generate Round 2 with adaptive difficulty")
-    context.console.print(
-        '  agent generate-questions --round 2 --prev-answers \'[{"item_id":"q1","score":85}]\''
-    )
+    context.console.print('  agent generate-questions --round 2 --prev-answers \'[{"item_id":"q1","score":85}]\'')
     context.console.print()
 
 

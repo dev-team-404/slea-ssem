@@ -52,8 +52,7 @@ class GenerateQuestionsRequest(BaseModel):
     prev_answers: list[dict] | None = Field(default=None, description="이전 라운드 답변 (적응형 테스트용)")
     question_count: int = Field(default=5, ge=1, le=20, description="생성할 문항 개수 (기본값: 5, 테스트: 2)")
     question_types: list[str] | None = Field(
-        default=None,
-        description="생성할 문항 유형 (multiple_choice | true_false | short_answer), None이면 모두 생성"
+        default=None, description="생성할 문항 유형 (multiple_choice | true_false | short_answer), None이면 모두 생성"
     )
 
 
@@ -771,9 +770,12 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                     if isinstance(schema_from_tool, dict):
                         # Tool 5에서 반환한 answer_schema 사용
                         answer_schema = AnswerSchema(
-                            type=schema_from_tool.get("type", schema_from_tool.get("correct_key") and "exact_match" or "keyword_match"),
+                            type=schema_from_tool.get(
+                                "type", schema_from_tool.get("correct_key") and "exact_match" or "keyword_match"
+                            ),
                             keywords=schema_from_tool.get("correct_keywords") or schema_from_tool.get("keywords"),
-                            correct_answer=schema_from_tool.get("correct_key") or schema_from_tool.get("correct_answer"),
+                            correct_answer=schema_from_tool.get("correct_key")
+                            or schema_from_tool.get("correct_answer"),
                         )
                     else:
                         # Fallback to tool_output fields

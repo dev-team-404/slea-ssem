@@ -326,7 +326,9 @@ class QuestionGenerationService:
                 question_count=question_count,
                 question_types=question_types,
             )
-            logger.debug(f"✓ GenerateQuestionsRequest created: session_id={session_id}, count={question_count}, types={question_types}")
+            logger.debug(
+                f"✓ GenerateQuestionsRequest created: session_id={session_id}, count={question_count}, types={question_types}"
+            )
 
             agent_response = await agent.generate_questions(agent_request)
             logger.info(f"✅ Agent response received: {len(agent_response.items)} items generated")

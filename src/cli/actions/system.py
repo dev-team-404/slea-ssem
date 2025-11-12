@@ -103,7 +103,6 @@ def help(context: CLIContext, *args: str) -> None:
         if i < len(sorted_group_names) - 1:
             context.console.print(Rule(style="dim"))
 
-
     # --- Separator before system commands ---
     context.console.print(Rule(style="dim"))
 
@@ -117,7 +116,6 @@ def help(context: CLIContext, *args: str) -> None:
         system_table.add_row(usage, f"[dim]{description}[/dim]")
 
     context.console.print(system_table)
-
 
     context.console.print()
     context.console.print("[bold yellow]💡 팁:[/bold yellow] 명령어를 입력하거나 'help'를 다시 입력하세요")

@@ -177,7 +177,8 @@ ignore = [
     "PLR",  # Pylint Refactoring
     "PLC",  # Pylint Convention
     "D203", # no-blank-line-before-class (D211)과 충돌
-    "D212"  # multi-line-summary-second-line (D213)과 충돌
+    "D212",  # multi-line-summary-second-line (D213)과 충돌
+    "E501", # Line too long
 ]
 
 [tool.ruff.format]
