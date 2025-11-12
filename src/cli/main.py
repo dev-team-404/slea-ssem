@@ -13,6 +13,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
+from dotenv import load_dotenv
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import InMemoryHistory
@@ -256,6 +257,9 @@ class CLI:
 
 def main() -> None:
     """Start the interactive CLI."""
+    # Load environment variables from .env file
+    load_dotenv()
+
     try:
         cli = CLI()
         cli.run()

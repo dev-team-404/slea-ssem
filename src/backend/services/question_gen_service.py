@@ -329,9 +329,7 @@ class QuestionGenerationService:
             for item in agent_response.items:
                 # Handle both Pydantic model and dict for answer_schema
                 answer_schema_value = (
-                    item.answer_schema.model_dump()
-                    if hasattr(item.answer_schema, "model_dump")
-                    else item.answer_schema
+                    item.answer_schema.model_dump() if hasattr(item.answer_schema, "model_dump") else item.answer_schema
                 )
                 question = Question(
                     id=item.id,
