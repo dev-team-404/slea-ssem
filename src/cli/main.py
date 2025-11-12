@@ -191,7 +191,7 @@ class CLI:
                 # so dispatcher can show proper error message
                 if not command_path:
                     command_path.append(part)
-                args = parts[i + 1 :]
+                args = parts[i:]
                 break
         return command_path, args
 
