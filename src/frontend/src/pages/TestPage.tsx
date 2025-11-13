@@ -1,4 +1,4 @@
-// REQ: REQ-F-B2-1, REQ-F-B2-2
+// REQ: REQ-F-B2-1, REQ-F-B2-2, REQ-F-B2-6
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { transport } from '../lib/transport'
@@ -50,6 +50,8 @@ const TestPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
   const [timeRemaining, setTimeRemaining] = useState<number>(1200) // 20 minutes = 1200 seconds
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [lastSavedAnswer, setLastSavedAnswer] = useState<string>('')
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState
@@ -96,6 +98,9 @@ const TestPage: React.FC = () => {
   useEffect(() => {
     setQuestionStartTime(Date.now())
     setSubmitError(null)
+    setLastSavedAnswer('')
+    setSaveStatus('idle')
+    setAnswer('') // Clear answer when moving to next question
   }, [currentIndex])
 
   // Timer countdown logic (REQ-F-B2-2, REQ-F-B2-5)
@@ -115,6 +120,47 @@ const TestPage: React.FC = () => {
 
     return () => clearInterval(interval)
   }, [sessionId, questions])
+
+  // Autosave logic (REQ-F-B2-6)
+  useEffect(() => {
+    // Only autosave if answer is not empty, different from last saved, and session is ready
+    if (!answer.trim() || answer === lastSavedAnswer || !sessionId || !questions || questions.length === 0) {
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving')
+      try {
+        const currentQuestion = questions[currentIndex]
+        const responseTimeMs = Date.now() - questionStartTime
+
+        let userAnswer: { selected?: string; text?: string }
+        if (currentQuestion.item_type === 'multiple_choice' || currentQuestion.item_type === 'true_false') {
+          userAnswer = { selected: answer }
+        } else {
+          userAnswer = { text: answer }
+        }
+
+        await transport.post('/questions/autosave', {
+          session_id: sessionId,
+          question_id: currentQuestion.id,
+          user_answer: userAnswer,
+          response_time_ms: responseTimeMs,
+        })
+
+        setLastSavedAnswer(answer)
+        setSaveStatus('saved')
+
+        // Hide "저장됨" message after 2 seconds
+        setTimeout(() => setSaveStatus('idle'), 2000)
+      } catch (err) {
+        console.error('Autosave error:', err)
+        setSaveStatus('error')
+      }
+    }, 1000) // 1 second debounce
+
+    return () => clearTimeout(timer)
+  }, [answer, sessionId, questions, currentIndex, questionStartTime, lastSavedAnswer])
 
   // Helper: Get timer color based on remaining time (REQ-F-B2-5)
   const getTimerColor = (seconds: number): string => {
@@ -311,6 +357,25 @@ const TestPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Autosave status indicator - REQ-F-B2-6 */}
+      {saveStatus === 'saving' && (
+        <div className="save-status save-status-saving">
+          저장 중...
+        </div>
+      )}
+
+      {saveStatus === 'saved' && (
+        <div className="save-status save-status-saved">
+          ✓ 저장됨
+        </div>
+      )}
+
+      {saveStatus === 'error' && (
+        <div className="save-status save-status-error">
+          저장 실패
+        </div>
+      )}
     </main>
   )
 }

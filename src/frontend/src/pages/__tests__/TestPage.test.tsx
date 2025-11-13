@@ -442,3 +442,150 @@ describe('TestPage - REQ-F-B2-2 Timer', () => {
     expect(formatTime(0)).toBe('0:00')      // 0 seconds
   })
 })
+
+describe('TestPage - REQ-F-B2-6 Autosave', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+  })
+
+  test('Autosave: 답변 입력 시 자동 저장', async () => {
+    // REQ: REQ-F-B2-6
+    // AC: 답변 입력 시 1초 debounce 후 자동 저장
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+    mockPost.mockResolvedValueOnce({ saved: true, session_id: 'session-456', question_id: 'q1' })
+
+    const user = userEvent.setup()
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('What is AI?')).toBeInTheDocument()
+    })
+
+    // Select answer
+    const optionA = screen.getByLabelText('Option A')
+    await user.click(optionA)
+
+    // Wait for autosave (1 second debounce + API call)
+    await waitFor(() => {
+      const autosaveCalls = mockPost.mock.calls.filter(call => call[0] === '/questions/autosave')
+      expect(autosaveCalls.length).toBeGreaterThan(0)
+      expect(autosaveCalls[0][1]).toMatchObject({
+        session_id: 'session-456',
+        question_id: 'q1',
+        user_answer: { selected: 'Option A' },
+      })
+    }, { timeout: 3000 })
+  })
+
+  test('Autosave: 저장 완료 시 "저장됨" 표시', async () => {
+    // REQ: REQ-F-B2-6
+    // AC: 저장 완료 후 "저장됨" 메시지 표시
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+    mockPost.mockResolvedValueOnce({ saved: true, session_id: 'session-456', question_id: 'q1' })
+
+    const user = userEvent.setup()
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('What is AI?')).toBeInTheDocument()
+    })
+
+    // Select answer
+    const optionA = screen.getByLabelText('Option A')
+    await user.click(optionA)
+
+    // Wait for autosave and "저장됨" message
+    await waitFor(() => {
+      expect(screen.getByText(/저장됨/i)).toBeInTheDocument()
+    }, { timeout: 3000 })
+  })
+
+  test('Autosave: 저장 완료 후 메시지 자동 숨김', async () => {
+    // REQ: REQ-F-B2-6
+    // AC: 저장 완료 후 2초 후 메시지 자동 숨김
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+    mockPost.mockResolvedValueOnce({ saved: true, session_id: 'session-456', question_id: 'q1' })
+
+    const user = userEvent.setup()
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('What is AI?')).toBeInTheDocument()
+    })
+
+    // Select answer
+    const optionA = screen.getByLabelText('Option A')
+    await user.click(optionA)
+
+    // Should show "저장됨" message
+    await waitFor(() => {
+      expect(screen.getByText(/저장됨/i)).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // Wait 2 more seconds - message should be hidden
+    await waitFor(() => {
+      expect(screen.queryByText(/저장됨/i)).not.toBeInTheDocument()
+    }, { timeout: 3000 })
+  })
+
+  test('Autosave: 동일한 답변은 중복 저장하지 않음', async () => {
+    // REQ: REQ-F-B2-6
+    // AC: 이미 저장된 답변은 다시 저장하지 않음
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+    mockPost.mockResolvedValue({ saved: true, session_id: 'session-456', question_id: 'q1' })
+
+    const user = userEvent.setup()
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('What is AI?')).toBeInTheDocument()
+    })
+
+    // Select answer
+    const optionA = screen.getByLabelText('Option A')
+    await user.click(optionA)
+
+    // Wait for autosave
+    await waitFor(() => {
+      const autosaveCalls = mockPost.mock.calls.filter(call => call[0] === '/questions/autosave')
+      expect(autosaveCalls.length).toBe(1)
+    }, { timeout: 2000 })
+
+    const saveCount = mockPost.mock.calls.filter(call => call[0] === '/questions/autosave').length
+
+    // Wait longer - should NOT save again
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    const newSaveCount = mockPost.mock.calls.filter(call => call[0] === '/questions/autosave').length
+    expect(newSaveCount).toBe(saveCount) // Same count, no duplicate save
+  })
+
+  test('Autosave: 저장 실패 시 에러 메시지 표시', async () => {
+    // REQ: REQ-F-B2-6
+    // AC: 에러 발생 시 사용자에게 알림
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+    mockPost.mockRejectedValueOnce(new Error('Network error'))
+
+    const user = userEvent.setup()
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('What is AI?')).toBeInTheDocument()
+    })
+
+    // Select answer
+    const optionA = screen.getByLabelText('Option A')
+    await user.click(optionA)
+
+    // Should show error message
+    await waitFor(() => {
+      expect(screen.getByText(/저장 실패/i)).toBeInTheDocument()
+    }, { timeout: 3000 })
+  })
+})
