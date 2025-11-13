@@ -125,10 +125,8 @@ const TestResultsPage: React.FC = () => {
     return (
       <main className="results-page">
         <div className="results-container">
-          <div className="loading-spinner">
-            <div className="spinner" />
             <p className="loading-text">결과를 불러오는 중입니다...</p>
-          </div>
+
         </div>
       </main>
     )
