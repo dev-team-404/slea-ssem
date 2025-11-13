@@ -38,6 +38,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-B4 | 최종 결과 페이지 | 0 | ⏳ Backlog | 6개 sub-tasks |
 | REQ-F-B4-1 | 등급/점수/순위/백분위 표시 | 4 | ✅ Done | Tests designed (16 cases), Commit: a22319f, Progress: docs/progress/REQ-F-B4-1.md |
 | REQ-F-B4-3 | 전사 상대 순위 및 분포 시각화 (막대 차트) | 4 | ✅ Done | 5 tests (100%), Commit: 6c22a41, Progress: docs/progress/REQ-F-B4-3.md |
+| REQ-F-B4-4 | 모집단 < 100일 경우 분포 신뢰도 낮음 경고 표시 | 4 | ✅ Done | 4 tests (100%), Commit: b6c17b0, Progress: docs/progress/REQ-F-B4-4.md |
 | REQ-F-B5 | 재응시 및 비교 화면 | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | ⏳ Backlog | 3개 sub-tasks |
 
