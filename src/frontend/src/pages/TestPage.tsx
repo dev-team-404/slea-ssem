@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { questionService } from '../services'
+import { Timer, SaveStatus, Question, type QuestionData } from '../components/test'
+import { useAutosave } from '../hooks/useAutosave'
 import './TestPage.css'
 
 /**
@@ -9,13 +11,14 @@ import './TestPage.css'
  *
  * REQ: REQ-F-B2-1 - 생성된 문항을 순차적으로 표시
  * REQ: REQ-F-B2-2 - 진행률, 응답 입력, "다음" 버튼, 타이머 제공
+ * REQ: REQ-F-B2-6 - 자동 저장 with visual feedback
  *
  * Features:
  * - Generate test questions on mount
  * - Display questions one by one
- * - Show progress (e.g., 1/5)
  * - Timer (20 minutes)
- * - Submit answer and move to next question
+ * - Autosave answers
+ * - Submit and navigate to results
  *
  * Route: /test
  */
@@ -25,23 +28,14 @@ type LocationState = {
   round: number
 }
 
-type Question = {
-  id: string
-  item_type: string
-  stem: string
-  choices: string[] | null
-  difficulty: number
-  category: string
-}
-
 type GenerateQuestionsResponse = {
   session_id: string
-  questions: Question[]
+  questions: QuestionData[]
 }
 
 const TestPage: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [questions, setQuestions] = useState<QuestionData[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answer, setAnswer] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -50,12 +44,23 @@ const TestPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
   const [timeRemaining, setTimeRemaining] = useState<number>(1200) // 20 minutes = 1200 seconds
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [lastSavedAnswer, setLastSavedAnswer] = useState<string>('')
+
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState
 
+  // Get current question
+  const currentQuestion = questions[currentIndex] || null
+
+  // Autosave hook
+  const { saveStatus } = useAutosave({
+    sessionId,
+    currentQuestion,
+    answer,
+    questionStartTime,
+  })
+
+  // Load questions on mount
   useEffect(() => {
     const generateQuestions = async () => {
       if (!state?.surveyId) {
@@ -76,7 +81,7 @@ const TestPage: React.FC = () => {
 
         setSessionId(response.session_id)
         setQuestions(response.questions)
-        setQuestionStartTime(Date.now()) // Reset timer when questions loaded
+        setQuestionStartTime(Date.now())
         setIsLoading(false)
       } catch (err) {
         const message =
@@ -91,18 +96,15 @@ const TestPage: React.FC = () => {
     generateQuestions()
   }, [state?.surveyId, state?.round])
 
-  // Reset timer and clear submit error when moving to next question
+  // Reset state when moving to next question
   useEffect(() => {
     setQuestionStartTime(Date.now())
     setSubmitError(null)
-    setLastSavedAnswer('')
-    setSaveStatus('idle')
-    setAnswer('') // Clear answer when moving to next question
+    setAnswer('')
   }, [currentIndex])
 
   // Timer countdown logic (REQ-F-B2-2, REQ-F-B2-5)
   useEffect(() => {
-    // Only start timer when sessionId and questions are ready
     if (!sessionId || questions.length === 0) return
 
     const interval = setInterval(() => {
@@ -118,78 +120,26 @@ const TestPage: React.FC = () => {
     return () => clearInterval(interval)
   }, [sessionId, questions])
 
-  // Autosave logic (REQ-F-B2-6)
-  useEffect(() => {
-    // Only autosave if answer is not empty, different from last saved, and session is ready
-    if (!answer.trim() || answer === lastSavedAnswer || !sessionId || !questions || questions.length === 0) {
-      return
-    }
-
-    const timer = setTimeout(async () => {
-      setSaveStatus('saving')
-      try {
-        const currentQuestion = questions[currentIndex]
-        const responseTimeMs = Date.now() - questionStartTime
-
-        let userAnswer: { selected?: string; text?: string }
-        if (currentQuestion.item_type === 'multiple_choice' || currentQuestion.item_type === 'true_false') {
-          userAnswer = { selected: answer }
-        } else {
-          userAnswer = { text: answer }
-        }
-
-        await questionService.autosave({
-          session_id: sessionId,
-          question_id: currentQuestion.id,
-          user_answer: JSON.stringify(userAnswer),
-        })
-
-        setLastSavedAnswer(answer)
-        setSaveStatus('saved')
-
-        // Hide "저장됨" message after 2 seconds
-        setTimeout(() => setSaveStatus('idle'), 2000)
-      } catch (err) {
-        console.error('Autosave error:', err)
-        setSaveStatus('error')
-      }
-    }, 1000) // 1 second debounce
-
-    return () => clearTimeout(timer)
-  }, [answer, sessionId, questions, currentIndex, questionStartTime, lastSavedAnswer])
-
-  // Helper: Get timer color based on remaining time (REQ-F-B2-5)
-  const getTimerColor = (seconds: number): string => {
-    if (seconds > 15 * 60) return 'green'   // 16+ minutes
-    if (seconds > 5 * 60) return 'orange'   // 6-15 minutes
-    return 'red'                             // 5 minutes or less
-  }
-
-  // Helper: Format time as MM:SS (REQ-F-B2-2)
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
+  // Handle next button click
   const handleNextClick = useCallback(async () => {
     if (!sessionId || !answer.trim() || isSubmitting) {
       return
     }
 
     setIsSubmitting(true)
-    setSubmitError(null) // Clear previous submit errors
+    setSubmitError(null)
 
     try {
       const currentQuestion = questions[currentIndex]
-      const responseTimeMs = Date.now() - questionStartTime
 
       // Build user_answer based on question type
       let userAnswer: { selected?: string; text?: string }
-      if (currentQuestion.item_type === 'multiple_choice' || currentQuestion.item_type === 'true_false') {
+      if (
+        currentQuestion.item_type === 'multiple_choice' ||
+        currentQuestion.item_type === 'true_false'
+      ) {
         userAnswer = { selected: answer }
       } else {
-        // short_answer
         userAnswer = { text: answer }
       }
 
@@ -200,7 +150,7 @@ const TestPage: React.FC = () => {
         user_answer: JSON.stringify(userAnswer),
       })
 
-      // Move to next question
+      // Move to next question or finish
       if (currentIndex < questions.length - 1) {
         setCurrentIndex(currentIndex + 1)
         setAnswer('')
@@ -215,8 +165,9 @@ const TestPage: React.FC = () => {
       setSubmitError(message)
       setIsSubmitting(false)
     }
-  }, [sessionId, answer, isSubmitting, currentIndex, questions, navigate, questionStartTime])
+  }, [sessionId, answer, isSubmitting, currentIndex, questions, navigate])
 
+  // Loading state
   if (isLoading) {
     return (
       <main className="test-page">
@@ -227,6 +178,7 @@ const TestPage: React.FC = () => {
     )
   }
 
+  // Error state
   if (loadingError) {
     return (
       <main className="test-page">
@@ -244,6 +196,7 @@ const TestPage: React.FC = () => {
     )
   }
 
+  // No questions state
   if (questions.length === 0) {
     return (
       <main className="test-page">
@@ -254,123 +207,42 @@ const TestPage: React.FC = () => {
     )
   }
 
-  const currentQuestion = questions[currentIndex]
-  const progress = `${currentIndex + 1}/${questions.length}`
-
   return (
     <main className="test-page">
       <div className="test-container">
+        {/* Header with Timer and Save Status */}
         <div className="test-header">
-          <h1 className="page-title">AI 역량 레벨 테스트</h1>
-          <div className="header-info">
-            <p className="progress">진행률: {progress}</p>
-            <div className={`timer timer-${getTimerColor(timeRemaining)}`}>
-              남은 시간: {formatTime(timeRemaining)}
-            </div>
-          </div>
+          <Timer timeRemaining={timeRemaining} />
+          <SaveStatus status={saveStatus} />
         </div>
 
-        <div className="question-section">
-          <h2 className="question-number">문제 {currentIndex + 1}</h2>
-          <p className="question-text">{currentQuestion.stem}</p>
+        {/* Question */}
+        <Question
+          question={currentQuestion}
+          currentIndex={currentIndex}
+          totalQuestions={questions.length}
+          answer={answer}
+          onAnswerChange={setAnswer}
+          disabled={isSubmitting}
+        />
 
-          {currentQuestion.item_type === 'multiple_choice' && currentQuestion.choices && (
-            <div className="choices">
-              {currentQuestion.choices.map((choice, index) => (
-                <label key={index} className="choice-item">
-                  <input
-                    type="radio"
-                    name="answer"
-                    value={choice}
-                    checked={answer === choice}
-                    onChange={(e) => setAnswer(e.target.value)}
-                  />
-                  <span className="choice-text">{choice}</span>
-                </label>
-              ))}
-            </div>
-          )}
+        {/* Submit Error */}
+        {submitError && <p className="error-message">{submitError}</p>}
 
-          {currentQuestion.item_type === 'true_false' && (
-            <div className="choices">
-              <label className="choice-item">
-                <input
-                  type="radio"
-                  name="answer"
-                  value="true"
-                  checked={answer === 'true'}
-                  onChange={(e) => setAnswer(e.target.value)}
-                />
-                <span className="choice-text">참 (True)</span>
-              </label>
-              <label className="choice-item">
-                <input
-                  type="radio"
-                  name="answer"
-                  value="false"
-                  checked={answer === 'false'}
-                  onChange={(e) => setAnswer(e.target.value)}
-                />
-                <span className="choice-text">거짓 (False)</span>
-              </label>
-            </div>
-          )}
-
-          {currentQuestion.item_type === 'short_answer' && (
-            <textarea
-              className="answer-input"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="답변을 입력하세요"
-              rows={5}
-            />
-          )}
-        </div>
-
-        <div className="button-group">
-          <button
-            type="button"
-            className="next-button"
-            onClick={handleNextClick}
-            disabled={!answer.trim() || isSubmitting}
-          >
-            {currentIndex < questions.length - 1
-              ? '다음 문제'
-              : '테스트 완료'}
-          </button>
-        </div>
-
-        <div className="info-box">
-          <p className="info-text">
-            답변을 선택하거나 입력한 후 "{currentIndex < questions.length - 1 ? '다음 문제' : '테스트 완료'}" 버튼을 클릭하세요.
-          </p>
-        </div>
-
-        {submitError && (
-          <div className="error-box">
-            <p className="error-message">{submitError}</p>
-          </div>
-        )}
+        {/* Next Button */}
+        <button
+          type="button"
+          className="next-button"
+          onClick={handleNextClick}
+          disabled={!answer.trim() || isSubmitting}
+        >
+          {isSubmitting
+            ? '제출 중...'
+            : currentIndex < questions.length - 1
+            ? '다음'
+            : '완료'}
+        </button>
       </div>
-
-      {/* Autosave status indicator - REQ-F-B2-6 */}
-      {saveStatus === 'saving' && (
-        <div className="save-status save-status-saving">
-          저장 중...
-        </div>
-      )}
-
-      {saveStatus === 'saved' && (
-        <div className="save-status save-status-saved">
-          ✓ 저장됨
-        </div>
-      )}
-
-      {saveStatus === 'error' && (
-        <div className="save-status save-status-error">
-          저장 실패
-        </div>
-      )}
     </main>
   )
 }

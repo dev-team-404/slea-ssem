@@ -15,11 +15,24 @@ SLEA-SSEM 프론트엔드 아키텍처 가이드
 ```
 src/frontend/src/
 ├── components/        # 재사용 가능한 UI 컴포넌트
+│   └── test/         # 테스트 페이지 전용 컴포넌트
+│       ├── Timer.tsx            # 타이머 컴포넌트
+│       ├── SaveStatus.tsx       # 자동 저장 상태 표시
+│       ├── Question.tsx         # 문제 표시 컴포넌트
+│       └── index.ts             # 중앙 export
 ├── hooks/            # Custom React Hooks
+│   ├── useAuthCallback.ts
+│   ├── useUserProfile.ts
+│   ├── useNicknameCheck.ts
+│   └── useAutosave.ts           # 자동 저장 로직 (NEW)
 ├── lib/              # 라이브러리 래퍼
 │   └── transport/    # HTTP 통신 레이어 (Real/Mock 전환)
 ├── pages/            # 페이지 컴포넌트 (라우트별)
 ├── services/         # API 호출 서비스 레이어
+│   ├── authService.ts
+│   ├── profileService.ts
+│   ├── questionService.ts
+│   └── index.ts
 ├── utils/            # 유틸리티 함수
 ├── mocks/            # Mock 데이터
 └── test/             # 테스트 설정
@@ -498,6 +511,398 @@ describe('useNicknameCheck', () => {
 
 ---
 
+## 성능 최적화
+
+### 헬퍼 함수 최적화
+
+#### 원칙: 컴포넌트 외부로 추출
+
+렌더링할 때마다 재생성되는 헬퍼 함수는 컴포넌트 외부로 추출해야 합니다.
+
+**❌ Bad: 컴포넌트 내부에 정의**
+
+```typescript
+const TestPage: React.FC = () => {
+  // 매 렌더링마다 재생성됨
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  return <div>{formatTime(timeRemaining)}</div>
+}
+```
+
+**✅ Good: 컴포넌트 외부로 추출**
+
+```typescript
+/**
+ * Helper: Format time as MM:SS
+ * @param seconds - Time in seconds
+ * @returns Formatted time string (e.g., "20:00")
+ */
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const TestPage: React.FC = () => {
+  return <div>{formatTime(timeRemaining)}</div>
+}
+```
+
+#### 언제 사용하는가?
+
+| 패턴 | 사용 시기 | 예시 |
+|------|-----------|------|
+| **컴포넌트 외부 추출** | 순수 함수 (props/state에 의존하지 않음) | `formatTime`, `getTimerColor`, `convertLevelToBackend` |
+| **useMemo** | state/props에 의존하는 계산 | `getStatusMessage` (checkStatus, errorMessage 의존) |
+| **useCallback** | 이벤트 핸들러 | `handleNextClick`, `handleCheckClick` |
+
+### 실제 예시
+
+#### 예시 1: TestPage.tsx
+
+```typescript
+// ✅ 컴포넌트 외부로 추출 (순수 함수)
+const getTimerColor = (seconds: number): string => {
+  if (seconds > 15 * 60) return 'green'
+  if (seconds > 5 * 60) return 'orange'
+  return 'red'
+}
+
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const TestPage: React.FC = () => {
+  const [timeRemaining, setTimeRemaining] = useState(1200)
+
+  return (
+    <div className={`timer ${getTimerColor(timeRemaining)}`}>
+      {formatTime(timeRemaining)}
+    </div>
+  )
+}
+```
+
+#### 예시 2: NicknameSetupPage.tsx
+
+```typescript
+const NicknameSetupPage: React.FC = () => {
+  const { checkStatus, errorMessage } = useNicknameCheck()
+
+  // ✅ useMemo로 메모이제이션 (state 의존)
+  const statusMessage = useMemo(() => {
+    if (checkStatus === 'available') {
+      return {
+        text: '사용 가능한 닉네임입니다.',
+        className: 'status-message success',
+      }
+    }
+    if (checkStatus === 'taken') {
+      return {
+        text: '이미 사용 중인 닉네임입니다.',
+        className: 'status-message error',
+      }
+    }
+    if (checkStatus === 'error' && errorMessage) {
+      return {
+        text: errorMessage,
+        className: 'status-message error',
+      }
+    }
+    return null
+  }, [checkStatus, errorMessage])
+
+  return <div>{statusMessage && <p>{statusMessage.text}</p>}</div>
+}
+```
+
+#### 예시 3: SelfAssessmentPage.tsx
+
+```typescript
+// ✅ 컴포넌트 외부로 추출 (순수 함수 + 정적 상수)
+const LEVEL_OPTIONS = [
+  { value: 1, label: '1 - 입문', description: '기초 개념 학습 중' },
+  { value: 2, label: '2 - 초급', description: '기본 업무 수행 가능' },
+  // ...
+]
+
+const convertLevelToBackend = (level: number): string => {
+  if (level === 1) return 'beginner'
+  if (level === 2 || level === 3) return 'intermediate'
+  if (level === 4 || level === 5) return 'advanced'
+  throw new Error(`Invalid level: ${level}`)
+}
+
+const SelfAssessmentPage: React.FC = () => {
+  const [level, setLevel] = useState<number | null>(null)
+
+  const handleSubmit = async () => {
+    const backendLevel = convertLevelToBackend(level!)
+    await profileService.updateSurvey({ level: backendLevel, ... })
+  }
+
+  return <div>...</div>
+}
+```
+
+### 최적화 체크리스트
+
+- [ ] 순수 함수는 컴포넌트 외부로 추출
+- [ ] 정적 상수 (LEVEL_OPTIONS, TIMER_THRESHOLDS 등)는 컴포넌트 외부에 정의
+- [ ] state/props에 의존하는 계산은 `useMemo`
+- [ ] 이벤트 핸들러는 `useCallback`
+- [ ] 매 렌더링마다 새로운 객체/배열 생성 지양
+
+---
+
+## 컴포넌트 분할
+
+### 원칙: 단일 책임 원칙 (Single Responsibility Principle)
+
+큰 컴포넌트는 더 작고 집중된 컴포넌트로 분할하여 가독성과 유지보수성을 향상시킵니다.
+
+### 언제 분할해야 하는가?
+
+| 신호 | 조치 |
+|------|------|
+| 컴포넌트가 300줄 이상 | 하위 컴포넌트로 분할 고려 |
+| 여러 가지 역할을 수행 | 각 역할을 별도 컴포넌트로 분리 |
+| 복잡한 로직이 섞여 있음 | 커스텀 Hook으로 로직 추출 |
+| 재사용 가능한 UI 패턴 | 공통 컴포넌트로 추출 |
+
+### 실제 예시: TestPage 리팩토링
+
+#### Before (386줄, 모든 로직이 한 파일)
+
+```typescript
+const TestPage: React.FC = () => {
+  // 타이머 로직
+  const [timeRemaining, setTimeRemaining] = useState(1200)
+  const formatTime = (seconds) => { ... }
+  const getTimerColor = (seconds) => { ... }
+
+  // 자동 저장 로직
+  const [saveStatus, setSaveStatus] = useState('idle')
+  const [lastSavedAnswer, setLastSavedAnswer] = useState('')
+  useEffect(() => {
+    // 복잡한 autosave 로직...
+  }, [answer])
+
+  // 문제 렌더링 로직
+  const renderQuestion = () => {
+    if (question.item_type === 'multiple_choice') { ... }
+    if (question.item_type === 'true_false') { ... }
+    return <textarea />
+  }
+
+  return (
+    <div>
+      {/* 타이머 */}
+      <div className={`timer ${getTimerColor(timeRemaining)}`}>
+        {formatTime(timeRemaining)}
+      </div>
+
+      {/* 저장 상태 */}
+      {saveStatus === 'saved' && <span>저장됨</span>}
+
+      {/* 문제 */}
+      {renderQuestion()}
+
+      {/* 버튼 */}
+      <button>다음</button>
+    </div>
+  )
+}
+```
+
+#### After (분할된 구조)
+
+**1. Timer 컴포넌트 (components/test/Timer.tsx)**
+```typescript
+interface TimerProps {
+  timeRemaining: number
+}
+
+export const Timer: React.FC<TimerProps> = ({ timeRemaining }) => {
+  const color = getTimerColor(timeRemaining)
+  const formattedTime = formatTime(timeRemaining)
+
+  return (
+    <div className={`timer timer-${color}`}>
+      <span className="timer-icon">⏱</span>
+      <span className="timer-text">{formattedTime}</span>
+    </div>
+  )
+}
+```
+
+**2. SaveStatus 컴포넌트 (components/test/SaveStatus.tsx)**
+```typescript
+export type SaveStatusType = 'idle' | 'saving' | 'saved' | 'error'
+
+interface SaveStatusProps {
+  status: SaveStatusType
+}
+
+export const SaveStatus: React.FC<SaveStatusProps> = ({ status }) => {
+  if (status === 'idle') return null
+
+  return (
+    <div className={`save-status save-status-${status}`}>
+      {status === 'saving' && <span>저장 중...</span>}
+      {status === 'saved' && <span>저장됨</span>}
+      {status === 'error' && <span>저장 실패</span>}
+    </div>
+  )
+}
+```
+
+**3. Question 컴포넌트 (components/test/Question.tsx)**
+```typescript
+interface QuestionProps {
+  question: QuestionData
+  currentIndex: number
+  totalQuestions: number
+  answer: string
+  onAnswerChange: (answer: string) => void
+  disabled?: boolean
+}
+
+export const Question: React.FC<QuestionProps> = ({
+  question,
+  answer,
+  onAnswerChange,
+  ...props
+}) => {
+  // 문제 타입별 렌더링 로직만 집중
+  return (
+    <div className="question-container">
+      <div className="question-stem">{question.stem}</div>
+      {renderAnswerInput()}
+    </div>
+  )
+}
+```
+
+**4. useAutosave 훅 (hooks/useAutosave.ts)**
+```typescript
+interface UseAutosaveOptions {
+  sessionId: string | null
+  currentQuestion: QuestionData | null
+  answer: string
+  questionStartTime: number
+}
+
+export function useAutosave(options: UseAutosaveOptions) {
+  const [saveStatus, setSaveStatus] = useState<SaveStatusType>('idle')
+
+  useEffect(() => {
+    // 복잡한 autosave 로직 캡슐화
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving')
+      await questionService.autosave({ ... })
+      setSaveStatus('saved')
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [options.answer, ...])
+
+  return { saveStatus }
+}
+```
+
+**5. 리팩토링된 TestPage (150줄, 간결함)**
+```typescript
+const TestPage: React.FC = () => {
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [questions, setQuestions] = useState([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [answer, setAnswer] = useState('')
+  const [timeRemaining, setTimeRemaining] = useState(1200)
+
+  // Custom hook으로 autosave 로직 추출
+  const { saveStatus } = useAutosave({
+    sessionId,
+    currentQuestion: questions[currentIndex],
+    answer,
+    questionStartTime,
+  })
+
+  return (
+    <main className="test-page">
+      <div className="test-container">
+        {/* 컴포넌트로 분할된 깔끔한 구조 */}
+        <div className="test-header">
+          <Timer timeRemaining={timeRemaining} />
+          <SaveStatus status={saveStatus} />
+        </div>
+
+        <Question
+          question={questions[currentIndex]}
+          currentIndex={currentIndex}
+          totalQuestions={questions.length}
+          answer={answer}
+          onAnswerChange={setAnswer}
+        />
+
+        <button onClick={handleNextClick}>다음</button>
+      </div>
+    </main>
+  )
+}
+```
+
+### 컴포넌트 분할 전략
+
+#### 1. Presentational Components (UI만 담당)
+
+- Props를 받아서 UI만 렌더링
+- 비즈니스 로직 없음
+- 재사용 가능
+- 예: `Timer`, `SaveStatus`, `Question`
+
+#### 2. Container Components (로직 담당)
+
+- 데이터 fetching
+- State 관리
+- 이벤트 핸들링
+- 예: `TestPage`
+
+#### 3. Custom Hooks (로직 재사용)
+
+- 복잡한 상태 로직 캡슐화
+- 여러 컴포넌트에서 재사용 가능
+- 테스트 용이
+- 예: `useAutosave`, `useNicknameCheck`
+
+### 분할 후 이점
+
+| 항목 | Before | After |
+|------|--------|-------|
+| 파일 크기 | 386줄 | 150줄 (TestPage) |
+| 재사용성 | 낮음 | Timer, Question 등 재사용 가능 |
+| 테스트 | 어려움 | 각 컴포넌트/훅 독립 테스트 가능 |
+| 가독성 | 복잡함 | 명확한 구조 |
+| 유지보수 | 어려움 | 각 파일이 단일 책임만 가짐 |
+
+### 컴포넌트 분할 체크리스트
+
+- [ ] 컴포넌트가 300줄 미만인가?
+- [ ] 각 컴포넌트가 단일 책임만 가지는가?
+- [ ] 복잡한 로직이 Custom Hook으로 분리되었는가?
+- [ ] 재사용 가능한 UI가 별도 컴포넌트인가?
+- [ ] Props 인터페이스가 명확한가?
+- [ ] 각 컴포넌트를 독립적으로 테스트할 수 있는가?
+
+---
+
 ## 환경 설정
 
 ### 개발 환경
@@ -551,7 +956,18 @@ http://localhost:3000?mock=true
 
 ## 버전 히스토리
 
-- **v1.0** (2025-01-13): 초기 아키텍처 정의
+- **v1.2** (2025-11-13): 컴포넌트 분할 패턴 추가
+  - TestPage 리팩토링 (386줄 → 150줄)
+  - Timer, SaveStatus, Question 컴포넌트 분리
+  - useAutosave 커스텀 훅 생성
+  - 컴포넌트 분할 전략 및 체크리스트 추가
+
+- **v1.1** (2025-11-13): 성능 최적화 패턴 추가
+  - 헬퍼 함수 컴포넌트 외부 추출 (TestPage, ProfileReviewPage)
+  - useMemo를 활용한 계산 메모이제이션 (NicknameSetupPage)
+  - 최적화 체크리스트 및 가이드 추가
+
+- **v1.0** (2025-11-13): 초기 아키텍처 정의
   - Service Layer 도입
   - Page → Hooks → Service → Transport 패턴 확립
   - Mock/Real Transport 전환 시스템 구축
