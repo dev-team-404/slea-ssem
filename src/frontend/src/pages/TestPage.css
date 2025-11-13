@@ -29,10 +29,41 @@
   margin-bottom: 0.5rem;
 }
 
+.header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
 .progress {
   font-size: 1rem;
   color: #666;
   font-weight: 500;
+}
+
+/* Timer styles - REQ-F-B2-2, REQ-F-B2-5 */
+.timer {
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.timer-green {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.timer-orange {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.timer-red {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 .question-section {

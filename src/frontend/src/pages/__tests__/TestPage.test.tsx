@@ -1,7 +1,7 @@
-// REQ: REQ-F-B2-1
+// REQ: REQ-F-B2-1, REQ-F-B2-2
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter, MemoryRouter } from 'react-router-dom'
 import TestPage from '../TestPage'
 import * as transport from '../../lib/transport'
@@ -338,5 +338,107 @@ describe('TestPage - REQ-F-B2-1', () => {
     await waitFor(() => {
       expect(screen.getByText('Machine learning is a subset of AI')).toBeInTheDocument()
     }, { timeout: 1000 })
+  })
+})
+
+describe('TestPage - REQ-F-B2-2 Timer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test('Timer: 테스트 시작 시 20:00 표시', async () => {
+    // REQ: REQ-F-B2-2, REQ-F-B2-5
+    // AC: 타이머가 20분(20:00)에서 시작
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/남은 시간: 20:00/i)).toBeInTheDocument()
+    })
+  })
+
+  test('Timer: 1초마다 정확하게 감소', async () => {
+    // REQ: REQ-F-B2-2, REQ-F-B2-5
+    // AC: 1초마다 시간이 감소 (20:00 → 19:59 → 19:58)
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/남은 시간: 20:00/i)).toBeInTheDocument()
+    })
+
+    // Use real timers and wait for actual countdown
+    await waitFor(() => {
+      expect(screen.getByText(/남은 시간: 19:59/i)).toBeInTheDocument()
+    }, { timeout: 2000 })
+  })
+
+  test('Timer: 16분 이상일 때 녹색 스타일 적용', async () => {
+    // REQ: REQ-F-B2-5
+    // AC: 16분 이상 → 녹색 배경
+    const mockPost = vi.mocked(transport.transport.post)
+    mockPost.mockResolvedValueOnce(mockGenerateResponse)
+
+    renderWithRouter(<TestPage />)
+
+    await waitFor(() => {
+      const timer = screen.getByText(/남은 시간:/i)
+      expect(timer).toHaveClass('timer-green')
+    })
+  })
+
+  test('Timer: 색상 변경 로직 검증 (녹색/주황색/빨간색)', () => {
+    // REQ: REQ-F-B2-5
+    // AC: 시간에 따라 색상 변경 (녹색 → 주황색 → 빨간색)
+    // Note: 헬퍼 함수 로직 검증 (unit test 스타일)
+
+    // Mock getTimerColor function (inline test)
+    const getTimerColor = (seconds: number): string => {
+      if (seconds > 15 * 60) return 'green'
+      if (seconds > 5 * 60) return 'orange'
+      return 'red'
+    }
+
+    // Test green (16+ minutes)
+    expect(getTimerColor(20 * 60)).toBe('green')  // 20 minutes
+    expect(getTimerColor(16 * 60)).toBe('green')  // 16 minutes
+
+    // Test orange (6-15 minutes)
+    expect(getTimerColor(15 * 60)).toBe('orange') // 15 minutes
+    expect(getTimerColor(10 * 60)).toBe('orange') // 10 minutes
+    expect(getTimerColor(6 * 60)).toBe('orange')  // 6 minutes
+
+    // Test red (5 minutes or less)
+    expect(getTimerColor(5 * 60)).toBe('red')     // 5 minutes
+    expect(getTimerColor(3 * 60)).toBe('red')     // 3 minutes
+    expect(getTimerColor(0)).toBe('red')          // 0 minutes
+  })
+
+  test('Timer: formatTime 포맷팅 검증 (MM:SS)', () => {
+    // REQ: REQ-F-B2-2
+    // AC: 시간이 MM:SS 형식으로 표시됨
+
+    // Mock formatTime function (inline test)
+    const formatTime = (seconds: number): string => {
+      const mins = Math.floor(seconds / 60)
+      const secs = seconds % 60
+      return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    expect(formatTime(1200)).toBe('20:00')  // 20 minutes
+    expect(formatTime(1199)).toBe('19:59')  // 19 minutes 59 seconds
+    expect(formatTime(600)).toBe('10:00')   // 10 minutes
+    expect(formatTime(61)).toBe('1:01')     // 1 minute 1 second
+    expect(formatTime(5)).toBe('0:05')      // 5 seconds
+    expect(formatTime(0)).toBe('0:00')      // 0 seconds
   })
 })

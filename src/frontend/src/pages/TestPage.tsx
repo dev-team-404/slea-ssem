@@ -49,6 +49,7 @@ const TestPage: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
+  const [timeRemaining, setTimeRemaining] = useState<number>(1200) // 20 minutes = 1200 seconds
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState
@@ -96,6 +97,38 @@ const TestPage: React.FC = () => {
     setQuestionStartTime(Date.now())
     setSubmitError(null)
   }, [currentIndex])
+
+  // Timer countdown logic (REQ-F-B2-2, REQ-F-B2-5)
+  useEffect(() => {
+    // Only start timer when sessionId and questions are ready
+    if (!sessionId || questions.length === 0) return
+
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 0) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [sessionId, questions])
+
+  // Helper: Get timer color based on remaining time (REQ-F-B2-5)
+  const getTimerColor = (seconds: number): string => {
+    if (seconds > 15 * 60) return 'green'   // 16+ minutes
+    if (seconds > 5 * 60) return 'orange'   // 6-15 minutes
+    return 'red'                             // 5 minutes or less
+  }
+
+  // Helper: Format time as MM:SS (REQ-F-B2-2)
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   const handleNextClick = useCallback(async () => {
     if (!sessionId || !answer.trim() || isSubmitting) {
@@ -188,7 +221,12 @@ const TestPage: React.FC = () => {
       <div className="test-container">
         <div className="test-header">
           <h1 className="page-title">AI 역량 레벨 테스트</h1>
-          <p className="progress">진행률: {progress}</p>
+          <div className="header-info">
+            <p className="progress">진행률: {progress}</p>
+            <div className={`timer timer-${getTimerColor(timeRemaining)}`}>
+              남은 시간: {formatTime(timeRemaining)}
+            </div>
+          </div>
         </div>
 
         <div className="question-section">
