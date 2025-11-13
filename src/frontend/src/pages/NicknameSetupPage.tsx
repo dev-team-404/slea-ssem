@@ -2,7 +2,7 @@
 import React, { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
-import { transport } from '../lib/transport'
+import { profileService } from '../services'
 import './NicknameSetupPage.css'
 
 /**
@@ -43,7 +43,7 @@ const NicknameSetupPage: React.FC = () => {
 
     setIsSubmitting(true)
     try {
-      await transport.post('/profile/register', { nickname })
+      await profileService.registerNickname(nickname)
       setIsSubmitting(false)
       navigate('/self-assessment', { replace: true })
     } catch (error) {

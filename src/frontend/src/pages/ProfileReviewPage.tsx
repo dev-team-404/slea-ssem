@@ -1,7 +1,7 @@
 // REQ: REQ-F-A2-2-4
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { transport } from '../lib/transport'
+import { profileService } from '../services'
 import './ProfileReviewPage.css'
 
 /**
@@ -58,7 +58,7 @@ const ProfileReviewPage: React.FC = () => {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await transport.get<NicknameResponse>('/profile/nickname')
+        const response = await profileService.getNickname()
         setNickname(response.nickname)
       } catch (err) {
         const message =

@@ -1,7 +1,7 @@
 // REQ: REQ-F-A2-2-2
 import React, { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { transport } from '../lib/transport'
+import { profileService } from '../services'
 import './SelfAssessmentPage.css'
 
 /**
@@ -67,8 +67,10 @@ const SelfAssessmentPage: React.FC = () => {
 
     try {
       const backendLevel = convertLevelToBackend(level)
-      const response = await transport.put<{ survey_id: string }>('/profile/survey', {
+      const response = await profileService.updateSurvey({
         level: backendLevel,
+        career: 0,
+        interests: [],
       })
 
       setIsSubmitting(false)

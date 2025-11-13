@@ -1,7 +1,7 @@
 // REQ: REQ-F-B2-1, REQ-F-B2-2, REQ-F-B2-6
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { transport } from '../lib/transport'
+import { questionService } from '../services'
 import './TestPage.css'
 
 /**
@@ -68,14 +68,11 @@ const TestPage: React.FC = () => {
       setLoadingError(null)
 
       try {
-        const response = await transport.post<GenerateQuestionsResponse>(
-          '/questions/generate',
-          {
-            survey_id: state.surveyId,
-            round: state.round || 1,
-            domain: 'AI',
-          }
-        )
+        const response = await questionService.generateQuestions({
+          survey_id: state.surveyId,
+          round: state.round || 1,
+          domain: 'AI',
+        })
 
         setSessionId(response.session_id)
         setQuestions(response.questions)
@@ -141,11 +138,10 @@ const TestPage: React.FC = () => {
           userAnswer = { text: answer }
         }
 
-        await transport.post('/questions/autosave', {
+        await questionService.autosave({
           session_id: sessionId,
           question_id: currentQuestion.id,
-          user_answer: userAnswer,
-          response_time_ms: responseTimeMs,
+          user_answer: JSON.stringify(userAnswer),
         })
 
         setLastSavedAnswer(answer)
@@ -198,11 +194,10 @@ const TestPage: React.FC = () => {
       }
 
       // Submit answer to backend
-      await transport.post('/questions/autosave', {
+      await questionService.autosave({
         session_id: sessionId,
         question_id: currentQuestion.id,
-        user_answer: userAnswer,
-        response_time_ms: responseTimeMs,
+        user_answer: JSON.stringify(userAnswer),
       })
 
       // Move to next question
