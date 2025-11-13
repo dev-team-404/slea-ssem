@@ -145,9 +145,9 @@ const TestResultsPage: React.FC = () => {
             <button
               type="button"
               className="back-button"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/home')}
             >
-              대시보드로 돌아가기
+              홈화면으로 돌아가기
             </button>
           </div>
         </div>
@@ -242,9 +242,9 @@ const TestResultsPage: React.FC = () => {
           <button
             type="button"
             className="primary-button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/home')}
           >
-            대시보드로 이동
+            홈화면으로 이동
           </button>
           <button
             type="button"
