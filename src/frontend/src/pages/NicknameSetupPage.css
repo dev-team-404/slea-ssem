@@ -84,22 +84,25 @@
 }
 
 .info-box {
-  @apply mt-8 p-4 bg-gray-50 border-l-4 border-blue-500 rounded;
+  @apply mt-8 p-5 bg-blue-50 border border-blue-200 rounded-lg;
 }
 
 .info-title {
-  @apply text-sm font-semibold text-gray-800 mb-2;
+  @apply flex items-center gap-2 text-sm font-semibold text-blue-800 mb-3;
+}
+
+.info-icon {
+  @apply w-5 h-5 text-blue-600;
 }
 
 .info-list {
-  @apply list-none p-0 m-0 text-xs text-gray-600;
+  @apply list-none p-0 m-0 space-y-2;
 }
 
 .info-list li {
-  @apply mb-1 pl-4 relative;
+  @apply flex items-start gap-2 text-sm text-gray-700;
 }
 
-.info-list li::before {
-  @apply absolute left-0 text-blue-500;
-  content: '•';
+.check-icon {
+  @apply w-5 h-5 text-green-600 flex-shrink-0 mt-0.5;
 }
