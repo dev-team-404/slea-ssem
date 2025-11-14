@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import HomePage from '../HomePage'
 import * as authUtils from '../../utils/auth'
+import { profileService } from '../../services'
 
 // Mock useNavigate
 const mockNavigate = vi.fn()
@@ -20,11 +21,17 @@ vi.mock('../../utils/auth', () => ({
   getToken: vi.fn(() => 'mock_jwt_token'),
 }))
 
+// Mock profileService
+vi.mock('../../services', () => ({
+  profileService: {
+    getNickname: vi.fn(),
+  },
+}))
+
 describe('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(authUtils, 'getToken').mockReturnValue('mock_jwt_token')
-    ;(globalThis.fetch as any) = vi.fn()
   })
 
   it('should redirect to login if no token is present', () => {
@@ -39,28 +46,38 @@ describe('HomePage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 
-  it('should display welcome message when authenticated', () => {
+  it('should display welcome message when authenticated', async () => {
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: null,
+      registered_at: null,
+      updated_at: null,
+    })
+
     render(
       <MemoryRouter>
         <HomePage />
       </MemoryRouter>
     )
 
-    expect(screen.getByText('S.LSI Learning Platform')).toBeInTheDocument()
+    // Wait for component to mount
+    await waitFor(() => {
+      // Header와 본문 둘 다 플랫폼 이름이 있으므로 getAllByText 사용
+      const platformTitles = screen.getAllByText('S.LSI Learning Platform')
+      expect(platformTitles.length).toBeGreaterThanOrEqual(1)
+    })
+
     expect(screen.getByText(/AI 기반 학습 플랫폼/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /시작하기/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /시작하기/i})).toBeInTheDocument()
   })
 
   it('should call API to check nickname when "시작하기" is clicked', async () => {
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: 'testuser',
-        registered_at: '2025-11-10T12:00:00Z',
-        updated_at: '2025-11-10T12:00:00Z',
-      }),
+    // Mock profileService to return testuser
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: 'testuser',
+      registered_at: '2025-11-10T12:00:00Z',
+      updated_at: '2025-11-10T12:00:00Z',
     })
 
     render(
@@ -73,29 +90,18 @@ describe('HomePage', () => {
     fireEvent.click(startButton)
 
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/profile/nickname',
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer mock_jwt_token',
-          }),
-        })
-      )
+      // getNickname이 2번 호출되어야 함 (mount + 버튼 클릭)
+      expect(profileService.getNickname).toHaveBeenCalledTimes(2)
     })
   })
 
   it('should redirect to /nickname-setup when nickname is null', async () => {
     // REQ: REQ-F-A2-1
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: null,  // ✅ REQ-F-A2-1: nickname is NULL
-        registered_at: null,
-        updated_at: null,
-      }),
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: null,  // ✅ REQ-F-A2-1: nickname is NULL
+      registered_at: null,
+      updated_at: null,
     })
 
     render(
@@ -115,15 +121,11 @@ describe('HomePage', () => {
 
   it('should navigate to self-assessment when nickname exists', async () => {
     // REQ: REQ-F-A2-2-1
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: 'testuser',  // ✅ nickname is set
-        registered_at: '2025-11-10T12:00:00Z',
-        updated_at: '2025-11-10T12:00:00Z',
-      }),
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: 'testuser',  // ✅ nickname is set
+      registered_at: '2025-11-10T12:00:00Z',
+      updated_at: '2025-11-10T12:00:00Z',
     })
 
     render(
@@ -142,11 +144,15 @@ describe('HomePage', () => {
   })
 
   it('should display error message when API call fails', async () => {
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: async () => ({ detail: 'Unauthorized' }),
-    })
+    // Mount 시 성공, 버튼 클릭 시 실패
+    vi.mocked(profileService.getNickname)
+      .mockResolvedValueOnce({
+        user_id: 'test@samsung.com',
+        nickname: null,
+        registered_at: null,
+        updated_at: null,
+      })
+      .mockRejectedValueOnce(new Error('Unauthorized'))
 
     render(
       <MemoryRouter>
@@ -159,13 +165,21 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       // Error handling - show error message to user
-      const errorElement = screen.queryByText(/오류가 발생했습니다/i)
-      expect(errorElement || mockNavigate).toBeTruthy()
+      const errorElement = screen.queryByText(/프로필 정보를 불러오는데 실패했습니다/i)
+      expect(errorElement).toBeInTheDocument()
     })
   })
 
   it('should handle network errors gracefully', async () => {
-    ;(globalThis.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+    // Mount 시 성공, 버튼 클릭 시 네트워크 에러
+    vi.mocked(profileService.getNickname)
+      .mockResolvedValueOnce({
+        user_id: 'test@samsung.com',
+        nickname: null,
+        registered_at: null,
+        updated_at: null,
+      })
+      .mockRejectedValueOnce(new Error('Network error'))
 
     render(
       <MemoryRouter>
@@ -178,8 +192,8 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       // Should show error message or handle gracefully
-      const errorElement = screen.queryByText(/오류가 발생했습니다/i)
-      expect(errorElement || mockNavigate).toBeTruthy()
+      const errorElement = screen.queryByText(/프로필 정보를 불러오는데 실패했습니다/i)
+      expect(errorElement).toBeInTheDocument()
     })
   })
 })
@@ -188,21 +202,16 @@ describe('HomePage - REQ-F-A2-Signup-1 (Header Integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(authUtils, 'getToken').mockReturnValue('mock_jwt_token')
-    ;(globalThis.fetch as any) = vi.fn()
   })
 
   it('nickname이 null일 때 헤더에 "회원가입" 버튼 표시', async () => {
     // REQ: REQ-F-A2-Signup-1
     // Given: User has no nickname (initial load returns null)
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: null,
-        registered_at: null,
-        updated_at: null,
-      }),
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: null,
+      registered_at: null,
+      updated_at: null,
     })
 
     render(
@@ -221,15 +230,11 @@ describe('HomePage - REQ-F-A2-Signup-1 (Header Integration)', () => {
   it('nickname이 존재할 때 헤더에 "회원가입" 버튼 숨김', async () => {
     // REQ: REQ-F-A2-Signup-1
     // Given: User already has nickname
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: 'existing_user',
-        registered_at: '2025-11-10T12:00:00Z',
-        updated_at: '2025-11-10T12:00:00Z',
-      }),
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: 'existing_user',
+      registered_at: '2025-11-10T12:00:00Z',
+      updated_at: '2025-11-10T12:00:00Z',
     })
 
     render(
@@ -240,7 +245,7 @@ describe('HomePage - REQ-F-A2-Signup-1 (Header Integration)', () => {
 
     // Wait for nickname to load
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(profileService.getNickname).toHaveBeenCalled()
     })
 
     // Then: "회원가입" button should NOT be visible
@@ -248,15 +253,13 @@ describe('HomePage - REQ-F-A2-Signup-1 (Header Integration)', () => {
     expect(signupButton).not.toBeInTheDocument()
   })
 
-  it('헤더에 플랫폼 이름이 표시됨', () => {
+  it('헤더에 플랫폼 이름이 표시됨', async () => {
     // REQ: General header functionality
-    ;(globalThis.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        user_id: 'test@samsung.com',
-        nickname: null,
-      }),
+    vi.mocked(profileService.getNickname).mockResolvedValue({
+      user_id: 'test@samsung.com',
+      nickname: null,
+      registered_at: null,
+      updated_at: null,
     })
 
     render(
@@ -265,8 +268,11 @@ describe('HomePage - REQ-F-A2-Signup-1 (Header Integration)', () => {
       </MemoryRouter>
     )
 
-    // Then: Platform name should appear twice (header + main content)
-    const platformNames = screen.getAllByText(/S\.LSI Learning Platform/i)
-    expect(platformNames.length).toBeGreaterThanOrEqual(1)
+    // Wait for mount
+    await waitFor(() => {
+      // Then: Platform name should appear twice (header + main content)
+      const platformNames = screen.getAllByText(/S\.LSI Learning Platform/i)
+      expect(platformNames.length).toBeGreaterThanOrEqual(1)
+    })
   })
 })
