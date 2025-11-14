@@ -1,8 +1,9 @@
-// REQ: REQ-F-B4-1, REQ-F-B4-3, REQ-F-B4-4
-import React from 'react'
+// REQ: REQ-F-B4-1, REQ-F-B4-3, REQ-F-B4-4, REQ-F-B5-1
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTestResults } from '../hooks/useTestResults'
-import { GradeBadge, MetricCard, ActionButtons, GradeDistributionChart } from '../components/TestResults'
+import { GradeBadge, MetricCard, ActionButtons, GradeDistributionChart, ComparisonSection } from '../components/TestResults'
+import { resultService, type PreviousResult } from '../services/resultService'
 import './TestResultsPage.css'
 
 /**
@@ -32,6 +33,27 @@ const TestResultsPage: React.FC = () => {
 
   // Custom hook for data fetching with retry logic
   const { resultData, isLoading, error, retry } = useTestResults(state?.sessionId)
+
+  // REQ-F-B5-1: Fetch previous result for comparison
+  const [previousResult, setPreviousResult] = useState<PreviousResult | null>(null)
+  const [isPreviousLoading, setIsPreviousLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPreviousResult = async () => {
+      setIsPreviousLoading(true)
+      try {
+        const result = await resultService.getPreviousResult()
+        setPreviousResult(result)
+      } catch (err) {
+        // Silently fail - comparison section will handle null
+        setPreviousResult(null)
+      } finally {
+        setIsPreviousLoading(false)
+      }
+    }
+
+    fetchPreviousResult()
+  }, [])
 
   // Loading state
   if (isLoading) {
@@ -121,6 +143,15 @@ const TestResultsPage: React.FC = () => {
           percentileDescription={resultData.percentile_description}
           showConfidenceWarning={showConfidenceWarning}
         />
+
+        {/* Comparison Section - REQ: REQ-F-B5-1 */}
+        {!isPreviousLoading && (
+          <ComparisonSection
+            currentGrade={resultData.grade}
+            currentScore={resultData.score}
+            previousResult={previousResult}
+          />
+        )}
 
         {/* Action Buttons */}
         <ActionButtons

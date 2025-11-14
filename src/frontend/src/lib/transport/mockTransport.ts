@@ -82,6 +82,11 @@ const mockData: Record<string, any> = {
     question_id: '',
     saved_at: new Date().toISOString(),
   },
+  '/results/previous': {
+    grade: 'Beginner',
+    score: 65,
+    test_date: '2025-01-10T10:00:00Z',
+  },
   // Add more mock endpoints here
 }
 

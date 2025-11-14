@@ -1,4 +1,4 @@
-// REQ: REQ-F-B4-1, REQ-F-B5-3
+// REQ: REQ-F-B4-1, REQ-F-B5-1, REQ-F-B5-3
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -154,6 +154,7 @@ describe('TestResultsPage - REQ-F-B5-3 (Retake)', () => {
   test('navigates to /home when "홈화면으로 이동" button clicked', async () => {
     // REQ: REQ-F-B4-1
     vi.mocked(transport.transport.get).mockResolvedValueOnce(mockResultData)
+    vi.mocked(transport.transport.get).mockResolvedValueOnce(null) // previous result
 
     const user = userEvent.setup()
     renderWithRouter(<TestResultsPage />)
@@ -166,5 +167,82 @@ describe('TestResultsPage - REQ-F-B5-3 (Retake)', () => {
     await user.click(homeButton)
 
     expect(mockNavigate).toHaveBeenCalledWith('/home')
+  })
+})
+
+describe('TestResultsPage - REQ-F-B5-1 (Comparison)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+    localStorage.clear()
+    mockLocationState = { sessionId: 'session_123' }
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  test('이전 결과 로드 성공 및 ComparisonSection 렌더링', async () => {
+    // REQ: REQ-F-B5-1
+    const mockPreviousResult = {
+      grade: 'Beginner',
+      score: 65,
+      test_date: '2025-01-10T10:00:00Z',
+    }
+
+    vi.mocked(transport.transport.get)
+      .mockResolvedValueOnce(mockResultData) // current results
+      .mockResolvedValueOnce(mockPreviousResult) // previous result
+
+    renderWithRouter(<TestResultsPage />)
+
+    await waitFor(() => {
+      // ComparisonSection 렌더링 확인
+      expect(screen.getByText(/성적 비교/i)).toBeInTheDocument()
+    })
+
+    // 이전 결과 데이터 표시 확인
+    await waitFor(() => {
+      expect(screen.getByText(/이전 테스트:/i)).toBeInTheDocument()
+      expect(screen.getByText('Beginner')).toBeInTheDocument()
+      expect(screen.getByText('65점')).toBeInTheDocument()
+    })
+  })
+
+  test('이전 결과 없을 때 (첫 응시)', async () => {
+    // REQ: REQ-F-B5-1
+    vi.mocked(transport.transport.get)
+      .mockResolvedValueOnce(mockResultData) // current results
+      .mockResolvedValueOnce(null) // no previous result
+
+    renderWithRouter(<TestResultsPage />)
+
+    await waitFor(() => {
+      // "첫 응시입니다" 메시지 확인
+      expect(screen.getByText(/첫 응시입니다/i)).toBeInTheDocument()
+    })
+
+    // 현재 결과만 표시
+    expect(screen.getByText(/현재 등급:/i)).toBeInTheDocument()
+    expect(screen.getByText(/현재 점수:/i)).toBeInTheDocument()
+  })
+
+  test('이전 결과 API 에러 시 ComparisonSection 숨김', async () => {
+    // REQ: REQ-F-B5-1 - Error handling
+    vi.mocked(transport.transport.get)
+      .mockResolvedValueOnce(mockResultData) // current results
+      .mockRejectedValueOnce(new Error('API Error')) // previous result fails
+
+    renderWithRouter(<TestResultsPage />)
+
+    await waitFor(() => {
+      // Main results are still displayed
+      expect(screen.getByText(/테스트 결과/i)).toBeInTheDocument()
+    })
+
+    // ComparisonSection 렌더링됨 (null previousResult로)
+    await waitFor(() => {
+      expect(screen.getByText(/첫 응시입니다/i)).toBeInTheDocument()
+    })
   })
 })

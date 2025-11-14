@@ -1,0 +1,187 @@
+/* REQ: REQ-F-B5-1 - Comparison Section Styles */
+
+.comparison-section {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.comparison-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #212529;
+}
+
+.previous-test-date {
+  font-size: 14px;
+  color: #6c757d;
+  margin: 0 0 16px 0;
+}
+
+.comparison-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comparison-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 6px;
+  background-color: white;
+  border: 2px solid transparent;
+}
+
+.comparison-item.improved {
+  border-color: #28a745;
+  background-color: #f0fdf4;
+}
+
+.comparison-item.declined {
+  border-color: #dc3545;
+  background-color: #fef2f2;
+}
+
+.comparison-item.unchanged {
+  border-color: #6c757d;
+  background-color: #f8f9fa;
+}
+
+.comparison-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.comparison-change,
+.comparison-unchanged {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.old-value {
+  color: #6c757d;
+}
+
+.new-value {
+  color: #212529;
+}
+
+.arrow {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.comparison-item.improved .arrow {
+  color: #28a745;
+}
+
+.comparison-item.declined .arrow {
+  color: #dc3545;
+}
+
+.comparison-item.unchanged .arrow {
+  color: #6c757d;
+}
+
+.diff {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.diff.positive {
+  color: #28a745;
+}
+
+.diff.negative {
+  color: #dc3545;
+}
+
+.comparison-unchanged .value {
+  color: #212529;
+}
+
+.comparison-unchanged .status {
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.summary-message {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.summary-message.improved {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.summary-message.declined {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.summary-message.unchanged {
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+/* First Attempt Styles */
+.first-attempt {
+  text-align: center;
+  padding: 24px;
+}
+
+.first-attempt-message {
+  font-size: 20px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 16px 0;
+}
+
+.current-only {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.metric-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+}
