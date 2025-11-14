@@ -26,6 +26,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-A2-2-2 | 자기평가 정보(수준) 입력 | 4 | ✅ Done | 10 tests (100%), Commit: bd3c7ec, Progress: docs/progress/REQ-F-A2-2-2.md |
 | REQ-F-A2-2-3 | 필수 필드 입력 시 "완료" 버튼 활성화 | 4 | ✅ Done | Commit: bd3c7ec, Progress: docs/progress/REQ-F-A2-2-3.md |
 | REQ-F-A2-2-4 | "완료" 클릭 시 프로필 저장 및 리뷰 페이지 이동 | 4 | ✅ Done | Commit: d401eed, Progress: docs/progress/REQ-F-A2-2-4.md |
+| REQ-F-A2-Signup | 통합 회원가입 화면 (헤더 "회원가입" 버튼) | 0 | ⏳ Backlog | 7개 sub-tasks (닉네임 + 자기평가 한 페이지) |
 | REQ-F-A2-Edit | 프로필 수정 화면 | 0 | ⏳ Backlog | 6개 sub-tasks |
 | REQ-F-A2-Edit-1 | 프로필 리뷰 화면에 "프로필 수정" 버튼 제공 | 4 | ✅ Done | Commit: d401eed, Progress: docs/progress/REQ-F-A2-Edit-1.md |
 | REQ-F-A3 | 개인정보 수집 및 이용 동의 | 0 | ⏳ Backlog | 5개 sub-tasks |
@@ -40,8 +41,10 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-B4-3 | 전사 상대 순위 및 분포 시각화 (막대 차트) | 4 | ✅ Done | 5 tests (100%), Commit: 6c22a41, Progress: docs/progress/REQ-F-B4-3.md |
 | REQ-F-B4-4 | 모집단 < 100일 경우 분포 신뢰도 낮음 경고 표시 | 4 | ✅ Done | 4 tests (100%), Commit: b6c17b0, Progress: docs/progress/REQ-F-B4-4.md |
 | REQ-F-B5 | 재응시 및 비교 화면 | 0 | ⏳ Backlog | 3개 sub-tasks |
+| REQ-F-B5-1 | 이전 응시 정보 비교 섹션 | 4 | ✅ Done | 9 tests (100%), Progress: docs/progress/REQ-F-B5-1.md |
+| REQ-F-B5-2 | 레벨 테스트 재응시 버튼 | 4 | ✅ Done | 5 tests (100%), Progress: docs/progress/REQ-F-B5-2.md |
 | REQ-F-B5-3 | 재응시 시 이전 정보 자동 입력 | 4 | ✅ Done | 9 tests (100%), Commit: 4f404ac, Progress: docs/progress/REQ-F-B5-3.md |
-| REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | ⏳ Backlog | 3개 sub-tasks |
+| REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### Backend (bwyoon)
 
@@ -50,6 +53,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-A1 | Samsung AD 인증 & 세션 관리 | 4 | ✅ Done | Commit: f5412e9 |
 | REQ-B-A3 | 개인정보 동의 관리 | 0 | ⏳ Backlog | 2개 sub-tasks |
 | REQ-B-A2 | 닉네임 등록 | 4 | ✅ Done | 23 tests (100%), Commit: 5e6c373 |
+| REQ-B-A2-Signup | 통합 회원가입 API (닉네임 + 프로필 한 번에 저장) | 0 | ⏳ Backlog | 5개 sub-tasks (트랜잭션 처리) |
 | REQ-B-A2-Edit | 프로필 수정 | 4 | ✅ Done | 28 tests (100%), Commit: fdb3896 |
 | REQ-B-B1 | 자기평가 데이터 수집 & 저장 | 4 | ✅ Done | 14 tests (100%), Commit: (pending) |
 | REQ-B-B2-Gen | 1차 문항 생성 | 4 | ✅ Done | 12 tests (100%), Mock data, Commit: (pending) |
@@ -61,7 +65,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-B4-Plus | 등급 기반 배지 부여 | 4 | ✅ Done | 6 badge tests included, Commit: 1de9a2d, Progress: docs/progress/REQ-B-B4-Plus.md |
 | REQ-B-B5 | 응시 이력 저장 & 조회 | 4 | ✅ Done | 16 tests (100%), Commit: d400aa8, Progress: docs/progress/REQ-B-B5.md |
 | REQ-B-B6-2 | 콘텐츠 필터링 (비속어/편향/저작권) | 4 | ✅ Done | 26 tests (100%), Commit: (pending), Progress: docs/progress/REQ-B-B6-2.md |
-| REQ-B-B6-Plus | 재미 모드 (Backend) | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-B-B6-Plus | 재미 모드 (Backend) | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### Agent (Claude Code)
 
@@ -86,7 +90,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-A-DataContract | Tool 입출력 데이터 계약 | 4 | ✅ Done | 27 tests (100%), Commit: [pending], Progress: docs/progress/REQ-A-DataContract.md |
 | REQ-A-LangChain | LangChain Agent 구현 | 4 | ✅ Done | 13 tests (100%), Commit: [pending], Progress: docs/progress/REQ-A-LangChain.md |
 | REQ-A-Agent-Backend-1 | QuestionGenerationService Real Agent 통합 + CLI Integration | 4 | ✅ Done | 12+12 tests (100%), Commits: 61c6449 (CLI), f53df96 (docs), Progress: docs/progress/REQ-A-Agent-Backend-1.md |
-| REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | ⏳ Backlog | 3개 sub-tasks (MVP 1.0) |
+| REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### CLI (bwyoon)
 
@@ -130,6 +134,15 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | 2 | 🧪 Test | Tests designed, awaiting review |
 | 3 | 💻 Impl | Implementation in progress, validation running |
 | 4 | ✅ Done | Merged to main branch |
+
+## 📦 Status Codes
+
+| Status | Description |
+|--------|-------------|
+| ⏳ Backlog | Planned for MVP 1.0, not yet started |
+| ✅ Done | Completed and merged to main branch |
+| ⚠️ Merged | Deprecated or merged into another REQ |
+| 📦 MVP 2.0 | Deferred to future release (not in MVP 1.0 scope) |
 
 ---
 

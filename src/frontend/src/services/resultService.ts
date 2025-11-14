@@ -38,6 +38,15 @@ export interface GradeResult {
 }
 
 /**
+ * Previous test result data (REQ: REQ-F-B5-1)
+ */
+export interface PreviousResult {
+  grade: Grade
+  score: number
+  test_date: string // ISO date string
+}
+
+/**
  * Result service
  * Handles all test result-related API calls
  */
@@ -52,5 +61,21 @@ export const resultService = {
    */
   async getResults(sessionId: string): Promise<GradeResult> {
     return transport.get<GradeResult>(`/api/results/${sessionId}`)
+  },
+
+  /**
+   * Get previous test result for comparison
+   *
+   * REQ: REQ-F-B5-1
+   *
+   * @returns Previous test result or null if first attempt
+   */
+  async getPreviousResult(): Promise<PreviousResult | null> {
+    try {
+      return await transport.get<PreviousResult>('/api/results/previous')
+    } catch (error) {
+      // If no previous result exists (404), return null
+      return null
+    }
   },
 }
