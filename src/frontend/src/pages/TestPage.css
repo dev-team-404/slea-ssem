@@ -186,12 +186,7 @@
   background-color: #f0f7ff;
 }
 
-.info-box {
-  padding: 1rem;
-  background-color: #f0f7ff;
-  border-left: 4px solid #0066cc;
-  border-radius: 4px;
-}
+/* info-box styles moved to index.css for global use */
 
 .info-text {
   font-size: 0.9rem;

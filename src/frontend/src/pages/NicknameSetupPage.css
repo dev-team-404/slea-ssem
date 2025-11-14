@@ -83,26 +83,4 @@
          hover:bg-green-700 disabled:bg-green-200 disabled:cursor-not-allowed disabled:text-gray-100;
 }
 
-.info-box {
-  @apply mt-8 p-5 bg-blue-50 border border-blue-200 rounded-lg;
-}
-
-.info-title {
-  @apply flex items-center gap-2 text-sm font-semibold text-blue-800 mb-3;
-}
-
-.info-icon {
-  @apply w-5 h-5 text-blue-600;
-}
-
-.info-list {
-  @apply list-none p-0 m-0 space-y-2;
-}
-
-.info-list li {
-  @apply flex items-start gap-2 text-sm text-gray-700;
-}
-
-.check-icon {
-  @apply w-5 h-5 text-green-600 flex-shrink-0 mt-0.5;
-}
+/* info-box styles moved to index.css for global use */

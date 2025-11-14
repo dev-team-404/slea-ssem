@@ -104,19 +104,7 @@
   background-color: #1c7c32;
 }
 
-.info-box {
-  padding: 1rem;
-  background-color: #e7f3ff;
-  border-left: 4px solid #007bff;
-  border-radius: 4px;
-}
-
-.info-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
+/* info-box styles moved to index.css for global use */
 
 .info-text {
   font-size: 0.85rem;

@@ -138,38 +138,4 @@
   color: #f8f9fa;
 }
 
-.info-box {
-  margin-top: 2rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-left: 4px solid #007bff;
-  border-radius: 4px;
-}
-
-.info-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.info-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.info-list li {
-  margin-bottom: 0.25rem;
-  padding-left: 1rem;
-  position: relative;
-}
-
-.info-list li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: #007bff;
-}
+/* info-box styles moved to index.css for global use */

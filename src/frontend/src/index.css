@@ -10,6 +10,33 @@
   }
 }
 
+@layer components {
+  /* Common info-box card design */
+  .info-box {
+    @apply mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300;
+  }
+
+  .info-title {
+    @apply flex items-center gap-2 text-base font-semibold text-gray-900 mb-4;
+  }
+
+  .info-icon {
+    @apply w-5 h-5 text-blue-500;
+  }
+
+  .info-content {
+    @apply space-y-3;
+  }
+
+  .info-item {
+    @apply flex items-start gap-3 text-sm text-gray-600;
+  }
+
+  .check-icon {
+    @apply w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5;
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
