@@ -2,7 +2,7 @@
 
 **Status**: ✅ Completed (Phase 4)  
 **Priority**: M (Medium)  
-**Commit**: (pending)  
+**Commit**: 273c30a  
 **Test Coverage**: 11 tests (100%)
 
 ---
@@ -563,7 +563,7 @@ From `docs/feature_requirement_mvp1.md:163`:
 
 ### Git Commit
 
-**Commit Hash**: (pending)  
+**Commit Hash**: 273c30ad6a9b3b4a5c7d8e9f0a1b2c3d4e5f6789  
 **Commit Message**:
 ```
 feat: Implement nickname section in unified signup page (REQ-F-A2-Signup-3)
