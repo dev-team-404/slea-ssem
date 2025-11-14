@@ -1,55 +1,41 @@
+@import "tailwindcss";
+
 .home-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  @apply flex justify-center items-center min-h-screen;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .home-container {
-  background: white;
+  @apply bg-white rounded-xl shadow-xl max-w-2xl w-full text-center;
   padding: 3rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  max-width: 600px;
-  width: 100%;
-  text-align: center;
 }
 
 .home-title {
-  color: #1976d2;
-  margin-bottom: 1rem;
-  font-size: 2.5rem;
-  font-weight: bold;
+  @apply mb-4 text-4xl font-bold;
+  color: var(--color-primary);
 }
 
 .home-description {
-  color: #333;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  @apply text-gray-800 mb-4 text-xl;
 }
 
 .home-subtitle {
-  color: #666;
-  margin-bottom: 2.5rem;
-  font-size: 1rem;
+  @apply text-gray-600 mb-10 text-base;
+}
+
+.error-message {
+  @apply text-red-600 mb-4;
 }
 
 .start-button {
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  padding: 1rem 3rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  @apply text-white border-none px-12 py-4 text-xl font-bold rounded-lg cursor-pointer
+         transition-all duration-300;
+  background-color: var(--color-primary);
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
 }
 
 .start-button:hover {
-  background-color: #1565c0;
+  background-color: var(--color-primary-dark);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5);
   transform: translateY(-2px);
 }

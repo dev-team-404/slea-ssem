@@ -72,7 +72,7 @@ const HomePage: React.FC = () => {
             개인 맞춤형 레벨 테스트로 학습을 시작하세요.
           </p>
           {errorMessage && (
-            <p className="error-message" style={{ color: '#d32f2f', marginBottom: '1rem' }}>
+            <p className="error-message">
               {errorMessage}
             </p>
           )}
