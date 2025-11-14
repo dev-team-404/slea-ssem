@@ -1,7 +1,7 @@
 // REQ: REQ-F-A2-Signup-1, REQ-F-A2-Profile-Access-1
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlusIcon } from '@heroicons/react/24/outline'
+import { UserPlusIcon, UserCircleIcon } from '@heroicons/react/24/outline'
 import './Header.css'
 
 interface HeaderProps {
@@ -66,6 +66,9 @@ export const Header: React.FC<HeaderProps> = ({ nickname, isLoading = false }) =
               {/* REQ-F-A2-Profile-Access-1: Show nickname when not null */}
               {nickname !== null && (
                 <div className="nickname-display" aria-label={`현재 로그인: ${nickname}`}>
+                  <div className="profile-icon">
+                    <UserCircleIcon />
+                  </div>
                   <span className="nickname-text">{nickname}</span>
                 </div>
               )}
