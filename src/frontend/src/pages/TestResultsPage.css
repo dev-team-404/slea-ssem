@@ -251,6 +251,9 @@
 }
 
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.75rem 2rem;
   font-size: 1rem;
   font-weight: 600;
@@ -269,6 +272,9 @@
 }
 
 .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.75rem 2rem;
   font-size: 1rem;
   font-weight: 600;
@@ -283,6 +289,12 @@
 .secondary-button:hover {
   background-color: var(--color-accent-light);
   transform: translateY(-2px);
+}
+
+/* Button icons */
+.button-icon {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* Grade Distribution Chart - REQ: REQ-F-B4-3 */
