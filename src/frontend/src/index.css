@@ -9,58 +9,62 @@
 }
 
 @layer components {
-  /* Common info-box card design - Help card style */
+  /* Simple card design for info-box */
   .info-box {
-    @apply mt-12 px-10 py-8 bg-gradient-to-br from-blue-50 to-indigo-50 
-           border-l-4 border-l-blue-500 border border-blue-200 
-           rounded-lg shadow-lg hover:shadow-xl 
-           transition-all duration-300 ease-in-out
-           hover:scale-[1.01];
+    @apply mt-8 p-6 bg-white border border-gray-300 rounded-lg shadow-sm;
   }
 
-  .info-title {
-    @apply flex items-center gap-3 text-lg font-bold text-gray-800 mb-8;
+  /* 내부 일반 HTML 요소 스타일 */
+  .info-box h3,
+  .info-box h4,
+  .info-box p:first-child,
+  .info-box .info-title {
+    @apply text-base font-semibold text-gray-900 mb-4;
   }
 
-  .info-icon {
-    @apply w-6 h-6 text-blue-600;
+  .info-box p {
+    @apply text-sm text-gray-700 mb-3 leading-relaxed;
   }
 
-  .info-content {
-    @apply space-y-6;
+  .info-box p:last-child {
+    @apply mb-0;
   }
 
-  .info-item {
-    @apply flex items-start gap-5 text-base text-gray-700 leading-loose py-2;
+  .info-box ul {
+    @apply list-none pl-0 space-y-3;
   }
 
-  .check-icon {
-    @apply w-5 h-5 text-emerald-600 flex-shrink-0 mt-1;
+  .info-box ul li {
+    @apply text-sm text-gray-700 leading-relaxed pl-6 relative;
   }
 
-  /* info-box 내부 요소들에 적절한 여백 추가 */
-  .info-box .info-text {
-    @apply text-base text-gray-700 leading-loose mt-4;
+  .info-box ul li::before {
+    @apply absolute left-0 text-blue-600;
+    content: '•';
+    font-size: 1.25rem;
+    line-height: 1.2;
   }
 
-  .info-box .info-list {
-    @apply mt-6 space-y-5 pl-2;
+  /* info-content, info-item 같은 구조도 지원 */
+  .info-box .info-content {
+    @apply space-y-3;
   }
 
-  .info-box .info-list li {
-    @apply text-base text-gray-700 leading-loose pl-8 relative py-1;
+  .info-box .info-item {
+    @apply flex items-start gap-3 text-sm text-gray-700 leading-relaxed;
   }
 
-  .info-box .info-list li::before {
-    @apply absolute left-0 top-2 text-blue-500;
-    content: '✓';
-    font-weight: bold;
-    font-size: 1.125rem;
+  .info-box .info-icon,
+  .info-box .check-icon {
+    @apply w-5 h-5 flex-shrink-0 mt-0.5;
   }
 
-  /* info-box 내부의 일반 p 태그에도 여백 */
-  .info-box > p:not(.info-title) {
-    @apply text-base text-gray-700 leading-loose mt-4;
+  .info-box .info-icon {
+    @apply text-blue-600;
+  }
+
+  .info-box .check-icon {
+    @apply text-green-600;
   }
 }
 
