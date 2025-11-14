@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { profileService } from '../services'
+import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './ProfileReviewPage.css'
 
 /**
