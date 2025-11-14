@@ -5,17 +5,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
+  background-color: #f9f9f9;
   padding: 2rem;
 }
 
 .signup-container {
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 3rem;
   max-width: 700px;
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .page-title {
@@ -84,7 +85,7 @@
 
 .nickname-input:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: #667eea;
 }
 
 .nickname-input:disabled {
@@ -97,7 +98,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background-color: #007bff;
+  background-color: #00C7B7;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -106,7 +107,7 @@
 }
 
 .check-button:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: #00b3a5;
 }
 
 .check-button:disabled {
@@ -164,9 +165,9 @@
 .suggestion-button {
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
-  color: #007bff;
+  color: #00C7B7;
   background-color: white;
-  border: 1px solid #007bff;
+  border: 1px solid #00C7B7;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
@@ -174,7 +175,7 @@
 
 .suggestion-button:hover {
   color: white;
-  background-color: #007bff;
+  background-color: #00C7B7;
 }
 
 /* Info box */
@@ -182,7 +183,7 @@
   margin-top: 1rem;
   padding: 1rem;
   background-color: #f8f9fa;
-  border-left: 4px solid #007bff;
+  border-left: 4px solid #667eea;
   border-radius: 4px;
 }
 
@@ -213,7 +214,7 @@
   content: '•';
   position: absolute;
   left: 0;
-  color: #007bff;
+  color: #667eea;
 }
 
 /* Placeholder content (for sections not yet implemented) */
@@ -249,13 +250,13 @@
 }
 
 .level-option:hover {
-  border-color: #007bff;
+  border-color: #667eea;
   background-color: #f8f9fa;
 }
 
 .level-option.selected {
-  border-color: #007bff;
-  background-color: #e7f3ff;
+  border-color: #667eea;
+  background-color: #ede9fe;
 }
 
 .level-option input[type='radio'] {
@@ -263,7 +264,7 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
-  accent-color: #007bff;
+  accent-color: #667eea;
 }
 
 .level-content {
@@ -295,7 +296,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background-color: #28a745;
+  background-color: #FF9900;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -303,13 +304,13 @@
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: #1c7c32;
+  background-color: #e68a00;
 }
 
 .submit-button:disabled {
-  background-color: #b7d7bc;
+  background-color: #ffd699;
   cursor: not-allowed;
-  color: #f8f9fa;
+  color: #ffffff;
 }
 
 /* Responsive design */

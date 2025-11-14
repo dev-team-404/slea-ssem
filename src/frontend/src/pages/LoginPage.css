@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f9f9f9;
 }
 
 .login-container {
@@ -14,8 +14,9 @@
   gap: 2rem;
   padding: 3rem;
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 1rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .login-title {
@@ -30,18 +31,18 @@
   font-size: 1.1rem;
   font-weight: 600;
   color: white;
-  background: #1a73e8;
+  background: #FF9900;
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
 }
 
 .login-button:hover {
-  background: #1557b0;
+  background: #e68a00;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 153, 0, 0.4);
 }
 
 .login-button:active {
@@ -49,6 +50,6 @@
 }
 
 .login-button:focus {
-  outline: 2px solid #1a73e8;
+  outline: 2px solid #FF9900;
   outline-offset: 2px;
 }

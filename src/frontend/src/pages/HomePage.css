@@ -3,21 +3,22 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f9f9f9;
 }
 
 .home-container {
   background: white;
   padding: 3rem;
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   max-width: 600px;
   width: 100%;
   text-align: center;
 }
 
 .home-title {
-  color: #1976d2;
+  color: #667eea;
   margin-bottom: 1rem;
   font-size: 2.5rem;
   font-weight: bold;
@@ -36,7 +37,7 @@
 }
 
 .start-button {
-  background-color: #1976d2;
+  background-color: #FF9900;
   color: white;
   border: none;
   padding: 1rem 3rem;
@@ -45,16 +46,16 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 153, 0, 0.3);
 }
 
 .start-button:hover {
-  background-color: #1565c0;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5);
+  background-color: #e68a00;
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.5);
   transform: translateY(-2px);
 }
 
 .start-button:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 153, 0, 0.3);
 }

@@ -6,16 +6,17 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background-color: #f5f5f5;
+  background-color: #f9f9f9;
 }
 
 .test-container {
   max-width: 800px;
   width: 100%;
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .test-header {
@@ -111,8 +112,8 @@
 }
 
 .choice-item:hover {
-  border-color: #0066cc;
-  background-color: #f0f7ff;
+  border-color: #667eea;
+  background-color: #ede9fe;
 }
 
 .choice-item input[type='radio'] {
@@ -139,7 +140,7 @@
 
 .answer-input:focus {
   outline: none;
-  border-color: #0066cc;
+  border-color: #667eea;
 }
 
 .button-group {
@@ -154,7 +155,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background-color: #0066cc;
+  background-color: #FF9900;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -162,7 +163,7 @@
 }
 
 .next-button:hover:not(:disabled) {
-  background-color: #0052a3;
+  background-color: #e68a00;
 }
 
 .next-button:disabled {
@@ -174,22 +175,22 @@
   padding: 0.75rem 2rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #0066cc;
+  color: #00C7B7;
   background-color: white;
-  border: 2px solid #0066cc;
+  border: 2px solid #00C7B7;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .back-button:hover {
-  background-color: #f0f7ff;
+  background-color: #e6f7f5;
 }
 
 .info-box {
   padding: 1rem;
-  background-color: #f0f7ff;
-  border-left: 4px solid #0066cc;
+  background-color: #ede9fe;
+  border-left: 4px solid #667eea;
   border-radius: 4px;
 }
 

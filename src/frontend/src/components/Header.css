@@ -1,9 +1,9 @@
 /* REQ: REQ-F-A2-Signup-1 */
 
 .app-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #667eea;
+  border-bottom: 1px solid #5568d3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -25,7 +25,7 @@
 .header-logo {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1976d2;
+  color: #ffffff;
   margin: 0;
   cursor: default;
 }
@@ -38,7 +38,7 @@
 
 /* REQ-F-A2-Signup-1: Signup button styling */
 .signup-button {
-  background-color: #1976d2;
+  background-color: #FF9900;
   color: white;
   border: none;
   border-radius: 4px;
@@ -50,7 +50,7 @@
 }
 
 .signup-button:hover {
-  background-color: #1565c0;
+  background-color: #e68a00;
   transform: translateY(-1px);
 }
 
@@ -59,7 +59,7 @@
 }
 
 .signup-button:focus {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #FF9900;
   outline-offset: 2px;
 }
 
