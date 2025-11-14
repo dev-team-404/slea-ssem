@@ -43,7 +43,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-B5-1 | 이전 응시 정보 비교 섹션 | 4 | ✅ Done | 9 tests (100%), Progress: docs/progress/REQ-F-B5-1.md |
 | REQ-F-B5-2 | 레벨 테스트 재응시 버튼 | 4 | ✅ Done | 5 tests (100%), Progress: docs/progress/REQ-F-B5-2.md |
 | REQ-F-B5-3 | 재응시 시 이전 정보 자동 입력 | 4 | ✅ Done | 9 tests (100%), Commit: 4f404ac, Progress: docs/progress/REQ-F-B5-3.md |
-| REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | ⏳ Backlog | 3개 sub-tasks |
+| REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### Backend (bwyoon)
 
@@ -63,7 +63,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-B4-Plus | 등급 기반 배지 부여 | 4 | ✅ Done | 6 badge tests included, Commit: 1de9a2d, Progress: docs/progress/REQ-B-B4-Plus.md |
 | REQ-B-B5 | 응시 이력 저장 & 조회 | 4 | ✅ Done | 16 tests (100%), Commit: d400aa8, Progress: docs/progress/REQ-B-B5.md |
 | REQ-B-B6-2 | 콘텐츠 필터링 (비속어/편향/저작권) | 4 | ✅ Done | 26 tests (100%), Commit: (pending), Progress: docs/progress/REQ-B-B6-2.md |
-| REQ-B-B6-Plus | 재미 모드 (Backend) | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-B-B6-Plus | 재미 모드 (Backend) | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### Agent (Claude Code)
 
@@ -88,7 +88,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-A-DataContract | Tool 입출력 데이터 계약 | 4 | ✅ Done | 27 tests (100%), Commit: [pending], Progress: docs/progress/REQ-A-DataContract.md |
 | REQ-A-LangChain | LangChain Agent 구현 | 4 | ✅ Done | 13 tests (100%), Commit: [pending], Progress: docs/progress/REQ-A-LangChain.md |
 | REQ-A-Agent-Backend-1 | QuestionGenerationService Real Agent 통합 + CLI Integration | 4 | ✅ Done | 12+12 tests (100%), Commits: 61c6449 (CLI), f53df96 (docs), Progress: docs/progress/REQ-A-Agent-Backend-1.md |
-| REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | ⏳ Backlog | 3개 sub-tasks (MVP 1.0) |
+| REQ-B-B7 | 학습 일정 예고 프리뷰 | 0 | 📦 MVP 2.0 | Deferred to MVP 2.0 |
 
 ### CLI (bwyoon)
 
@@ -132,6 +132,15 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | 2 | 🧪 Test | Tests designed, awaiting review |
 | 3 | 💻 Impl | Implementation in progress, validation running |
 | 4 | ✅ Done | Merged to main branch |
+
+## 📦 Status Codes
+
+| Status | Description |
+|--------|-------------|
+| ⏳ Backlog | Planned for MVP 1.0, not yet started |
+| ✅ Done | Completed and merged to main branch |
+| ⚠️ Merged | Deprecated or merged into another REQ |
+| 📦 MVP 2.0 | Deferred to future release (not in MVP 1.0 scope) |
 
 ---
 
