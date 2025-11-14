@@ -9,13 +9,17 @@
 }
 
 @layer components {
-  /* Tailwind standard card pattern for info-box */
+  /* Standard card pattern matching main containers */
   .info-box {
-    @apply mt-8 bg-white border border-gray-200 rounded-lg shadow-md p-6 space-y-4;
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .info-box .info-title {
-    @apply text-lg font-semibold text-gray-900;
+    @apply text-base font-semibold text-gray-800 mb-4;
   }
 
   .info-box .info-content {
@@ -23,7 +27,7 @@
   }
 
   .info-box .info-item {
-    @apply flex items-start gap-3;
+    @apply flex items-start gap-3 text-sm text-gray-700;
   }
 
   .info-box .info-icon,
@@ -40,15 +44,28 @@
   }
 
   .info-box .info-text {
-    @apply text-sm text-gray-600 leading-relaxed;
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.5;
   }
 
   .info-box .info-list {
-    @apply space-y-2;
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
   }
 
   .info-box .info-list li {
-    @apply text-sm text-gray-600 leading-relaxed;
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.5;
+    padding: 0.25rem 0;
+  }
+
+  .info-box p:not(.info-title) {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.5;
   }
 }
 
