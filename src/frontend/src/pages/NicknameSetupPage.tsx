@@ -154,20 +154,20 @@ const NicknameSetupPage: React.FC = () => {
             <InformationCircleIcon className="info-icon" />
             <span>닉네임 규칙</span>
           </div>
-          <ul className="info-list">
-            <li>
+          <div className="info-content">
+            <div className="info-item">
               <CheckCircleIcon className="check-icon" />
               <span>3-30자 사이로 입력해주세요</span>
-            </li>
-            <li>
+            </div>
+            <div className="info-item">
               <CheckCircleIcon className="check-icon" />
               <span>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</span>
-            </li>
-            <li>
+            </div>
+            <div className="info-item">
               <CheckCircleIcon className="check-icon" />
               <span>금칙어는 사용할 수 없습니다</span>
-            </li>
-          </ul>
+            </div>
+          </div>
         </div>
       </div>
     </main>
