@@ -1,5 +1,5 @@
-// REQ: REQ-F-A2-Signup-3
-import React, { useCallback, useMemo } from 'react'
+// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4
+import React, { useCallback, useMemo, useState } from 'react'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
 import './SignupPage.css'
 
@@ -7,6 +7,7 @@ import './SignupPage.css'
  * Unified Signup Page Component
  *
  * REQ: REQ-F-A2-Signup-3 - 통합 회원가입 페이지에 닉네임 입력 섹션 표시
+ * REQ: REQ-F-A2-Signup-4 - 통합 회원가입 페이지에 자기평가 입력 섹션 표시 (수준만)
  *
  * Features:
  * - Nickname input section (REQ-F-A2-Signup-3)
@@ -14,12 +15,29 @@ import './SignupPage.css'
  *   - Duplicate check button
  *   - Real-time validation
  *   - Suggestions on duplicate (up to 3)
- * - Profile input section (REQ-F-A2-Signup-4, to be implemented)
+ * - Profile input section (REQ-F-A2-Signup-4)
+ *   - Level slider (1-5)
  * - Submit button (REQ-F-A2-Signup-5/6, to be implemented)
  *
  * Route: /signup
  */
+
+type LevelOption = {
+  value: number
+  label: string
+  description: string
+}
+
+const LEVEL_OPTIONS: LevelOption[] = [
+  { value: 1, label: '1 - 입문', description: '기초 개념 학습 중' },
+  { value: 2, label: '2 - 초급', description: '기본 업무 수행 가능' },
+  { value: 3, label: '3 - 중급', description: '독립적으로 업무 수행' },
+  { value: 4, label: '4 - 고급', description: '복잡한 문제 해결 가능' },
+  { value: 5, label: '5 - 전문가', description: '다른 사람을 지도 가능' },
+]
+
 const SignupPage: React.FC = () => {
+  // REQ-F-A2-Signup-3: Nickname state
   const {
     nickname,
     setNickname,
@@ -28,6 +46,9 @@ const SignupPage: React.FC = () => {
     suggestions,
     checkNickname,
   } = useNicknameCheck()
+
+  // REQ-F-A2-Signup-4: Level state
+  const [level, setLevel] = useState<number | null>(null)
 
   const handleCheckClick = useCallback(() => {
     checkNickname()
@@ -55,6 +76,20 @@ const SignupPage: React.FC = () => {
     }
     return null
   }, [checkStatus, errorMessage])
+
+  const handleLevelChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10)
+    setLevel(value)
+  }, [])
+
+  // Memoize level description to avoid recalculation on every render
+  const levelDescription = useMemo(() => {
+    if (level === null) {
+      return '슬라이더를 움직여 수준을 선택하세요'
+    }
+    const option = LEVEL_OPTIONS.find((opt) => opt.value === level)
+    return option ? `${option.label}: ${option.description}` : ''
+  }, [level])
 
   const isChecking = checkStatus === 'checking'
   const isCheckButtonDisabled = isChecking || nickname.length === 0
@@ -128,11 +163,43 @@ const SignupPage: React.FC = () => {
           </div>
         </section>
 
-        {/* REQ-F-A2-Signup-4: Profile Section (to be implemented) */}
+        {/* REQ-F-A2-Signup-4: Profile Section (Level only) */}
         <section className="profile-section">
           <h2 className="section-title">자기평가 정보</h2>
-          <div className="placeholder-content">
-            <p>🚧 자기평가 섹션은 REQ-F-A2-Signup-4에서 구현 예정입니다.</p>
+
+          <div className="form-group">
+            <label htmlFor="level-slider" className="form-label">
+              수준
+            </label>
+            <input
+              id="level-slider"
+              type="range"
+              className="level-slider"
+              min="1"
+              max="5"
+              step="1"
+              value={level || 1}
+              onChange={handleLevelChange}
+              aria-label="수준"
+            />
+            <div className="level-value-display">
+              {level !== null && (
+                <span className="level-value">{level}</span>
+              )}
+            </div>
+            <p className={`level-description ${level === null ? 'placeholder' : ''}`}>
+              {levelDescription}
+            </p>
+          </div>
+
+          <div className="info-box">
+            <p className="info-title">향후 추가 예정</p>
+            <ul className="info-list">
+              <li>경력(연차) 입력</li>
+              <li>직군 선택</li>
+              <li>담당 업무 입력</li>
+              <li>관심분야 다중 선택</li>
+            </ul>
           </div>
         </section>
 

@@ -1,5 +1,5 @@
-// REQ: REQ-F-A2-Signup-3
-import { render, screen, waitFor } from '@testing-library/react'
+// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
@@ -263,6 +263,120 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
     // Wait for completion
     await waitFor(() => {
       expect(screen.queryByText(/확인 중/i)).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('SignupPage - REQ-F-A2-Signup-4 (Level Slider)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+  })
+
+  // Test 1: Render level slider
+  test('renders profile section with level slider', () => {
+    // REQ: REQ-F-A2-Signup-4 - 수준 (1~5 슬라이더)
+    renderWithRouter(<SignupPage />)
+
+    // Check profile section title
+    expect(screen.getByRole('heading', { name: /자기평가 정보/i })).toBeInTheDocument()
+
+    // Check level slider exists
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    expect(slider).toBeInTheDocument()
+    expect(slider.type).toBe('range')
+    expect(slider.min).toBe('1')
+    expect(slider.max).toBe('5')
+  })
+
+  // Test 2: Initial state shows placeholder
+  test('shows placeholder when no level is selected', () => {
+    // REQ: REQ-F-A2-Signup-4 - 초기 상태
+    renderWithRouter(<SignupPage />)
+
+    // Should show placeholder text
+    expect(screen.getByText(/슬라이더를 움직여 수준을 선택하세요/i)).toBeInTheDocument()
+    
+    // Level value display should be empty (level is null initially)
+    const valueDisplay = document.querySelector('.level-value')
+    expect(valueDisplay).toBeNull()
+  })
+
+  // Test 3: Level 2 description (testing from initial state)
+  test('shows correct description for level 2 when changed from initial state', async () => {
+    // REQ: REQ-F-A2-Signup-4 - 레벨 설명 표시
+    renderWithRouter(<SignupPage />)
+
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    
+    // Change slider to level 2 (triggers onChange from null state)
+    fireEvent.change(slider, { target: { value: '2' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 - 초급: 기본 업무 수행 가능/i)).toBeInTheDocument()
+    })
+    
+    // Level value should be displayed
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  // Test 4: Level 3 description
+  test('shows correct description for level 3', async () => {
+    // REQ: REQ-F-A2-Signup-4 - 레벨 설명 표시
+    renderWithRouter(<SignupPage />)
+
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    
+    fireEvent.change(slider, { target: { value: '3' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 - 중급: 독립적으로 업무 수행/i)).toBeInTheDocument()
+    })
+  })
+
+  // Test 5: Level 4 description
+  test('shows correct description for level 4', async () => {
+    // REQ: REQ-F-A2-Signup-4 - 레벨 설명 표시
+    renderWithRouter(<SignupPage />)
+
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    
+    fireEvent.change(slider, { target: { value: '4' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/4 - 고급: 복잡한 문제 해결 가능/i)).toBeInTheDocument()
+    })
+  })
+
+  // Test 6: Level 5 description
+  test('shows correct description for level 5', async () => {
+    // REQ: REQ-F-A2-Signup-4 - 레벨 설명 표시
+    renderWithRouter(<SignupPage />)
+
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    
+    fireEvent.change(slider, { target: { value: '5' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/5 - 전문가: 다른 사람을 지도 가능/i)).toBeInTheDocument()
+    })
+  })
+
+  // Test 7: Level value updates on slider change
+  test('updates level value when slider changes', async () => {
+    // REQ: REQ-F-A2-Signup-4 - 슬라이더 상태 관리
+    renderWithRouter(<SignupPage />)
+
+    const slider = screen.getByLabelText(/수준/i) as HTMLInputElement
+    
+    // Initial value
+    expect(slider.value).toBe('1')
+
+    // Change to level 3
+    fireEvent.change(slider, { target: { value: '3' } })
+    
+    await waitFor(() => {
+      expect(slider.value).toBe('3')
     })
   })
 })
