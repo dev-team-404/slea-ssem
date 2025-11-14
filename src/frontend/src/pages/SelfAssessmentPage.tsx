@@ -136,7 +136,12 @@ const SelfAssessmentPage: React.FC = () => {
         </div>
 
         <div className="info-box">
-          <p className="info-title">수준 선택 가이드</p>
+          <div className="info-title">
+            <svg className="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            수준 선택 가이드
+          </div>
           <ul className="info-list">
             <li>본인의 현재 기술 수준을 솔직하게 평가해주세요</li>
             <li>선택한 수준에 맞춰 테스트 난이도가 조정됩니다</li>

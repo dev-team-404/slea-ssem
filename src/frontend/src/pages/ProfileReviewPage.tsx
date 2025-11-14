@@ -161,7 +161,12 @@ const ProfileReviewPage: React.FC = () => {
         </div>
 
         <div className="info-box">
-          <p className="info-title">다음 단계</p>
+          <div className="info-title">
+            <svg className="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            다음 단계
+          </div>
           <p className="info-text">
             "테스트 시작"을 클릭하면 AI 역량 레벨 테스트가 시작됩니다.
             1차 문제 5개가 생성되며, 약 10분이 소요됩니다.

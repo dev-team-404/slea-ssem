@@ -144,7 +144,12 @@ const SignupPage: React.FC = () => {
           </div>
 
           <div className="info-box">
-            <p className="info-title">닉네임 규칙</p>
+            <div className="info-title">
+              <svg className="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              닉네임 규칙
+            </div>
             <ul className="info-list">
               <li>3-30자 사이로 입력해주세요</li>
               <li>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</li>
@@ -183,7 +188,12 @@ const SignupPage: React.FC = () => {
           </div>
 
           <div className="info-box">
-            <p className="info-title">향후 추가 예정</p>
+            <div className="info-title">
+              <svg className="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              향후 추가 예정
+            </div>
             <ul className="info-list">
               <li>경력(연차) 입력</li>
               <li>직군 선택</li>
