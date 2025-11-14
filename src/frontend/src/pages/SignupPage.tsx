@@ -1,6 +1,7 @@
 // REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4
 import React, { useCallback, useMemo, useState } from 'react'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
+import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SignupPage.css'
 
 /**
@@ -143,14 +144,13 @@ const SignupPage: React.FC = () => {
             )}
           </div>
 
-          <div className="info-box">
-            <p className="info-title">닉네임 규칙</p>
+          <InfoBox title="닉네임 규칙">
             <ul className="info-list">
               <li>3-30자 사이로 입력해주세요</li>
               <li>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</li>
               <li>금칙어는 사용할 수 없습니다</li>
             </ul>
-          </div>
+          </InfoBox>
         </section>
 
         {/* REQ-F-A2-Signup-4: Profile Section (Level only) */}
@@ -182,15 +182,14 @@ const SignupPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="info-box">
-            <p className="info-title">향후 추가 예정</p>
+          <InfoBox title="향후 추가 예정" icon={InfoBoxIcons.clock}>
             <ul className="info-list">
               <li>경력(연차) 입력</li>
               <li>직군 선택</li>
               <li>담당 업무 입력</li>
               <li>관심분야 다중 선택</li>
             </ul>
-          </div>
+          </InfoBox>
         </section>
 
         {/* REQ-F-A2-Signup-5/6: Submit Button (to be implemented) */}

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { profileService } from '../services'
+import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './ProfileReviewPage.css'
 
 /**
@@ -160,13 +161,12 @@ const ProfileReviewPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="info-box">
-          <p className="info-title">다음 단계</p>
+        <InfoBox title="다음 단계" icon={InfoBoxIcons.arrowRight}>
           <p className="info-text">
             "테스트 시작"을 클릭하면 AI 역량 레벨 테스트가 시작됩니다.
             1차 문제 5개가 생성되며, 약 10분이 소요됩니다.
           </p>
-        </div>
+        </InfoBox>
       </div>
     </main>
   )

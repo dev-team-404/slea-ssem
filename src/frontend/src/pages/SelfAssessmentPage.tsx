@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { profileService } from '../services'
+import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SelfAssessmentPage.css'
 
 /**
@@ -135,14 +136,13 @@ const SelfAssessmentPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="info-box">
-          <p className="info-title">수준 선택 가이드</p>
+        <InfoBox title="수준 선택 가이드" icon={InfoBoxIcons.check}>
           <ul className="info-list">
             <li>본인의 현재 기술 수준을 솔직하게 평가해주세요</li>
             <li>선택한 수준에 맞춰 테스트 난이도가 조정됩니다</li>
             <li>나중에 프로필 수정에서 변경할 수 있습니다</li>
           </ul>
-        </div>
+        </InfoBox>
       </div>
     </main>
   )

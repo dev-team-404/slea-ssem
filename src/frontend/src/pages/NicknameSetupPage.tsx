@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
 import { profileService } from '../services'
+import InfoBox from '../components/InfoBox'
 import './NicknameSetupPage.css'
 
 /**
@@ -148,14 +149,13 @@ const NicknameSetupPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="info-box">
-          <p className="info-title">닉네임 규칙</p>
+        <InfoBox title="닉네임 규칙">
           <ul className="info-list">
             <li>3-30자 사이로 입력해주세요</li>
             <li>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</li>
             <li>금칙어는 사용할 수 없습니다</li>
           </ul>
-        </div>
+        </InfoBox>
       </div>
     </main>
   )
