@@ -41,6 +41,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-B4-4 | 모집단 < 100일 경우 분포 신뢰도 낮음 경고 표시 | 4 | ✅ Done | 4 tests (100%), Commit: b6c17b0, Progress: docs/progress/REQ-F-B4-4.md |
 | REQ-F-B5 | 재응시 및 비교 화면 | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-F-B5-1 | 이전 응시 정보 비교 섹션 | 4 | ✅ Done | 9 tests (100%), Progress: docs/progress/REQ-F-B5-1.md |
+| REQ-F-B5-2 | 레벨 테스트 재응시 버튼 | 4 | ✅ Done | 5 tests (100%), Progress: docs/progress/REQ-F-B5-2.md |
 | REQ-F-B5-3 | 재응시 시 이전 정보 자동 입력 | 4 | ✅ Done | 9 tests (100%), Commit: 4f404ac, Progress: docs/progress/REQ-F-B5-3.md |
 | REQ-F-B6 | 재미 모드 (카테고리 선택형 퀴즈) | 0 | ⏳ Backlog | 3개 sub-tasks |
 
