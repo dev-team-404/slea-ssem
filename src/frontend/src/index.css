@@ -11,7 +11,7 @@
 @layer components {
   /* Common info-box card design - Help card style */
   .info-box {
-    @apply mt-12 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 
+    @apply mt-12 p-8 bg-gradient-to-br from-blue-50 to-indigo-50 
            border-l-4 border-l-blue-500 border border-blue-200 
            rounded-lg shadow-lg hover:shadow-xl 
            transition-all duration-300 ease-in-out
@@ -19,7 +19,7 @@
   }
 
   .info-title {
-    @apply flex items-center gap-3 text-lg font-bold text-gray-800 mb-5;
+    @apply flex items-center gap-3 text-lg font-bold text-gray-800 mb-6;
   }
 
   .info-icon {
@@ -27,11 +27,11 @@
   }
 
   .info-content {
-    @apply space-y-4;
+    @apply space-y-5;
   }
 
   .info-item {
-    @apply flex items-start gap-3 text-sm text-gray-700 leading-relaxed;
+    @apply flex items-start gap-4 text-sm text-gray-700 leading-relaxed py-1;
   }
 
   .check-icon {
