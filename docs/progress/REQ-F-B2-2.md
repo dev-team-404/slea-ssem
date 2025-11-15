@@ -30,11 +30,13 @@
 **Location**: `src/frontend/src/pages/TestPage.tsx`
 
 **State Addition**:
+
 ```typescript
 const [timeRemaining, setTimeRemaining] = useState<number>(1200) // 20 minutes
 ```
 
 **Countdown Logic**:
+
 ```typescript
 useEffect(() => {
   if (!sessionId || questions.length === 0) return
@@ -54,10 +56,12 @@ useEffect(() => {
 ```
 
 **Helper Functions**:
+
 - `getTimerColor(seconds)`: 녹색/주황색/빨간색 반환
 - `formatTime(seconds)`: MM:SS 포맷 반환
 
 **UI Integration**:
+
 ```tsx
 <div className={`timer timer-${getTimerColor(timeRemaining)}`}>
   남은 시간: {formatTime(timeRemaining)}
@@ -81,6 +85,7 @@ useEffect(() => {
 **Test File**: `src/frontend/src/pages/__tests__/TestPage.test.tsx`
 
 **Test Coverage**:
+
 - ✅ Happy path (20:00 초기값)
 - ✅ Countdown logic (실제 1초 대기)
 - ✅ Color transitions (unit test 방식)
@@ -116,17 +121,20 @@ useEffect(() => {
 ### Implementation Details
 
 **State Management**:
+
 ```typescript
 const [timeRemaining, setTimeRemaining] = useState<number>(1200)
 ```
 
 **Countdown Logic** (src/frontend/src/pages/TestPage.tsx:101-117):
+
 - Starts when `sessionId` and `questions` are ready
 - Updates every 1000ms (1 second)
 - Stops at 0 (prevents negative values)
 - Cleanup on unmount
 
 **Color Logic** (src/frontend/src/pages/TestPage.tsx:119-124):
+
 ```typescript
 const getTimerColor = (seconds: number): string => {
   if (seconds > 15 * 60) return 'green'   // 961+ seconds
@@ -136,6 +144,7 @@ const getTimerColor = (seconds: number): string => {
 ```
 
 **Time Formatting** (src/frontend/src/pages/TestPage.tsx:126-131):
+
 ```typescript
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
@@ -155,6 +164,7 @@ npm test -- TestPage.test.tsx --run
 ```
 
 **All tests passing**:
+
 - 9 REQ-F-B2-1 tests (기존)
 - 5 REQ-F-B2-2 timer tests (신규)
 

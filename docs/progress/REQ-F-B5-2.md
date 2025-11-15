@@ -10,9 +10,11 @@
 ## Phase 1: Specification
 
 ### Requirements
+
 대시보드 또는 결과 페이지에 "레벨 테스트 재응시" 버튼을 제공해야 한다.
 
 ### Acceptance Criteria
+
 - "재응시 버튼 클릭 시 이전 정보가 미리 로드된다."
 - 결과 페이지에서 사용자가 쉽게 재응시를 시작할 수 있음
 
@@ -22,10 +24,12 @@
 TestResultsPage에 "재응시하기" 버튼을 추가하여 사용자가 테스트 완료 후 즉시 재응시할 수 있도록 함
 
 **Location**:
+
 - `src/frontend/src/components/TestResults/ActionButtons.tsx` - "재응시하기" 버튼 컴포넌트
 - `src/frontend/src/pages/TestResultsPage.tsx` - onRetake handler 구현
 
 **Signature**:
+
 ```typescript
 // ActionButtons Component
 interface ActionButtonsProps {
@@ -38,6 +42,7 @@ onRetake: () => void
 ```
 
 **Behavior**:
+
 1. TestResultsPage에 ActionButtons 컴포넌트 렌더링
 2. ActionButtons는 2개의 버튼 표시:
    - "홈화면으로 이동" (primary button)
@@ -49,10 +54,12 @@ onRetake: () => void
 4. /profile-review에서 이전 정보 자동 로드 (REQ-F-B5-3)
 
 **Dependencies**:
+
 - REQ-F-B4-1 (TestResultsPage 기본 기능)
 - REQ-F-B5-3 (재응시 시 이전 정보 자동 입력)
 
 **Non-functional**:
+
 - 버튼 스타일: primary vs secondary 구분
 - 명확한 액션 라벨 ("재응시하기", "홈화면으로 이동")
 - 모바일/데스크톱 반응형 디자인
@@ -64,12 +71,14 @@ onRetake: () => void
 ### Test Cases
 
 **Test Locations**:
+
 - `src/frontend/src/pages/__tests__/TestResultsPage.test.tsx` (5 tests)
 - ActionButtons 컴포넌트는 단순 UI이므로 통합 테스트로 검증
 
 #### TestResultsPage Integration Tests (5 tests)
 
 **Test 1**: `"재응시하기" 버튼 클릭 시 /profile-review로 이동`
+
 - Given: TestResultsPage with surveyId = 'survey_abc'
 - When: User clicks "재응시하기" button
 - Then:
@@ -78,12 +87,14 @@ onRetake: () => void
 - **Status**: ✅ PASS
 
 **Test 2**: `surveyId를 state에서 localStorage로 저장`
+
 - Given: state.surveyId = 'survey_xyz'
 - When: "재응시하기" clicked
 - Then: localStorage.getItem('lastSurveyId') === 'survey_xyz'
 - **Status**: ✅ PASS
 
 **Test 3**: `state에 surveyId 없을 때 localStorage에서 조회`
+
 - Given: state has no surveyId, localStorage has 'saved_survey_123'
 - When: "재응시하기" clicked
 - Then:
@@ -92,12 +103,14 @@ onRetake: () => void
 - **Status**: ✅ PASS
 
 **Test 4**: `surveyId가 전혀 없어도 /profile-review로 이동`
+
 - Given: No surveyId in state or localStorage
 - When: "재응시하기" clicked
 - Then: navigate('/profile-review') called (fallback behavior)
 - **Status**: ✅ PASS
 
 **Test 5**: `"홈화면으로 이동" 버튼 클릭 시 /home으로 이동`
+
 - Given: TestResultsPage loaded
 - When: User clicks "홈화면으로 이동" button
 - Then: navigate('/home') called
@@ -110,6 +123,7 @@ onRetake: () => void
 ### Modified/Created Files
 
 #### 1. `src/frontend/src/components/TestResults/ActionButtons.tsx`
+
 **Lines**: 1-25 (NEW FILE)
 **Changes**: "재응시하기" 및 "홈화면으로 이동" 버튼 컴포넌트 생성
 
@@ -141,6 +155,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onGoHome, onRetake
 ```
 
 **Rationale**:
+
 - 재사용 가능한 버튼 컴포넌트 분리
 - primary/secondary 버튼 스타일 구분
 - 명확한 액션 라벨
@@ -148,6 +163,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onGoHome, onRetake
 ---
 
 #### 2. `src/frontend/src/pages/TestResultsPage.tsx`
+
 **Lines**: 156-172
 **Changes**: ActionButtons 컴포넌트 렌더링 및 onRetake handler 구현
 
@@ -171,6 +187,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onGoHome, onRetake
 ```
 
 **Rationale**:
+
 - surveyId 조회 우선순위: state > localStorage (fallback)
 - surveyId를 localStorage에 저장하여 REQ-F-B5-3 연동
 - /profile-review로 이동하여 사용자가 이전 정보 확인 가능
@@ -179,6 +196,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onGoHome, onRetake
 ---
 
 ### Code Quality
+
 - ✅ Type safety: TypeScript interfaces 정의
 - ✅ Error handling: surveyId 없어도 동작
 - ✅ Accessibility: semantic button elements
@@ -190,16 +208,20 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onGoHome, onRetake
 ## Phase 4: Summary
 
 ### Test Results
+
 ✅ All automated tests passed (5 tests total):
+
 - **TestResultsPage.test.tsx (REQ-F-B5-3 describe block)**: 5 tests (all PASS)
 
 **Test Execution**:
+
 ```bash
 npm test -- TestResultsPage --run
 # Result: 8 passed (8 total, including REQ-F-B5-1 and REQ-F-B5-3 tests)
 ```
 
 **Test Coverage**:
+
 - "재응시하기" 버튼 클릭 및 navigation ✅
 - surveyId localStorage 저장 ✅
 - surveyId fallback (state → localStorage) ✅
@@ -217,11 +239,13 @@ npm test -- TestResultsPage --run
 | "홈화면으로 이동" 버튼 | ActionButtons.tsx:16-18<br>TestResultsPage.tsx:158 | ✅ TestResultsPage.test (Test 5) |
 
 ### Modified/Created Files
+
 1. `src/frontend/src/components/TestResults/ActionButtons.tsx` (NEW, 25 lines)
 2. `src/frontend/src/pages/TestResultsPage.tsx:156-172` (ActionButtons integration)
 3. `src/frontend/src/pages/__tests__/TestResultsPage.test.tsx:54-171` (5 tests)
 
 ### Related Requirements
+
 - ✅ REQ-F-B4-1: 최종 결과 페이지 (기본 기능)
 - ✅ REQ-F-B5-1: 이전 응시 정보 비교 섹션 (이미 구현됨)
 - ✅ REQ-F-B5-3: 재응시 시 이전 정보 자동 입력 (연동됨)
@@ -231,11 +255,13 @@ npm test -- TestResultsPage --run
 ## Notes
 
 **Implementation Decision**: ActionButtons 컴포넌트 분리
+
 - 버튼 로직을 재사용 가능한 컴포넌트로 분리
 - TestResultsPage는 handler만 제공
 - 향후 다른 페이지에서도 재사용 가능
 
 **User Flow**:
+
 1. 테스트 완료 → TestResultsPage
 2. 결과 확인 → "재응시하기" 또는 "홈화면으로 이동" 선택
 3. "재응시하기" 클릭:
@@ -245,11 +271,13 @@ npm test -- TestResultsPage --run
    - "테스트 시작" 클릭 → 새 테스트 세션 시작
 
 **Design Decisions**:
+
 - primary button: "홈화면으로 이동" (기본 액션)
 - secondary button: "재응시하기" (추가 액션)
 - surveyId fallback: state → localStorage → 없어도 진행
 
 **Future Improvements**:
+
 - 재응시 제한 (예: 하루 1회)
 - 재응시 전 확인 모달 ("이전 결과가 유지됩니다. 계속하시겠습니까?")
 - 재응시 시 이전 결과 비교 미리보기

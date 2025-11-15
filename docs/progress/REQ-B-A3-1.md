@@ -15,10 +15,12 @@ Priority: **M** (Medium)
 ### Phase 1: Specification ✅
 
 **Requirement Analysis**: Two REST APIs for managing user privacy consent:
+
 1. **GET /profile/consent**: Retrieve user's consent status
 2. **POST /profile/consent**: Update user's consent status
 
 **Business Rules**:
+
 - Extract user_id from JWT token (authenticated endpoints)
 - GET returns: `{consented: boolean, consent_at: ISO timestamp or null}`
 - POST accepts: `{consent: boolean}`, updates DB fields
@@ -34,12 +36,14 @@ Priority: **M** (Medium)
 **Test Classes**:
 
 #### TestConsentEndpointGET (4 tests)
+
 - ✅ `test_get_consent_when_not_consented`: Default state
 - ✅ `test_get_consent_when_consented`: After consent granted
 - ✅ `test_get_consent_returns_iso_timestamp`: Timestamp format validation
 - ✅ `test_get_consent_unauthenticated`: Auth enforcement (placeholder)
 
 #### TestConsentEndpointPOST (5 tests)
+
 - ✅ `test_post_consent_grant`: Grant consent
 - ✅ `test_post_consent_withdraw`: Withdraw consent
 - ✅ `test_post_consent_records_timestamp`: Timestamp recording
@@ -47,6 +51,7 @@ Priority: **M** (Medium)
 - ✅ `test_post_consent_invalid_payload`: Validation errors
 
 #### TestConsentService (6 tests)
+
 - ✅ `test_get_user_consent_not_consented`: Service method
 - ✅ `test_get_user_consent_consented`: Service method with state
 - ✅ `test_update_user_consent_grant`: Service grant operation
@@ -65,6 +70,7 @@ Priority: **M** (Medium)
 **File**: `src/backend/models/user.py`
 
 **Changes**:
+
 - Added `privacy_consent: bool` field (default: False)
 - Added `consent_at: datetime | None` field (default: None)
 - Updated docstring with field descriptions
@@ -94,6 +100,7 @@ def update_user_consent(self, user_id: int, consent: bool) -> dict[str, Any]:
 **File**: `src/backend/api/profile.py`
 
 **Request/Response Models**:
+
 ```python
 class ConsentStatusResponse(BaseModel):
     consented: bool
@@ -110,6 +117,7 @@ class ConsentUpdateResponse(BaseModel):
 ```
 
 **Endpoints**:
+
 - `GET /profile/consent` - Returns current consent status
 - `POST /profile/consent` - Updates consent status
 
@@ -118,17 +126,20 @@ class ConsentUpdateResponse(BaseModel):
 ### Phase 4: Test Results ✅
 
 **Test Execution**:
+
 ```bash
-$ pytest tests/backend/test_profile_consent.py -v
+pytest tests/backend/test_profile_consent.py -v
 ```
 
 **Results**:
+
 - ✅ TestConsentEndpointGET: 4/4 PASSED
 - ✅ TestConsentEndpointPOST: 5/5 PASSED
 - ✅ TestConsentService: 6/6 PASSED
 - **Total: 15/15 PASSED**
 
 **Regression Testing**:
+
 - ✅ Existing profile tests: 44 PASSED
 - ⚠️ Pre-existing failures in survey tests (unrelated to consent feature)
 
@@ -152,6 +163,7 @@ $ pytest tests/backend/test_profile_consent.py -v
 **Authentication**: Required (JWT)
 
 **Response** (200 OK):
+
 ```json
 {
   "consented": false,
@@ -160,6 +172,7 @@ $ pytest tests/backend/test_profile_consent.py -v
 ```
 
 Or when consented:
+
 ```json
 {
   "consented": true,
@@ -168,6 +181,7 @@ Or when consented:
 ```
 
 **Errors**:
+
 - 401 Unauthorized: Missing/invalid JWT
 
 ### POST /profile/consent
@@ -175,6 +189,7 @@ Or when consented:
 **Authentication**: Required (JWT)
 
 **Request**:
+
 ```json
 {
   "consent": true
@@ -182,6 +197,7 @@ Or when consented:
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -192,6 +208,7 @@ Or when consented:
 ```
 
 **Errors**:
+
 - 401 Unauthorized: Missing/invalid JWT
 - 422 Unprocessable Entity: Invalid request body
 
@@ -220,9 +237,10 @@ Or when consented:
 
 ## Git Commit Information
 
-**Commit Hash**: (to be generated)
+**Commit Hash**: `de77701`
 
 **Commit Message**:
+
 ```
 feat: Implement privacy consent API (REQ-B-A3-1, REQ-B-A3-2)
 
@@ -240,6 +258,7 @@ Tests: 15/15 PASSED
 ## Status: ✅ COMPLETE
 
 All phases of REQ-Based Development Workflow completed:
+
 - Phase 1: Specification ✅
 - Phase 2: Test Design ✅
 - Phase 3: Implementation ✅

@@ -225,7 +225,7 @@ class TestScoringMultipleChoice:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["is_correct"] is True
-        assert result["score"] == 1.0
+        assert result["score"] == 100.0
 
     def test_score_mc_incorrect_answer(self, db_session: Session, test_session_in_progress: TestSession) -> None:
         """Incorrect MC answer scores 0.0."""
@@ -416,10 +416,10 @@ class TestScoringTrueFalse:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["is_correct"] is True
-        assert result["score"] == 1.0
+        assert result["score"] == 100.0
 
     def test_score_tf_correct_false(self, db_session: Session, test_session_in_progress: TestSession) -> None:
-        """Correct TF=False answer scores 1.0."""
+        """Correct TF=False answer scores 100.0."""
         service = ScoringService(db_session)
 
         question = Question(
@@ -447,7 +447,7 @@ class TestScoringTrueFalse:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["is_correct"] is True
-        assert result["score"] == 1.0
+        assert result["score"] == 100.0
 
     def test_score_tf_incorrect_answer(self, db_session: Session, test_session_in_progress: TestSession) -> None:
         """Incorrect TF answer scores 0.0."""
@@ -812,7 +812,7 @@ class TestTimePenalty:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["time_penalty_applied"] is False
-        assert result["final_score"] == 1.0
+        assert result["final_score"] == 100.0
 
     def test_apply_penalty_exceeded_time_limit(
         self, db_session: Session, test_session_in_progress: TestSession
@@ -853,8 +853,8 @@ class TestTimePenalty:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["time_penalty_applied"] is True
-        # MC score = 1.0, penalty = (25-20)/20 * 1.0 = 0.25, final = 1.0 - 0.25 = 0.75
-        assert result["final_score"] == pytest.approx(0.75, abs=0.01)
+        # MC score = 100.0, penalty = (25-20)/20 * 100.0 = 25.0, final = 100.0 - 25.0 = 75.0
+        assert result["final_score"] == pytest.approx(75.0, abs=0.01)
 
     def test_apply_penalty_score_not_below_zero(
         self, db_session: Session, test_session_in_progress: TestSession
@@ -933,7 +933,7 @@ class TestTimePenalty:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["time_penalty_applied"] is False
-        assert result["final_score"] == 1.0
+        assert result["final_score"] == 100.0
 
     def test_apply_penalty_session_not_paused(self, db_session: Session, test_session_in_progress: TestSession) -> None:
         """No penalty if session not paused (still in_progress)."""
@@ -971,7 +971,7 @@ class TestTimePenalty:
         result = service.score_answer(test_session_in_progress.id, question.id)
 
         assert result["time_penalty_applied"] is False
-        assert result["final_score"] == 1.0
+        assert result["final_score"] == 100.0
 
 
 class TestFullScoringFlow:
@@ -1014,7 +1014,7 @@ class TestFullScoringFlow:
         # Verify DB was updated
         db_session.refresh(answer)
         assert answer.is_correct is True
-        assert answer.score == 1.0
+        assert answer.score == 100.0
 
     def test_score_short_answer_with_penalty(self, db_session: Session, test_session_in_progress: TestSession) -> None:
         """Short answer score reflects both base score and penalty."""

@@ -133,12 +133,16 @@ class ScoringService:
 
         REQ: REQ-B-B3-Score-2
 
+        Scoring: 0-100 scale
+        - Correct: 100.0
+        - Incorrect: 0.0
+
         Args:
             user_answer: User's answer dict with "selected_key"
             answer_schema: Answer schema with "correct_key" or "correct_answer"
 
         Returns:
-            Tuple of (is_correct: bool, score: float)
+            Tuple of (is_correct: bool, score: float 0-100)
 
         Raises:
             ValueError: If user_answer missing required field
@@ -156,7 +160,7 @@ class ScoringService:
         correct_key = str(answer_schema.get("correct_key") or answer_schema.get("correct_answer", "")).strip()
 
         is_correct = selected_key == correct_key
-        score = 1.0 if is_correct else 0.0
+        score = 100.0 if is_correct else 0.0
 
         return is_correct, score
 
@@ -170,12 +174,16 @@ class ScoringService:
 
         REQ: REQ-B-B3-Score-2
 
+        Scoring: 0-100 scale
+        - Correct: 100.0
+        - Incorrect: 0.0
+
         Args:
             user_answer: User's answer dict with "answer"
             answer_schema: Answer schema with "correct_answer"
 
         Returns:
-            Tuple of (is_correct: bool, score: float)
+            Tuple of (is_correct: bool, score: float 0-100)
 
         Raises:
             ValueError: If user_answer has invalid format
@@ -212,7 +220,7 @@ class ScoringService:
             correct_bool = bool(correct_ans)
 
         is_correct = user_bool == correct_bool
-        score = 1.0 if is_correct else 0.0
+        score = 100.0 if is_correct else 0.0
 
         return is_correct, score
 
@@ -317,9 +325,12 @@ class ScoringService:
 
         REQ: REQ-B-B3-Score-1, REQ-B-B3-Score-2
 
-        Calculates total score from all attempt answers in session:
-        - Multiple choice / True-False: exact match (1 point if correct, 0 if wrong)
-        - Short answer: LLM-based (0-100 scale, stored in score field)
+        Calculates average score from all attempt answers in session:
+        - All question types (MC, TF, SA) use 0-100 scale
+        - Multiple choice: 100 if correct, 0 if wrong
+        - True-False: 100 if correct, 0 if wrong
+        - Short answer: 0-100 based on keyword matching (partial credit)
+        - Final score: Average of all question scores
 
         Args:
             session_id: TestSession ID
@@ -327,9 +338,9 @@ class ScoringService:
 
         Returns:
             Dictionary with:
-                - score (float): Percentage score (0-100)
-                - total_points (int): Total points earned
-                - correct_count (int): Number of correct answers
+                - score (float): Average score (0-100)
+                - total_points (int): Total points earned (sum of all scores)
+                - correct_count (int): Number of fully correct answers (score=100)
                 - total_count (int): Total questions
                 - wrong_categories (dict): Category -> wrong count mapping
 
@@ -344,18 +355,16 @@ class ScoringService:
         correct_count = sum(1 for a in attempts if a.is_correct)
         total_points = sum(a.score for a in attempts)
 
-        # Calculate percentage score
-        # For MC/TF: correct answers worth 100 points / total
-        # For SA: partial points included in score field
-        max_points = total_count * 100  # Each question worth 100 points max
-        percentage_score = (total_points / max_points) * 100 if max_points > 0 else 0
+        # Calculate average score (all scores are 0-100 scale)
+        # Final score = (sum of all scores) / number of questions
+        average_score = (total_points / total_count) if total_count > 0 else 0
 
         # Get wrong categories
         wrong_categories = self._get_wrong_categories(attempts)
 
         return {
-            "score": round(percentage_score, 2),
-            "total_points": int(total_points),
+            "score": round(average_score, 2),
+            "total_points": round(total_points, 2),
             "correct_count": correct_count,
             "total_count": total_count,
             "wrong_categories": wrong_categories,

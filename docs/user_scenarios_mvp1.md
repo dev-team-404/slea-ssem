@@ -197,7 +197,7 @@
 
 - 이름: 이정민 (입사 3개월 차)
 - 직책: 마케팅 담당
-- AD 계정: knox_id=lee.jungmin, email=lee.jungmin@company.com
+- AD 계정: knox_id=lee.jungmin, email=<lee.jungmin@company.com>
 - 부서: 마케팅팀
 - 사업부: System LSI
 

@@ -146,6 +146,7 @@ class RealTransport {
 ```
 
 **Hook을 사용하는 이유:**
+
 - 복잡한 상태 관리 (nickname, checkStatus, errorMessage, suggestions)
 - 클라이언트 측 validation 로직
 - 여러 컴포넌트에서 재사용 가능
@@ -198,6 +199,7 @@ transport.post('/profile/register', { nickname })
 ```
 
 **Hook을 생략하는 이유:**
+
 - 단순 CRUD 호출 (추가 상태 관리 불필요)
 - 한 곳에서만 사용 (재사용성 불필요)
 - 컴포넌트 내에서 충분히 처리 가능
@@ -409,21 +411,25 @@ class MockTransport implements HttpTransport {
 ### ✅ DO
 
 1. **모든 API 호출은 Service를 통해 실행**
+
    ```typescript
    await authService.login(userData)  // ✓
    ```
 
 2. **복잡한 상태 관리는 Hook으로 캡슐화**
+
    ```typescript
    const { nickname, checkNickname } = useNicknameCheck()  // ✓
    ```
 
 3. **타입 정의는 Service에 배치**
+
    ```typescript
    export interface LoginResponse { ... }  // ✓
    ```
 
 4. **Transport는 Mock/Real 전환만 담당**
+
    ```typescript
    export const transport = isMockMode() ? mockTransport : realTransport  // ✓
    ```
@@ -431,17 +437,20 @@ class MockTransport implements HttpTransport {
 ### ❌ DON'T
 
 1. **Page에서 transport 직접 호출 금지**
+
    ```typescript
    await transport.post('/api/auth/login', data)  // ✗
    ```
 
 2. **불필요한 Hook 생성 금지**
+
    ```typescript
    // 단순 API 호출인데 Hook으로 만들 필요 없음
    function useRegisterNickname() { ... }  // ✗
    ```
 
 3. **Service 없이 Hook에서 transport 직접 호출 금지**
+
    ```typescript
    // Hook 내에서
    await transport.post(...)  // ✗ - Service를 거쳐야 함
@@ -725,6 +734,7 @@ const TestPage: React.FC = () => {
 #### After (분할된 구조)
 
 **1. Timer 컴포넌트 (components/test/Timer.tsx)**
+
 ```typescript
 interface TimerProps {
   timeRemaining: number
@@ -744,6 +754,7 @@ export const Timer: React.FC<TimerProps> = ({ timeRemaining }) => {
 ```
 
 **2. SaveStatus 컴포넌트 (components/test/SaveStatus.tsx)**
+
 ```typescript
 export type SaveStatusType = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -765,6 +776,7 @@ export const SaveStatus: React.FC<SaveStatusProps> = ({ status }) => {
 ```
 
 **3. Question 컴포넌트 (components/test/Question.tsx)**
+
 ```typescript
 interface QuestionProps {
   question: QuestionData
@@ -792,6 +804,7 @@ export const Question: React.FC<QuestionProps> = ({
 ```
 
 **4. useAutosave 훅 (hooks/useAutosave.ts)**
+
 ```typescript
 interface UseAutosaveOptions {
   sessionId: string | null
@@ -819,6 +832,7 @@ export function useAutosave(options: UseAutosaveOptions) {
 ```
 
 **5. 리팩토링된 TestPage (150줄, 간결함)**
+
 ```typescript
 const TestPage: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -934,12 +948,14 @@ export default defineConfig({
 ### Mock 모드 활성화
 
 **방법 1: 환경변수**
+
 ```bash
 # .env
 VITE_MOCK_API=true
 ```
 
 **방법 2: URL 파라미터**
+
 ```
 http://localhost:3000?mock=true
 ```

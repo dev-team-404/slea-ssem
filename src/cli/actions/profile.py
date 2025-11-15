@@ -19,6 +19,8 @@ def profile_help(context: CLIContext, *args: str) -> None:
         "  profile update_survey         - Survey 업데이트 (인증 필요, 옵션: job_role, duty, interests)"
     )
     context.console.print("  profile reset_surveys         - 모든 Survey 기록 강제 삭제 (FK 무시, DEV용)")
+    context.console.print("  profile get-consent           - 개인정보 동의 여부 확인 (인증 필요)")
+    context.console.print("  profile set-consent           - 개인정보 동의 상태 변경 (인증 필요)")
 
 
 def check_nickname_availability(context: CLIContext, *args: str) -> None:
@@ -393,3 +395,106 @@ def reset_surveys(context: CLIContext, *args: str) -> None:
         context.logger.error(f"Failed to reset surveys: {e}", exc_info=True)
     finally:
         db.close()
+
+
+def get_consent(context: CLIContext, *args: str) -> None:
+    """현재 사용자의 개인정보 동의 여부를 확인합니다."""
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        context.console.print("[yellow]Please login first: auth login [username][/yellow]")
+        return
+
+    context.console.print("[dim]Fetching privacy consent status...[/dim]")
+
+    # JWT 토큰을 client에 설정
+    context.client.set_token(context.session.token)
+
+    # API 호출
+    status_code, response, error = context.client.make_request(
+        "GET",
+        "/profile/consent",
+    )
+
+    if error:
+        context.console.print("[bold red]✗ Failed to fetch consent status[/bold red]")
+        context.console.print(f"[red]  Error: {error}[/red]")
+        context.logger.error(f"Consent status fetch failed: {error}")
+        return
+
+    if status_code != 200:
+        context.console.print(f"[bold red]✗ Failed (HTTP {status_code})[/bold red]")
+        return
+
+    consented = response.get("consented", False)
+    consent_at = response.get("consent_at")
+
+    if consented:
+        context.console.print("[bold green]✓ Consent Status: GRANTED[/bold green]")
+        if consent_at:
+            context.console.print(f"[dim]  Consented at: {consent_at}[/dim]")
+    else:
+        context.console.print("[bold yellow]✓ Consent Status: NOT GRANTED[/bold yellow]")
+        context.console.print("[dim]  You have not granted privacy consent yet[/dim]")
+
+    context.logger.info("Fetched privacy consent status.")
+
+
+def set_consent(context: CLIContext, *args: str) -> None:
+    """개인정보 동의 상태를 변경합니다."""
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        context.console.print("[yellow]Please login first: auth login [username][/yellow]")
+        return
+
+    if not args:
+        context.console.print("[bold yellow]Usage:[/bold yellow] profile set-consent [true|false]")
+        context.console.print("[bold cyan]Examples:[/bold cyan]")
+        context.console.print("  profile set-consent true       - Grant privacy consent")
+        context.console.print("  profile set-consent false      - Withdraw privacy consent")
+        return
+
+    consent_str = args[0].lower()
+    if consent_str in ("true", "yes", "y", "1"):
+        consent = True
+        action = "Grant"
+    elif consent_str in ("false", "no", "n", "0"):
+        consent = False
+        action = "Withdraw"
+    else:
+        context.console.print(f"[bold red]✗ Invalid consent value: '{consent_str}'[/bold red]")
+        context.console.print("[yellow]Use: true/yes/y/1 or false/no/n/0[/yellow]")
+        return
+
+    context.console.print(f"[dim]{action}ing privacy consent...[/dim]")
+
+    # JWT 토큰을 client에 설정
+    context.client.set_token(context.session.token)
+
+    # API 호출
+    status_code, response, error = context.client.make_request(
+        "POST",
+        "/profile/consent",
+        json_data={"consent": consent},
+    )
+
+    if error:
+        context.console.print("[bold red]✗ Consent update failed[/bold red]")
+        context.console.print(f"[red]  Error: {error}[/red]")
+        context.logger.error(f"Consent update failed: {error}")
+        return
+
+    if status_code != 200:
+        context.console.print(f"[bold red]✗ Consent update failed (HTTP {status_code})[/bold red]")
+        return
+
+    message = response.get("message", "Consent updated")
+    context.console.print(f"[bold green]✓ {message}[/bold green]")
+
+    if consent:
+        consent_at = response.get("consent_at")
+        if consent_at:
+            context.console.print(f"[dim]  Consented at: {consent_at}[/dim]")
+    else:
+        context.console.print("[dim]  Privacy consent withdrawn[/dim]")
+
+    context.logger.info(f"Consent status changed: consent={consent}.")

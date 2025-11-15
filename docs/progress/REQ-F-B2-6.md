@@ -28,12 +28,14 @@
 **Location**: `src/frontend/src/pages/TestPage.tsx`
 
 **State Additions**:
+
 ```typescript
 const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const [lastSavedAnswer, setLastSavedAnswer] = useState<string>('')
 ```
 
 **Autosave Logic**:
+
 ```typescript
 useEffect(() => {
   if (!answer.trim() || answer === lastSavedAnswer || !sessionId || !questions || questions.length === 0) {
@@ -63,6 +65,7 @@ useEffect(() => {
 ```
 
 **UI Integration**:
+
 ```tsx
 {saveStatus === 'saving' && <div className="save-status save-status-saving">저장 중...</div>}
 {saveStatus === 'saved' && <div className="save-status save-status-saved">✓ 저장됨</div>}
@@ -86,6 +89,7 @@ useEffect(() => {
 **Test File**: `src/frontend/src/pages/__tests__/TestPage.test.tsx`
 
 **Test Coverage**:
+
 - ✅ Happy path (자동 저장 동작)
 - ✅ Save status display (저장 중/완료/실패)
 - ✅ Auto-hide after 2 seconds (메시지 자동 숨김)
@@ -120,12 +124,14 @@ useEffect(() => {
 ### Implementation Details
 
 **Autosave Debounce Logic** (src/frontend/src/pages/TestPage.tsx:124-163):
+
 - Waits 1 second after answer change before saving
 - Prevents duplicate saves by comparing with `lastSavedAnswer`
 - Handles multiple question types (multiple_choice, true_false, short_answer)
 - Updates save status through state machine (idle → saving → saved/error)
 
 **State Transitions**:
+
 ```
 idle → saving → saved → (2s delay) → idle
        ↓
@@ -133,6 +139,7 @@ idle → saving → saved → (2s delay) → idle
 ```
 
 **UI Positioning**:
+
 - Fixed position (top: 20px, right: 20px)
 - z-index: 1000 (above other content)
 - SlideIn animation (0.3s)

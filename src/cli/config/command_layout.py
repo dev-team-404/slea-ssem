@@ -83,6 +83,16 @@ COMMAND_LAYOUT = {
                 "usage": "profile reset_surveys",
                 "target": "src.cli.actions.profile.reset_surveys",
             },
+            "get-consent": {
+                "description": "개인정보 동의 여부 확인",
+                "usage": "profile get-consent",
+                "target": "src.cli.actions.profile.get_consent",
+            },
+            "set-consent": {
+                "description": "개인정보 동의 상태 변경",
+                "usage": "profile set-consent [true|false]",
+                "target": "src.cli.actions.profile.set_consent",
+            },
         },
     },
     "agent": {
