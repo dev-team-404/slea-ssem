@@ -94,7 +94,12 @@ class ExplainService:
         cached = self.session.query(AnswerExplanation).filter_by(question_id=question_id, is_correct=is_correct).first()
 
         if cached:
-            return self._format_explanation_response(cached, attempt_answer_id)
+            return self._format_explanation_response(
+                explanation=cached,
+                question=question,
+                user_answer=user_answer,
+                attempt_answer_id=attempt_answer_id,
+            )
 
         # Generate new explanation
         try:
@@ -126,7 +131,11 @@ class ExplainService:
         self.session.commit()
         self.session.refresh(explanation)
 
-        return self._format_explanation_response(explanation)
+        return self._format_explanation_response(
+            explanation=explanation,
+            question=question,
+            user_answer=user_answer,
+        )
 
     def get_explanation(
         self,
@@ -146,6 +155,8 @@ class ExplainService:
             Explanation dict or None if not found
 
         """
+        from src.backend.models.attempt_answer import AttemptAnswer
+
         query = self.session.query(AnswerExplanation).filter_by(question_id=question_id)
 
         if attempt_answer_id:
@@ -156,7 +167,19 @@ class ExplainService:
         if not explanation:
             return None
 
-        return self._format_explanation_response(explanation)
+        # Load related question and attempt answer for formatting
+        question = self.session.query(Question).filter_by(id=question_id).first()
+        user_answer = None
+        if explanation.attempt_answer_id:
+            attempt = self.session.query(AttemptAnswer).filter_by(id=explanation.attempt_answer_id).first()
+            if attempt:
+                user_answer = attempt.user_answer
+
+        return self._format_explanation_response(
+            explanation=explanation,
+            question=question,
+            user_answer=user_answer,
+        )
 
     # =========================================================================
     # Private Methods
@@ -194,7 +217,10 @@ class ExplainService:
         is_correct: bool,
     ) -> dict[str, Any]:
         """
-        Generate mock explanation (placeholder for LLM integration).
+        Generate mock explanation (placeholder for real LLM integration).
+
+        This simulates what a real LLM would return. The explanation should be
+        actual content, not instructions/prompts.
 
         REQ: REQ-B-B3-Explain-1
 
@@ -210,72 +236,131 @@ class ExplainService:
         # Build context from question
         stem = question.stem
         category = question.category
+        answer_schema = question.answer_schema or {}
 
+        # Generate mock explanation based on correctness
         if is_correct:
-            explanation_template = (
-                f"'{stem}' 문제에 대한 정답 해설입니다.\n\n"
-                f"귀하의 답변이 정확합니다. 이는 {category} 분야의 중요한 개념입니다.\n"
-                f"정답을 선택하신 이유는 문제의 핵심을 정확하게 파악하셨기 때문입니다.\n\n"
-                f"더 깊이 있는 이해를 위해 다음 사항들을 자세하게 설명하세요 (최소 400자):\n\n"
-                f"1. 핵심 개념 상세 설명:\n"
-                f"   - 이 개념의 정확한 정의와 의미\n"
-                f"   - {category} 분야에서 이 개념이 중요한 이유\n"
-                f"   - 이 개념과 관련된 기본 원리들\n\n"
-                f"2. 실제 활용 예시 (구체적인 사례 2-3개):\n"
-                f"   - 이 개념을 실무에서 어떻게 적용하는지\n"
-                f"   - 성공 사례와 그 이유\n"
-                f"   - 주의해야 할 함정이나 예외 상황\n\n"
-                f"3. 관련 개념과의 연결고리:\n"
-                f"   - 유사한 다른 개념과의 차이점\n"
-                f"   - 이전 학습 내용과의 연관성\n"
-                f"   - 향후 더 심화된 학습으로 나아가는 방향\n\n"
-                f"4. 흔한 오해와 올바른 이해:\n"
-                f"   - 학습자들이 자주 하는 실수\n"
-                f"   - 왜 다른 선택지들이 틀렸는지의 명확한 이유\n"
-                f"   - 정답이 유일한 이유\n\n"
-                f"이 모든 내용을 포함하여 400자 이상의 자세한 설명을 제공하면, "
-                f"관련 문제들을 더욱 효과적으로 해결할 수 있습니다."
-            )
+            explanation_text = self._generate_correct_answer_explanation(stem, category, answer_schema)
         else:
-            answer_schema = question.answer_schema
-            correct_key = answer_schema.get("correct_key", "N/A")
-
-            explanation_template = (
-                f"'{stem}' 문제에 대한 오답 해설입니다.\n\n"
-                f"귀하의 답변: {user_answer}\n"
-                f"정답: {correct_key}\n\n"
-                f"다음 내용을 자세하게 설명하세요 (최소 400자):\n\n"
-                f"1. 왜 당신의 답변이 틀렸는가:\n"
-                f"   - 귀하가 선택하신 '{user_answer}'의 문제점\n"
-                f"   - 이 선택지가 문제 조건을 어떻게 위반하는지\n"
-                f"   - {category} 분야의 기본 원리와의 불일치\n\n"
-                f"2. 정답이 '{correct_key}'인 명확한 이유:\n"
-                f"   - 정답의 정확한 정의와 의미\n"
-                f"   - {category} 분야의 기본 원리에 어떻게 부합하는지\n"
-                f"   - 실무 사례에서 이 원칙이 왜 중요한지\n\n"
-                f"3. 다른 선택지들과의 비교 분석:\n"
-                f"   - 다른 선택지들이 틀린 구체적인 이유\n"
-                f"   - 정답과 오답의 핵심 차이점\n"
-                f"   - 비슷해 보이지만 왜 다른지의 명확한 설명\n\n"
-                f"4. 흔한 오해와 올바른 이해:\n"
-                f"   - 많은 학습자들이 이 문제에서 하는 실수\n"
-                f"   - 이 개념을 올바르게 이해하는 방법\n"
-                f"   - 유사 개념들과 정확하게 구분하는 방법\n\n"
-                f"5. 향후 학습 방향:\n"
-                f"   - 이 유형의 문제 해결을 위한 학습 전략\n"
-                f"   - 관련 개념들을 복습해야 할 순서\n"
-                f"   - 비슷한 유형의 문제에 대비하는 방법\n\n"
-                f"이 모든 내용을 포함하여 400자 이상의 상세한 설명을 제공하면, "
-                f"앞으로 유사한 문제들을 더 효과적으로 해결할 수 있습니다."
-            )
+            correct_key = answer_schema.get("correct_key", "정답")
+            explanation_text = self._generate_incorrect_answer_explanation(stem, category, user_answer, correct_key)
 
         # Create reference links (category-specific)
         reference_links = self._generate_mock_references(category, is_correct)
 
         return {
-            "explanation": explanation_template,
+            "explanation": explanation_text,
             "reference_links": reference_links,
         }
+
+    def _generate_correct_answer_explanation(
+        self,
+        stem: str,
+        category: str,
+        answer_schema: dict[str, Any],
+    ) -> str:
+        """
+        Generate mock explanation for correct answer.
+
+        Returns actual explanation content (simulating LLM output).
+        """
+        explanations = {
+            "LLM": (
+                f"'{stem}'에 대한 정답 해설입니다.\n\n"
+                f"당신의 답변이 정확합니다. {category} 분야에서 이것은 핵심 개념입니다.\n\n"
+                f"[핵심 개념] 대규모 언어 모델(LLM)은 수십억 개의 파라미터를 가진 신경망으로, "
+                f"트랜스포머 아키텍처를 기반으로 합니다. 자기주의 메커니즘을 통해 입력 텍스트의 "
+                f"맥락을 파악하고 다음 토큰을 예측합니다.\n\n"
+                f"[실무 예시] OpenAI의 GPT-4, Google의 Gemini, Meta의 Llama 등이 이러한 아키텍처를 "
+                f"따릅니다. 이들은 자연어 처리, 코드 생성, 창의적 작업 등 다양한 분야에 적용되고 있습니다.\n\n"
+                f"[심화 개념] Transfer Learning을 통해 사전학습된 LLM을 특정 분야에 미세조정하면, "
+                f"적은 리소스로도 고성능을 얻을 수 있습니다. 이는 LLM 시대의 핵심 장점입니다."
+            ),
+            "RAG": (
+                f"'{stem}'에 대한 정답 해설입니다.\n\n"
+                f"당신의 답변이 정확합니다. Retrieval-Augmented Generation은 최신 정보를 제공하는 "
+                f"핵심 기술입니다.\n\n"
+                f"[핵심 개념] RAG는 문서 데이터베이스에서 관련 정보를 검색한 후, 이를 LLM의 입력으로 "
+                f"제공하여 더 정확한 답변을 생성하는 기술입니다.\n\n"
+                f"[실무 예시] 기업의 내부 문서 기반 Q&A 시스템, 의료 기록 기반 진단 보조 시스템 등에서 "
+                f"활용됩니다. 이를 통해 LLM의 할루시네이션 문제를 줄일 수 있습니다.\n\n"
+                f"[심화 개념] 벡터 임베딩과 의미론적 검색을 결합하면, 더 정교한 정보 검색이 가능합니다."
+            ),
+            "Robotics": (
+                f"'{stem}'에 대한 정답 해설입니다.\n\n"
+                f"당신의 답변이 정확합니다. 로봇공학의 기본 원리를 잘 이해하셨습니다.\n\n"
+                f"[핵심 개념] 로봇은 센서(입력), 제어기(처리), 액추에이터(출력)의 3가지 주요 구성으로 "
+                f"이루어집니다. 피드백 제어를 통해 목표 상태를 유지합니다.\n\n"
+                f"[실무 예시] 자동차의 자율주행 시스템, 산업용 로봇팔, 드론 등이 이러한 원리를 "
+                f"적용합니다.\n\n"
+                f"[심화 개념] 기계학습과 로봇공학의 결합으로 더욱 지능형 로봇이 개발되고 있습니다."
+            ),
+        }
+        return explanations.get(
+            category,
+            f"'{stem}'에 대한 정답 해설입니다.\n\n"
+            f"당신의 답변이 정확합니다. 이것은 {category} 분야의 중요한 개념입니다.\n\n"
+            f"[핵심 내용] 이 개념의 정의와 원리, 그리고 실제 응용 분야를 이해하는 것이 중요합니다.\n\n"
+            f"[실무 활용] 이러한 지식은 실무에서 효과적으로 적용될 수 있습니다.\n\n"
+            f"[향후 학습] 관련 심화 개념들을 학습하면 더욱 폭넓은 이해가 가능합니다.",
+        )
+
+    def _generate_incorrect_answer_explanation(
+        self,
+        stem: str,
+        category: str,
+        user_answer: str | dict,
+        correct_key: str,
+    ) -> str:
+        """
+        Generate mock explanation for incorrect answer.
+
+        Returns actual explanation content (simulating LLM output).
+        """
+        explanations = {
+            "LLM": (
+                f"'{stem}'에 대한 오답 해설입니다.\n\n"
+                f"당신의 선택이 정확하지 않습니다. 정답은 '{correct_key}'입니다.\n\n"
+                f"[틀린 이유] 이 선택지는 LLM의 기본 특성을 간과합니다. LLM은 학습 과정에서 "
+                f"수많은 토큰 시퀀스를 처리하며, 이를 통해 통계적 패턴을 학습합니다.\n\n"
+                f"[정답의 원리] '{correct_key}'가 맞는 이유는 {category} 분야의 기본 원리에 "
+                f"부합하기 때문입니다. 이는 여러 연구 논문에서 검증되었습니다.\n\n"
+                f"[개념 구분] 유사해 보이는 개념들을 정확히 구분하는 것이 중요합니다. "
+                f"예를 들어, LLM과 전통적인 규칙 기반 시스템의 차이를 이해해야 합니다.\n\n"
+                f"[복습 팁] 이 유형의 문제를 다시 한번 검토하고, 관련 개념들의 특징을 비교해보세요."
+            ),
+            "RAG": (
+                f"'{stem}'에 대한 오답 해설입니다.\n\n"
+                f"당신의 선택이 정확하지 않습니다. 정답은 '{correct_key}'입니다.\n\n"
+                f"[틀린 이유] 이 선택지는 RAG의 목적을 잘못 이해하고 있습니다. RAG는 단순히 "
+                f"정보를 검색하는 것이 아니라, 검색된 정보를 LLM의 입력으로 활용합니다.\n\n"
+                f"[정답의 원리] '{correct_key}'가 맞는 이유는 RAG의 아키텍처와 동작 방식을 "
+                f"정확히 이해했기 때문입니다.\n\n"
+                f"[개념 구분] 검색(Retrieval), 생성(Generation), 그리고 두 단계의 통합 과정을 "
+                f"명확히 구분해야 합니다.\n\n"
+                f"[복습 팁] RAG의 전체 파이프라인을 다시 그려보면서 각 단계를 정리해보세요."
+            ),
+            "Robotics": (
+                f"'{stem}'에 대한 오답 해설입니다.\n\n"
+                f"당신의 선택이 정확하지 않습니다. 정답은 '{correct_key}'입니다.\n\n"
+                f"[틀린 이유] 로봇의 운동학과 동역학을 혼동하기 쉽습니다. 운동학은 위치와 속도만 "
+                f"다루고, 동역학은 힘과 토크를 포함합니다.\n\n"
+                f"[정답의 원리] '{correct_key}'가 맞는 이유는 로봇공학의 기본 원리에 정확히 "
+                f"부합하기 때문입니다.\n\n"
+                f"[개념 구분] 센서, 제어기, 액추에이터의 역할을 정확히 이해해야 합니다. "
+                f"각각이 어떤 신호를 처리하는지 생각해보세요.\n\n"
+                f"[복습 팁] 로봇의 제어 루프를 단계별로 따라가며 각 컴포넌트의 역할을 정리하세요."
+            ),
+        }
+        return explanations.get(
+            category,
+            f"'{stem}'에 대한 오답 해설입니다.\n\n"
+            f"당신의 선택이 정확하지 않습니다. 정답은 '{correct_key}'입니다.\n\n"
+            f"[틀린 이유] 이 선택지는 {category} 분야의 핵심 개념을 놓치고 있습니다.\n\n"
+            f"[정답의 원리] '{correct_key}'가 맞는 이유는 기본 원리와 개념을 정확히 따르기 때문입니다.\n\n"
+            f"[개념 구분] 유사한 개념들을 비교하여 정확하게 구분하는 것이 중요합니다.\n\n"
+            f"[복습 팁] 이 유형의 문제를 다시 검토하고, 관련 개념들을 깊이 있게 학습해보세요.",
+        )
 
     def _generate_mock_references(
         self,
@@ -399,30 +484,172 @@ class ExplainService:
     def _format_explanation_response(
         self,
         explanation: AnswerExplanation,
+        question: Question | None = None,
+        user_answer: str | dict | None = None,
         attempt_answer_id: str | None = None,
     ) -> dict[str, Any]:
         """
-        Format explanation as API response.
+        Format explanation as API response with sections and answer summary.
 
         Args:
             explanation: AnswerExplanation ORM object
+            question: Question object (for answer formatting)
+            user_answer: User's answer (for comparison)
             attempt_answer_id: Optional override for attempt_answer_id
 
         Returns:
-            Formatted explanation dictionary
+            Formatted explanation dictionary with sections and answer summary
 
         """
+        # Parse explanation text into sections
+        sections = self._parse_explanation_sections(explanation.explanation_text)
+
+        # Generate user answer summary
+        user_answer_summary = None
+        if question and user_answer is not None:
+            user_answer_summary = self._format_user_answer_summary(
+                question=question,
+                user_answer=user_answer,
+                is_correct=explanation.is_correct,
+            )
+
         return {
             "id": explanation.id,
             "question_id": explanation.question_id,
             "attempt_answer_id": attempt_answer_id or explanation.attempt_answer_id,
             "explanation_text": explanation.explanation_text,
+            "explanation_sections": sections,
             "reference_links": explanation.reference_links,
+            "user_answer_summary": user_answer_summary,
             "is_correct": explanation.is_correct,
             "created_at": explanation.created_at.isoformat(),
             "is_fallback": False,
             "error_message": None,
         }
+
+    def _parse_explanation_sections(self, explanation_text: str) -> list[dict[str, str]]:
+        """
+        Parse explanation text into sections by [title] markers.
+
+        Example input:
+            '[틀린 이유] Content here...
+             [정답의 원리] Content here...'
+
+        Returns:
+            List of {"title": "...", "content": "..."}
+
+        """
+        import re
+
+        sections = []
+        # Match patterns like [제목] Content
+        pattern = r"\[([^\]]+)\]\s*(.+?)(?=\[|$)"
+        matches = re.findall(pattern, explanation_text, re.DOTALL)
+
+        for title, content in matches:
+            stripped_content = content.strip()
+            if stripped_content:
+                sections.append(
+                    {
+                        "title": f"[{title}]",
+                        "content": stripped_content,
+                    }
+                )
+
+        # If no sections found, treat entire text as one section
+        if not sections:
+            sections.append(
+                {
+                    "title": "[설명]",
+                    "content": explanation_text.strip(),
+                }
+            )
+
+        return sections
+
+    def _format_user_answer_summary(
+        self,
+        question: Question,
+        user_answer: str | dict,
+        is_correct: bool,
+    ) -> dict[str, Any]:
+        """
+        Format user's answer vs correct answer for display.
+
+        Args:
+            question: Question object
+            user_answer: User's submitted answer
+            is_correct: Whether answer is correct
+
+        Returns:
+            Dictionary with user_answer_text and correct_answer_text
+
+        """
+        question_type = question.item_type or "unknown"
+        answer_schema = question.answer_schema or {}
+
+        # Format user answer based on question type
+        user_answer_text = self._format_answer_for_display(user_answer, question_type)
+
+        # Format correct answer based on question type
+        correct_answer_text = self._format_correct_answer_for_display(answer_schema, question_type)
+
+        return {
+            "user_answer_text": user_answer_text,
+            "correct_answer_text": correct_answer_text,
+            "question_type": question_type,
+        }
+
+    def _format_answer_for_display(self, user_answer: str | dict, question_type: str) -> str:
+        """Convert user_answer to readable format based on question type."""
+        if isinstance(user_answer, str):
+            return user_answer
+
+        if not isinstance(user_answer, dict):
+            return str(user_answer)
+
+        # Multiple Choice: extract selected_key
+        if "selected_key" in user_answer:
+            key = user_answer["selected_key"]
+            return f"선택: {key}"
+
+        # True/False: convert boolean
+        if "answer" in user_answer:
+            val = user_answer["answer"]
+            if isinstance(val, bool):
+                return "참" if val else "거짓"
+            return str(val)
+
+        # Short Answer: extract text
+        if "text" in user_answer:
+            text = user_answer["text"]
+            return text if isinstance(text, str) else str(text)
+
+        # Fallback
+        return str(user_answer)
+
+    def _format_correct_answer_for_display(self, answer_schema: dict[str, Any], question_type: str) -> str:
+        """Extract correct answer from answer_schema for display."""
+        # Get correct_key or correct_answer
+        correct_key = answer_schema.get("correct_key")
+        if correct_key:
+            # Handle true/false questions - convert to readable format
+            if isinstance(correct_key, str):
+                key_lower = correct_key.lower()
+                if key_lower == "true":
+                    return "정답: 참"
+                elif key_lower == "false":
+                    return "정답: 거짓"
+            return f"정답: {correct_key}"
+
+        # Try correct_answer field
+        correct_answer = answer_schema.get("correct_answer")
+        if correct_answer:
+            if isinstance(correct_answer, bool):
+                return f"정답: {'참' if correct_answer else '거짓'}"
+            return f"정답: {correct_answer}"
+
+        return "정답: [정보 없음]"
 
     def _create_fallback_explanation(
         self,

@@ -1227,9 +1227,34 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
         context.console.print(f"[bold red]✗ Generation failed (HTTP {status_code})[/bold red]")
         return
 
-    explanation_text = response.get("explanation_text", "")
-
     context.console.print("[bold green]✓ Explanation generated[/bold green]")
-    if explanation_text:
-        context.console.print(f"[dim]{explanation_text[:200]}...[/dim]")
+    context.console.print()
+
+    # Display user answer summary if available
+    user_answer_summary = response.get("user_answer_summary")
+    if user_answer_summary:
+        context.console.print(f"[cyan]당신의 답변: {user_answer_summary.get('user_answer_text', 'N/A')}[/cyan]")
+        context.console.print(f"[yellow]{user_answer_summary.get('correct_answer_text', 'N/A')}[/yellow]")
+        context.console.print()
+
+    # Display explanation sections in a clean, readable format
+    explanation_sections = response.get("explanation_sections", [])
+    if explanation_sections:
+        for section in explanation_sections:
+            title = section.get("title", "[설명]")
+            content = section.get("content", "")
+            context.console.print(f"[bold cyan]{title}[/bold cyan]")
+            context.console.print(f"[dim]{content}[/dim]")
+            context.console.print()
+
+    # Display reference links
+    reference_links = response.get("reference_links", [])
+    if reference_links:
+        context.console.print("[bold cyan]참고 링크:[/bold cyan]")
+        for link in reference_links:
+            title = link.get("title", "")
+            url = link.get("url", "")
+            context.console.print(f"  • {title}: {url}")
+        context.console.print()
+
     context.logger.info(f"Explanation generated for question {question_id}.")
