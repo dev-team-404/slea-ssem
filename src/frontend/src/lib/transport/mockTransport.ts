@@ -4,6 +4,12 @@ import { HttpTransport, RequestConfig } from './types'
 
 // Mock data storage: 엔드포인트별로 미리 정의된 가짜 데이터 저장
 const mockData: Record<string, any> = {
+  '/api/auth/login': {
+    access_token: 'mock_access_token',
+    token_type: 'bearer',
+    user_id: 'mock_user@samsung.com',
+    is_new_user: true,
+  },
   '/api/profile/nickname': {
     user_id: 'mock_user@samsung.com',
     nickname: null,  // Change to 'mockuser' to test nickname exists
@@ -303,6 +309,15 @@ class MockTransport implements HttpTransport {
   }
 
   async post<T>(url: string, data?: any, config?: RequestConfig): Promise<T> {
+    if (url === '/api/auth/login') {
+      const loginResponse = {
+        ...mockData['/api/auth/login'],
+        // Default to the knox_id passed in the request when user_id is not provided
+        user_id: mockData['/api/auth/login'].user_id ?? data?.knox_id ?? 'mock_user@samsung.com',
+      }
+      console.log('[Mock Transport] Auth login response:', loginResponse)
+      return loginResponse as T
+    }
     return this.mockRequest<T>(url, 'POST', data)
   }
 

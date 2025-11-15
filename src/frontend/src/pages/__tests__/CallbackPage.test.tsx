@@ -1,11 +1,21 @@
 // REQ: REQ-F-A1-2
 import { render, screen, waitFor } from '@testing-library/react'
-import { BrowserRouter, MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import CallbackPage from '../CallbackPage'
+import { mockConfig, setMockData } from '../../lib/transport'
+import { mockTransport } from '../../lib/transport/mockTransport'
+import type { LoginResponse } from '../../services'
 
-// Mock fetch API
-global.fetch = vi.fn()
+const setLoginResponse = (overrides: Partial<LoginResponse> = {}) => {
+  setMockData('/api/auth/login', {
+    access_token: 'mock_access_token',
+    token_type: 'bearer',
+    user_id: 'mock_user@samsung.com',
+    is_new_user: true,
+    ...overrides,
+  })
+}
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -39,30 +49,43 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+vi.mock('../../lib/transport', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/transport')>(
+    '../../lib/transport',
+  )
+  const transportModule = await vi.importActual<
+    typeof import('../../lib/transport/mockTransport')
+  >('../../lib/transport/mockTransport')
+  return {
+    ...actual,
+    transport: transportModule.mockTransport,
+  }
+})
+
 describe('CallbackPage - REQ-F-A1-2', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockNavigate.mockReset()
     localStorageMock.clear()
+    mockConfig.delay = 0
+    mockConfig.simulateError = false
+    mockConfig.slowNetwork = false
+    setLoginResponse()
   })
 
   afterEach(() => {
-    vi.resetAllMocks()
+    vi.restoreAllMocks()
   })
 
   // Test 1: Happy Path - 신규 사용자 로그인 성공 (home-first flow)
   it('should redirect to /home for new users after successful login', async () => {
-    const mockResponse = {
+    setLoginResponse({
       access_token: 'test_token_123',
-      token_type: 'bearer',
       user_id: 'test_user_001',
       is_new_user: true,
-    }
-
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => mockResponse,
     })
+
+    const postSpy = vi.spyOn(mockTransport, 'post')
 
     render(
       <MemoryRouter
@@ -71,7 +94,7 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     // 로딩 표시 확인
@@ -79,15 +102,11 @@ describe('CallbackPage - REQ-F-A1-2', () => {
 
     // API 호출 대기
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/auth/login'),
+      expect(postSpy).toHaveBeenCalledWith(
+        '/api/auth/login',
         expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
-          body: expect.stringContaining('test_user_001'),
-        })
+          knox_id: 'test_user_001',
+        }),
       )
     })
 
@@ -104,18 +123,12 @@ describe('CallbackPage - REQ-F-A1-2', () => {
 
   // Test 2: Happy Path - 기존 사용자 로그인 성공 (home-first flow)
   it('should redirect to /home for existing users after successful login', async () => {
-    const mockResponse = {
+    setLoginResponse({
       access_token: 'existing_user_token_456',
-      token_type: 'bearer',
       user_id: 'existing_user_002',
       is_new_user: false,
-    }
-
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => mockResponse,
     })
+    const postSpy = vi.spyOn(mockTransport, 'post')
 
     render(
       <MemoryRouter
@@ -124,12 +137,23 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
+
+    await waitFor(() => {
+      expect(postSpy).toHaveBeenCalledWith(
+        '/api/auth/login',
+        expect.objectContaining({
+          knox_id: 'existing_user_002',
+        }),
+      )
+    })
 
     // 토큰 저장 확인
     await waitFor(() => {
-      expect(localStorageMock.getItem('slea_ssem_token')).toBe('existing_user_token_456')
+      expect(localStorageMock.getItem('slea_ssem_token')).toBe(
+        'existing_user_token_456',
+      )
     })
 
     // /home으로 리다이렉트 확인 (home-first approach)
@@ -140,7 +164,9 @@ describe('CallbackPage - REQ-F-A1-2', () => {
 
   // Test 3: Edge Case - API 호출 실패
   it('should display error message when API call fails', async () => {
-    ;(global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+    vi.spyOn(mockTransport, 'post').mockRejectedValueOnce(
+      new Error('Network error'),
+    )
 
     render(
       <MemoryRouter
@@ -149,7 +175,7 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     // 에러 메시지 표시 확인
@@ -163,11 +189,9 @@ describe('CallbackPage - REQ-F-A1-2', () => {
 
   // Test 4: Acceptance Criteria - 에러 링크 표시
   it('should display help links when authentication fails', async () => {
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => ({ detail: 'Authentication failed' }),
-    })
+    vi.spyOn(mockTransport, 'post').mockRejectedValueOnce(
+      new Error('Authentication failed'),
+    )
 
     render(
       <MemoryRouter
@@ -176,28 +200,36 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     await waitFor(() => {
       // "계정 정보 확인" 링크
       const accountLink = screen.getByRole('link', { name: /계정 정보 확인/i })
       expect(accountLink).toBeInTheDocument()
-      expect(accountLink).toHaveAttribute('href', expect.stringContaining('account'))
+      expect(accountLink).toHaveAttribute(
+        'href',
+        expect.stringContaining('account'),
+      )
 
       // "관리자 문의" 링크
       const supportLink = screen.getByRole('link', { name: /관리자 문의/i })
       expect(supportLink).toBeInTheDocument()
-      expect(supportLink).toHaveAttribute('href', expect.stringContaining('support'))
+      expect(supportLink).toHaveAttribute(
+        'href',
+        expect.stringContaining('support'),
+      )
     })
   })
 
   // Test 5: Acceptance Criteria - Mock 모드 (home-first flow)
   it('should use mock response without API call when api_mock=true', async () => {
+    const postSpy = vi.spyOn(mockTransport, 'post')
+
     render(
       <MemoryRouter initialEntries={['/auth/callback?api_mock=true']}>
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     // Mock 모드에서는 API 호출이 발생하지 않아야 함
@@ -205,62 +237,64 @@ describe('CallbackPage - REQ-F-A1-2', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/home')
     })
 
-    // fetch가 호출되지 않았는지 확인
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(postSpy).not.toHaveBeenCalled()
 
     // 토큰이 저장되었는지 확인
-    expect(localStorageMock.getItem('slea_ssem_token')).toMatch(/^mock_jwt_token_/)
+    expect(localStorageMock.getItem('slea_ssem_token')).toMatch(
+      /^mock_jwt_token_/,
+    )
   })
 
   it('should continue to support legacy mock=true parameter', async () => {
+    const postSpy = vi.spyOn(mockTransport, 'post')
+
     render(
       <MemoryRouter initialEntries={['/auth/callback?mock=true']}>
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/home')
     })
 
-    expect(localStorageMock.getItem('slea_ssem_token')).toMatch(/^mock_jwt_token_/)
+    expect(postSpy).not.toHaveBeenCalled()
+    expect(localStorageMock.getItem('slea_ssem_token')).toMatch(
+      /^mock_jwt_token_/,
+    )
   })
 
   // Test 5.5: SSO mock mode - 가짜 SSO 데이터로 백엔드 호출하여 실제 JWT 받기
   it('should call backend with fake SSO data when sso_mock=true', async () => {
-    const mockResponse = {
+    setLoginResponse({
       access_token: 'real_jwt_token_from_backend',
-      token_type: 'bearer',
       user_id: 'mock_user_123',
       is_new_user: true,
-    }
-
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => mockResponse,
     })
+
+    const postSpy = vi.spyOn(mockTransport, 'post')
 
     render(
       <MemoryRouter initialEntries={['/auth/callback?sso_mock=true']}>
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     // 백엔드 API가 호출되어야 함
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/auth/login'),
+      expect(postSpy).toHaveBeenCalledWith(
+        '/api/auth/login',
         expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('test_mock_user_'),
-        })
+          knox_id: expect.stringContaining('test_mock_user_'),
+        }),
       )
     })
 
     // 백엔드에서 받은 실제 JWT 토큰이 저장되어야 함
     await waitFor(() => {
-      expect(localStorageMock.getItem('slea_ssem_token')).toBe('real_jwt_token_from_backend')
+      expect(localStorageMock.getItem('slea_ssem_token')).toBe(
+        'real_jwt_token_from_backend',
+      )
     })
 
     // api_mock 플래그는 저장되지 않아야 함 (백엔드를 실제로 호출했으므로)
@@ -275,17 +309,10 @@ describe('CallbackPage - REQ-F-A1-2', () => {
   // Test 6: Performance - 3초 이내 리다이렉트
   it('should redirect within 3 seconds after successful authentication', async () => {
     const startTime = Date.now()
-    const mockResponse = {
+    setLoginResponse({
       access_token: 'fast_token',
-      token_type: 'bearer',
       user_id: 'fast_user',
       is_new_user: false,
-    }
-
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => mockResponse,
     })
 
     render(
@@ -295,7 +322,7 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     await waitFor(() => {
@@ -314,32 +341,23 @@ describe('CallbackPage - REQ-F-A1-2', () => {
     render(
       <MemoryRouter initialEntries={['/auth/callback']}>
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/필수 정보가 누락되었습니다/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/필수 정보가 누락되었습니다/i),
+      ).toBeInTheDocument()
     })
   })
 
   // Test 8: Acceptance Criteria - 로딩 스피너 표시
   it('should display loading spinner during authentication', () => {
-    ;(global.fetch as any).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-                json: async () => ({
-                  access_token: 'token',
-                  is_new_user: true,
-                }),
-              }),
-            1000
-          )
-        })
-    )
+    mockConfig.delay = 1000
+    setLoginResponse({
+      access_token: 'token',
+      is_new_user: true,
+    })
 
     render(
       <MemoryRouter
@@ -348,10 +366,11 @@ describe('CallbackPage - REQ-F-A1-2', () => {
         ]}
       >
         <CallbackPage />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     // 로딩 상태 표시 확인
     expect(screen.getByText(/로그인 처리 중/i)).toBeInTheDocument()
+    mockConfig.delay = 0
   })
 })
