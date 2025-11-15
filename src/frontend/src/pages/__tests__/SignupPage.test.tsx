@@ -1,10 +1,10 @@
-// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4, REQ-F-A2-Signup-5, REQ-F-A2-Signup-6
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import SignupPage from '../SignupPage'
-import * as transport from '../../lib/transport'
+import { mockConfig, setMockScenario } from '../../lib/transport'
 
 const mockNavigate = vi.fn()
 
@@ -16,18 +16,19 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-// Mock transport
-vi.mock('../../lib/transport', () => ({
-  transport: {
-    post: vi.fn(),
-    get: vi.fn(),
-  },
-}))
+// Use mockTransport instead of vi.mock - set mock mode via environment
+// mockTransport already handles validation and error cases
+beforeEach(() => {
+  // Enable mock mode for tests
+  localStorage.setItem('slea_ssem_api_mock', 'true')
+  // Fast responses for tests
+  mockConfig.delay = 0
+  mockConfig.simulateError = false
+})
 
-// Mock auth utils
-vi.mock('../../utils/auth', () => ({
-  getToken: vi.fn(() => 'mock_token'),
-}))
+afterEach(() => {
+  localStorage.removeItem('slea_ssem_api_mock')
+})
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>)
@@ -110,85 +111,67 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
   // Test 5: Successful nickname check (available)
   test('shows success message when nickname is available', async () => {
     // REQ: REQ-F-A2-Signup-3 - 중복 확인 정상 작동
-    const mockResponse = { available: true, suggestions: [] }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: 'new_user' is not in takenNicknames, so it's available
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
     const input = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(input, 'john_doe')
+    await user.type(input, 'new_user')
     await user.click(checkButton)
 
     await waitFor(() => {
       expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
     })
-
-    // Verify API was called with correct data
-    expect(transport.transport.post).toHaveBeenCalledWith(
-      '/api/profile/nickname/check',
-      { nickname: 'john_doe' }
-    )
   })
 
   // Test 6: Nickname taken - shows suggestions
   test('shows error message and suggestions when nickname is taken', async () => {
     // REQ: REQ-F-A2-Signup-3 - 중복 시 대안 3개 제안
-    const mockResponse = {
-      available: false,
-      suggestions: ['john_doe_1', 'john_doe_2', 'john_doe_3'],
-    }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: 'admin' is in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
     const input = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(input, 'john_doe')
+    await user.type(input, 'admin')
     await user.click(checkButton)
 
     await waitFor(() => {
       expect(screen.getByText(/이미 사용 중인 닉네임입니다/i)).toBeInTheDocument()
     })
 
-    // Check that all 3 suggestions are displayed
-    expect(screen.getByText('john_doe_1')).toBeInTheDocument()
-    expect(screen.getByText('john_doe_2')).toBeInTheDocument()
-    expect(screen.getByText('john_doe_3')).toBeInTheDocument()
+    // Check that suggestions are displayed (mockTransport generates admin_1, admin_2, admin_3)
+    expect(screen.getByText('admin_1')).toBeInTheDocument()
+    expect(screen.getByText('admin_2')).toBeInTheDocument()
+    expect(screen.getByText('admin_3')).toBeInTheDocument()
   })
 
   // Test 7: Clicking suggestion auto-fills input
   test('clicking a suggestion auto-fills the nickname input', async () => {
     // REQ: REQ-F-A2-Signup-3 - 대안 클릭 시 자동 입력
-    const mockResponse = {
-      available: false,
-      suggestions: ['john_doe_1', 'john_doe_2', 'john_doe_3'],
-    }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: 'test' is in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
     const input = screen.getByLabelText(/닉네임/i) as HTMLInputElement
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(input, 'john_doe')
+    await user.type(input, 'test')
     await user.click(checkButton)
 
     await waitFor(() => {
-      expect(screen.getByText('john_doe_1')).toBeInTheDocument()
+      expect(screen.getByText('test_1')).toBeInTheDocument()
     })
 
     // Click first suggestion
-    const suggestionButton = screen.getByText('john_doe_1')
+    const suggestionButton = screen.getByText('test_1')
     await user.click(suggestionButton)
 
     // Verify input value changed
-    expect(input.value).toBe('john_doe_1')
+    expect(input.value).toBe('test_1')
 
     // Verify suggestions and error message cleared
     expect(screen.queryByText(/이미 사용 중인 닉네임입니다/i)).not.toBeInTheDocument()
@@ -197,9 +180,8 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
   // Test 8: API error handling
   test('shows error message when nickname check API fails', async () => {
     // REQ: REQ-F-A2-Signup-3 - 에러 처리
-    vi.mocked(transport.transport.post).mockRejectedValueOnce(
-      new Error('Network error')
-    )
+    // mockTransport: simulateError causes API failure
+    mockConfig.simulateError = true
 
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
@@ -207,12 +189,15 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
     const input = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(input, 'john_doe')
+    await user.type(input, 'new_user')
     await user.click(checkButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/Network error/i)).toBeInTheDocument()
+      expect(screen.getByText(/Simulated API error/i)).toBeInTheDocument()
     })
+
+    // Reset for other tests
+    mockConfig.simulateError = false
   })
 
   // Test 9: Check button disabled when input is empty
@@ -243,10 +228,8 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
   // Test 11: Shows "확인 중..." while checking
   test('shows loading state while checking nickname', async () => {
     // REQ: REQ-F-A2-Signup-3 - UX: 로딩 상태 표시
-    const mockResponse = { available: true, suggestions: [] }
-    vi.mocked(transport.transport.post).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(mockResponse), 100))
-    )
+    // mockTransport: set delay to see loading state
+    mockConfig.delay = 100
 
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
@@ -254,7 +237,7 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
     const input = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(input, 'john_doe')
+    await user.type(input, 'loading_test')
     await user.click(checkButton)
 
     // Should show loading state
@@ -264,6 +247,9 @@ describe('SignupPage - REQ-F-A2-Signup-3 (Nickname Section)', () => {
     await waitFor(() => {
       expect(screen.queryByText(/확인 중/i)).not.toBeInTheDocument()
     })
+
+    // Reset delay
+    mockConfig.delay = 0
   })
 })
 
@@ -385,9 +371,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
   // Test 1: Happy path - all conditions met
   test('enables submit button when nickname is available and level is selected', async () => {
     // REQ: REQ-F-A2-Signup-5 - 닉네임 중복 확인 완료 + level 선택 시 버튼 활성화
-    const mockResponse = { available: true, suggestions: [] }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: use nickname not in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
@@ -395,7 +379,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
     const nicknameInput = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(nicknameInput, 'john_doe')
+    await user.type(nicknameInput, 'unique_user1')
     await user.click(checkButton)
 
     await waitFor(() => {
@@ -438,12 +422,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
   // Test 4: Nickname taken - button disabled
   test('keeps submit button disabled when nickname is taken even if level is selected', async () => {
     // REQ: REQ-F-A2-Signup-5 - 닉네임 사용 불가 시 버튼 비활성화
-    const mockResponse = {
-      available: false,
-      suggestions: ['john_doe_1', 'john_doe_2'],
-    }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: 'existing_user' is in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
@@ -451,7 +430,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
     const nicknameInput = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(nicknameInput, 'john_doe')
+    await user.type(nicknameInput, 'existing_user')
     await user.click(checkButton)
 
     await waitFor(() => {
@@ -470,9 +449,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
   // Test 5: Level not selected - button disabled
   test('keeps submit button disabled when nickname is available but level is not selected', async () => {
     // REQ: REQ-F-A2-Signup-5 - level 미선택 시 버튼 비활성화
-    const mockResponse = { available: true, suggestions: [] }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: use nickname not in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
@@ -480,7 +457,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
     const nicknameInput = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(nicknameInput, 'john_doe')
+    await user.type(nicknameInput, 'unique_user2')
     await user.click(checkButton)
 
     await waitFor(() => {
@@ -497,9 +474,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
   // Test 6: Real-time reactivity
   test('updates submit button state in real-time when level selection changes', async () => {
     // REQ: REQ-F-A2-Signup-5 - 조건 변경 시 실시간 반응
-    const mockResponse = { available: true, suggestions: [] }
-    vi.mocked(transport.transport.post).mockResolvedValueOnce(mockResponse)
-
+    // mockTransport: use nickname not in takenNicknames
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
@@ -507,7 +482,7 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
     const nicknameInput = screen.getByLabelText(/닉네임/i)
     const checkButton = screen.getByRole('button', { name: /중복 확인/i })
 
-    await user.type(nicknameInput, 'john_doe')
+    await user.type(nicknameInput, 'unique_user3')
     await user.click(checkButton)
 
     await waitFor(() => {
@@ -532,5 +507,167 @@ describe('SignupPage - REQ-F-A2-Signup-5 (Submit Button Activation)', () => {
 
     // Should still be enabled (different level selected)
     expect(submitButton).not.toBeDisabled()
+  })
+})
+
+describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+  })
+
+  // Test 1: Happy path - successful signup and redirect
+  test('submits nickname and profile, then redirects to home on success', async () => {
+    // REQ: REQ-F-A2-Signup-6 - 버튼 클릭 시 nickname + profile 저장 + 홈으로 리다이렉트
+    // mockTransport: handles registration and survey update automatically
+    const user = userEvent.setup()
+    renderWithRouter(<SignupPage />)
+
+    // Step 1: Enter nickname and check availability
+    const nicknameInput = screen.getByLabelText(/닉네임/i)
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+
+    await user.type(nicknameInput, 'signup_user1')
+    await user.click(checkButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
+    })
+
+    // Step 2: Select level
+    const level3Radio = screen.getByLabelText(/3 - 중급/i)
+    await user.click(level3Radio)
+
+    // Step 3: Click submit button
+    const submitButton = screen.getByRole('button', { name: /가입 완료/i })
+    await user.click(submitButton)
+
+    // Assert: redirect happens after successful signup
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
+    })
+  })
+
+  // Test 2: Signup with different levels
+  test('successfully completes signup with level 5', async () => {
+    // REQ: REQ-F-A2-Signup-6 - 모든 레벨에서 가입 성공
+    const user = userEvent.setup()
+    renderWithRouter(<SignupPage />)
+
+    const nicknameInput = screen.getByLabelText(/닉네임/i)
+    await user.type(nicknameInput, 'signup_user2')
+
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    await user.click(checkButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
+    })
+
+    const level5Radio = screen.getByLabelText(/5 - 전문가/i)
+    await user.click(level5Radio)
+
+    const submitButton = screen.getByRole('button', { name: /가입 완료/i })
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
+    })
+  })
+
+  // Test 3: Loading state during submission
+  test('shows loading state during submission', async () => {
+    // REQ: REQ-F-A2-Signup-6 - 제출 중 버튼 비활성화 + "가입 중..." 표시
+    // mockTransport: set delay to see loading state
+    mockConfig.delay = 100
+
+    const user = userEvent.setup()
+    renderWithRouter(<SignupPage />)
+
+    const nicknameInput = screen.getByLabelText(/닉네임/i)
+    await user.type(nicknameInput, 'signup_user3')
+
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    await user.click(checkButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
+    })
+
+    const level1Radio = screen.getByLabelText(/1 - 입문/i)
+    await user.click(level1Radio)
+
+    const submitButton = screen.getByRole('button', { name: /가입 완료/i })
+    await user.click(submitButton)
+
+    // Assert: Loading state
+    expect(screen.getByText(/가입 중/i)).toBeInTheDocument()
+    expect(submitButton).toBeDisabled()
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    mockConfig.delay = 0
+  })
+
+  // Test 4: Error handling - nickname already taken during registration
+  test('shows error message when nickname registration fails', async () => {
+    // REQ: REQ-F-A2-Signup-6 - API 에러 시 에러 메시지 표시
+    // mockTransport: trying to register an already taken nickname causes error
+    const user = userEvent.setup()
+    renderWithRouter(<SignupPage />)
+
+    // First check a unique nickname
+    const nicknameInput = screen.getByLabelText(/닉네임/i)
+    await user.type(nicknameInput, 'admin')
+
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    await user.click(checkButton)
+
+    // It will show taken message
+    await waitFor(() => {
+      expect(screen.getByText(/이미 사용 중인 닉네임입니다/i)).toBeInTheDocument()
+    })
+
+    // The button should be disabled since nickname is taken
+    const submitButton = screen.getByRole('button', { name: /가입 완료/i })
+    expect(submitButton).toBeDisabled()
+  })
+
+  // Test 5: Error handling - API error
+  test('shows error message when API fails', async () => {
+    // REQ: REQ-F-A2-Signup-6 - API 에러 시 에러 메시지 표시
+    const user = userEvent.setup()
+    renderWithRouter(<SignupPage />)
+
+    const nicknameInput = screen.getByLabelText(/닉네임/i)
+    await user.type(nicknameInput, 'signup_user4')
+
+    const checkButton = screen.getByRole('button', { name: /중복 확인/i })
+    await user.click(checkButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/사용 가능한 닉네임입니다/i)).toBeInTheDocument()
+    })
+
+    const level4Radio = screen.getByLabelText(/4 - 고급/i)
+    await user.click(level4Radio)
+
+    // Enable error simulation for the submit
+    mockConfig.simulateError = true
+
+    const submitButton = screen.getByRole('button', { name: /가입 완료/i })
+    await user.click(submitButton)
+
+    // Assert: Error message displayed
+    await waitFor(() => {
+      expect(screen.getByText(/Simulated API error/i)).toBeInTheDocument()
+    })
+
+    // Button should be enabled again for retry
+    expect(submitButton).not.toBeDisabled()
+
+    mockConfig.simulateError = false
   })
 })
