@@ -1,6 +1,8 @@
 // REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4, REQ-F-A2-Signup-5
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
+import NicknameInputSection from '../components/NicknameInputSection'
+import LevelSelector from '../components/LevelSelector'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SignupPage.css'
 
@@ -26,22 +28,8 @@ import './SignupPage.css'
  * Route: /signup
  */
 
-type LevelOption = {
-  value: number
-  label: string
-  description: string
-}
-
-const LEVEL_OPTIONS: LevelOption[] = [
-  { value: 1, label: '1 - 입문', description: '기초 개념 학습 중' },
-  { value: 2, label: '2 - 초급', description: '기본 업무 수행 가능' },
-  { value: 3, label: '3 - 중급', description: '독립적으로 업무 수행' },
-  { value: 4, label: '4 - 고급', description: '복잡한 문제 해결 가능' },
-  { value: 5, label: '5 - 전문가', description: '다른 사람을 지도 가능' },
-]
-
 const SignupPage: React.FC = () => {
-  // REQ-F-A2-Signup-3: Nickname state
+  // REQ-F-A2-Signup-3: Nickname state (from useNicknameCheck hook)
   const {
     nickname,
     setNickname,
@@ -53,40 +41,6 @@ const SignupPage: React.FC = () => {
 
   // REQ-F-A2-Signup-4: Level state
   const [level, setLevel] = useState<number | null>(null)
-
-  const handleCheckClick = useCallback(() => {
-    checkNickname()
-  }, [checkNickname])
-
-  // Memoize status message to avoid recalculation on every render
-  const statusMessage = useMemo(() => {
-    if (checkStatus === 'available') {
-      return {
-        text: '사용 가능한 닉네임입니다.',
-        className: 'status-message success',
-      }
-    }
-    if (checkStatus === 'taken') {
-      return {
-        text: '이미 사용 중인 닉네임입니다.',
-        className: 'status-message error',
-      }
-    }
-    if (checkStatus === 'error' && errorMessage) {
-      return {
-        text: errorMessage,
-        className: 'status-message error',
-      }
-    }
-    return null
-  }, [checkStatus, errorMessage])
-
-  const handleLevelChange = useCallback((selectedLevel: number) => {
-    setLevel(selectedLevel)
-  }, [])
-
-  const isChecking = checkStatus === 'checking'
-  const isCheckButtonDisabled = isChecking || nickname.length === 0
 
   // REQ-F-A2-Signup-5: Submit button activation logic
   // Enable when: nickname is available AND level is selected
@@ -103,103 +57,33 @@ const SignupPage: React.FC = () => {
         </p>
 
         {/* REQ-F-A2-Signup-3: Nickname Section */}
-        <section className="nickname-section">
-          <h2 className="section-title">닉네임 설정</h2>
-
-          <div className="form-group">
-            <label htmlFor="nickname-input" className="form-label">
-              닉네임
-            </label>
-            <div className="input-group">
-              <input
-                id="nickname-input"
-                type="text"
-                className="nickname-input"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="영문자, 숫자, 언더스코어 (3-30자)"
-                maxLength={30}
-                disabled={isChecking}
-              />
-              <button
-                className="check-button"
-                onClick={handleCheckClick}
-                disabled={isCheckButtonDisabled}
-              >
-                {isChecking ? '확인 중...' : '중복 확인'}
-              </button>
-            </div>
-
-            {statusMessage && (
-              <p className={statusMessage.className}>{statusMessage.text}</p>
-            )}
-
-            {checkStatus === 'taken' && suggestions.length > 0 && (
-              <div className="suggestions">
-                <p className="suggestions-title">추천 닉네임:</p>
-                <ul className="suggestions-list">
-                  {suggestions.map((suggestion) => (
-                    <li key={suggestion}>
-                      <button
-                        className="suggestion-button"
-                        onClick={() => setNickname(suggestion)}
-                      >
-                        {suggestion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <InfoBox title="닉네임 규칙">
-            <ul className="info-list">
-              <li>3-30자 사이로 입력해주세요</li>
-              <li>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</li>
-              <li>금칙어는 사용할 수 없습니다</li>
-            </ul>
-          </InfoBox>
-        </section>
+        <NicknameInputSection
+          nickname={nickname}
+          setNickname={setNickname}
+          checkStatus={checkStatus}
+          errorMessage={errorMessage}
+          suggestions={suggestions}
+          onCheckClick={checkNickname}
+          disabled={false}
+          showInfoBox={true}
+        />
 
         {/* REQ-F-A2-Signup-4: Profile Section (Level only) */}
-        <section className="profile-section">
-          <h2 className="section-title">자기평가 정보</h2>
+        <LevelSelector
+          value={level}
+          onChange={setLevel}
+          disabled={false}
+          showTitle={true}
+        />
 
-          <div className="form-group">
-            <label className="form-label">기술 수준</label>
-            <div className="level-options">
-              {LEVEL_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className={`level-option ${level === option.value ? 'selected' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="level"
-                    value={option.value}
-                    checked={level === option.value}
-                    onChange={() => handleLevelChange(option.value)}
-                    aria-label={option.label}
-                  />
-                  <div className="level-content">
-                    <div className="level-label">{option.label}</div>
-                    <div className="level-description">{option.description}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <InfoBox title="향후 추가 예정" icon={InfoBoxIcons.clock}>
-            <ul className="info-list">
-              <li>경력(연차) 입력</li>
-              <li>직군 선택</li>
-              <li>담당 업무 입력</li>
-              <li>관심분야 다중 선택</li>
-            </ul>
-          </InfoBox>
-        </section>
+        <InfoBox title="향후 추가 예정" icon={InfoBoxIcons.clock}>
+          <ul className="info-list">
+            <li>경력(연차) 입력</li>
+            <li>직군 선택</li>
+            <li>담당 업무 입력</li>
+            <li>관심분야 다중 선택</li>
+          </ul>
+        </InfoBox>
 
         {/* REQ-F-A2-Signup-5/6: Submit Button */}
         <div className="form-actions">
