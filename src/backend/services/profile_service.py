@@ -26,6 +26,8 @@ class ProfileService:
         check_nickname_available_for_edit: Check if nickname is available (excluding self)
         edit_nickname: Edit user's nickname
         update_survey: Create/update user profile survey
+        get_user_consent: Get user's privacy consent status
+        update_user_consent: Update user's privacy consent status
 
     """
 
@@ -308,9 +310,14 @@ class ProfileService:
         """
         # Validate self_level if provided
         if "self_level" in survey_data and survey_data["self_level"] is not None:
-            valid_levels = ("beginner", "intermediate", "advanced")
-            if survey_data["self_level"] not in valid_levels:
+            # Valid levels (lowercase for validation, converted to capitalized for DB)
+            valid_levels = ("beginner", "intermediate", "intermediate-advanced", "advanced", "elite")
+            level_lower = survey_data["self_level"].lower()
+            if level_lower not in valid_levels:
                 raise ValueError(f"Invalid self_level. Must be one of: {', '.join(valid_levels)}")
+            # Capitalize for PostgreSQL enum (Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite)
+            level_capitalized = "-".join(word.capitalize() for word in level_lower.split("-"))
+            survey_data["self_level"] = level_capitalized
 
         # Validate years_experience if provided
         if "years_experience" in survey_data and survey_data["years_experience"] is not None:
@@ -339,3 +346,70 @@ class ProfileService:
                 raise ValueError("interests must have between 1 and 20 items")
             if not all(isinstance(item, str) for item in interests):
                 raise ValueError("All items in interests must be strings")
+
+    def get_user_consent(self, user_id: int) -> dict[str, Any]:
+        """
+        Get user's privacy consent status.
+
+        REQ: REQ-B-A3-1
+
+        Args:
+            user_id: User ID to query
+
+        Returns:
+            Dictionary with:
+                - consented (bool): Privacy consent status
+                - consent_at (str | None): ISO format timestamp or null if not consented
+
+        Raises:
+            Exception: If user not found
+
+        """
+        user = self.session.query(User).filter_by(id=user_id).first()
+        if not user:
+            raise Exception(f"User with id {user_id} not found.")
+
+        return {
+            "consented": user.privacy_consent,
+            "consent_at": user.consent_at.isoformat() if user.consent_at else None,
+        }
+
+    def update_user_consent(self, user_id: int, consent: bool) -> dict[str, Any]:
+        """
+        Update user's privacy consent status.
+
+        REQ: REQ-B-A3-2
+
+        Args:
+            user_id: User ID to update
+            consent: Consent status (True to grant, False to withdraw)
+
+        Returns:
+            Dictionary with:
+                - success (bool): Update success status
+                - message (str): Result message
+                - user_id (int): User ID
+                - consent_at (str): ISO format timestamp of consent
+
+        Raises:
+            Exception: If user not found
+
+        """
+        user = self.session.query(User).filter_by(id=user_id).first()
+        if not user:
+            raise Exception(f"User with id {user_id} not found.")
+
+        user.privacy_consent = consent
+        if consent:
+            user.consent_at = datetime.now(UTC)
+        else:
+            user.consent_at = None
+
+        self.session.commit()
+
+        return {
+            "success": True,
+            "message": "개인정보 동의 완료",
+            "user_id": user.id,
+            "consent_at": user.consent_at.isoformat() if user.consent_at else None,
+        }

@@ -10,9 +10,11 @@
 ## Phase 1: Specification
 
 ### Requirements
+
 결과 페이지에 "이전 응시 정보 비교" 섹션을 표시하고, 이전 등급/점수와 현재 정보를 간단한 차트/텍스트로 비교해야 한다.
 
 ### Acceptance Criteria
+
 - "이전 결과 vs 현재 결과 비교가 시각적으로 표시된다."
 
 ### Implementation Specification
@@ -21,12 +23,14 @@
 TestResultsPage에 사용자의 이전 테스트 결과와 현재 결과를 비교하는 섹션을 추가하여, 등급/점수 변화를 시각적으로 표시
 
 **Location**:
+
 - `src/frontend/src/pages/TestResultsPage.tsx` - 비교 섹션 통합
 - `src/frontend/src/components/TestResults/ComparisonSection.tsx` - 비교 섹션 컴포넌트
 - `src/frontend/src/services/resultService.ts` - 이전 결과 조회 API
 - `src/frontend/src/lib/transport/mockTransport.ts` - Mock API
 
 **Signature**:
+
 ```typescript
 // Types
 interface PreviousResult {
@@ -47,6 +51,7 @@ interface ComparisonSectionProps {
 ```
 
 **Behavior**:
+
 1. TestResultsPage 로드 시 사용자의 이전 테스트 결과 조회
 2. 이전 결과가 있으면:
    - 등급 비교 (예: "Beginner → Intermediate")
@@ -59,10 +64,12 @@ interface ComparisonSectionProps {
    - 현재 등급/점수만 표시
 
 **Dependencies**:
+
 - Backend API: `/api/results/previous` (Mock으로 구현)
 - REQ-F-B4-1 (TestResultsPage 기본 기능)
 
 **Non-functional**:
+
 - 이전 결과는 가장 최근 1개만 표시
 - Loading state 처리
 - Error handling (API 실패 시 gracefully degrade)
@@ -75,42 +82,49 @@ interface ComparisonSectionProps {
 ### Test Cases
 
 **Test Locations**:
+
 - `src/frontend/src/components/TestResults/__tests__/ComparisonSection.test.tsx` (6 tests)
 - `src/frontend/src/pages/__tests__/TestResultsPage.test.tsx` (3 tests added)
 
 #### ComparisonSection Component Tests (6 tests)
 
 **Test 1**: `점수/등급 상승 시 개선 표시`
+
 - Given: previousResult = {grade: 'Beginner', score: 65}, current = {grade: 'Intermediate', score: 75}
 - When: Component renders
 - Then: "Beginner → Intermediate", "65점 → 75점 (+10점)", ↑ 아이콘, "10점 향상되었습니다!" 표시
 - **Status**: ✅ PASS
 
 **Test 2**: `점수/등급 하락 시 하락 표시`
+
 - Given: previousResult = {grade: 'Intermediate', score: 75}, current = {grade: 'Beginner', score: 65}
 - When: Component renders
 - Then: ↓ 아이콘, "(-10점)", "10점 낮아졌습니다" 표시
 - **Status**: ✅ PASS
 
 **Test 3**: `변동 없음`
+
 - Given: previousResult = {grade: 'Intermediate', score: 75}, current = same
 - When: Component renders
 - Then: "Intermediate (변동 없음)", "75점 (변동 없음)", → 아이콘, "이전과 동일한 성적입니다" 표시
 - **Status**: ✅ PASS
 
 **Test 4**: `이전 결과 없음 (첫 응시)`
+
 - Given: previousResult = null
 - When: Component renders
 - Then: "첫 응시입니다" 메시지, 현재 등급/점수만 표시, 비교 정보 없음
 - **Status**: ✅ PASS
 
 **Test 5**: `이전 테스트 날짜 표시`
+
 - Given: previousResult with test_date = '2025-01-10T10:00:00Z'
 - When: Component renders
 - Then: "이전 테스트: 2025년 1월 10일" 형식으로 표시
 - **Status**: ✅ PASS
 
 **Test 6**: `등급은 같지만 점수만 상승`
+
 - Given: previousResult = {grade: 'Intermediate', score: 70}, current = {grade: 'Intermediate', score: 75}
 - When: Component renders
 - Then: 등급 "(변동 없음)", 점수 "70점 → 75점 (+5점)", ↑ 아이콘 1개만, "5점 향상되었습니다!" 표시
@@ -119,18 +133,21 @@ interface ComparisonSectionProps {
 #### TestResultsPage Integration Tests (3 tests)
 
 **Test 7**: `이전 결과 로드 성공 및 ComparisonSection 렌더링`
+
 - Given: API returns previousResult = {grade: 'Beginner', score: 65, test_date: '2025-01-10'}
 - When: TestResultsPage loads
 - Then: ComparisonSection 렌더링, "성적 비교" 제목, 이전 결과 데이터 표시
 - **Status**: ✅ PASS
 
 **Test 8**: `이전 결과 없을 때 (첫 응시)`
+
 - Given: API returns null
 - When: TestResultsPage loads
 - Then: ComparisonSection 렌더링, "첫 응시입니다" 메시지, 현재 결과만 표시
 - **Status**: ✅ PASS
 
 **Test 9**: `이전 결과 API 에러 시 ComparisonSection 숨김`
+
 - Given: API call fails
 - When: TestResultsPage loads
 - Then: Main results displayed, ComparisonSection shows "첫 응시입니다" (null fallback)
@@ -143,6 +160,7 @@ interface ComparisonSectionProps {
 ### Modified/Created Files
 
 #### 1. `src/frontend/src/lib/transport/mockTransport.ts`
+
 **Lines**: 85-89
 **Changes**: Mock API 데이터 추가
 
@@ -159,8 +177,10 @@ interface ComparisonSectionProps {
 ---
 
 #### 2. `src/frontend/src/services/resultService.ts`
+
 **Lines**: 40-47, 66-81
 **Changes**:
+
 - PreviousResult interface 추가
 - getPreviousResult() 메서드 추가
 
@@ -186,10 +206,12 @@ async getPreviousResult(): Promise<PreviousResult | null> {
 ---
 
 #### 3. `src/frontend/src/components/TestResults/ComparisonSection.tsx`
+
 **Lines**: 1-135 (NEW FILE)
 **Changes**: 비교 섹션 컴포넌트 생성
 
 **Key Features**:
+
 - 첫 응시 vs 재응시 분기 처리
 - 등급/점수 변화 계산 로직
 - 상승/하락/변동없음 표시 (아이콘, 색상)
@@ -201,10 +223,12 @@ async getPreviousResult(): Promise<PreviousResult | null> {
 ---
 
 #### 4. `src/frontend/src/components/TestResults/ComparisonSection.css`
+
 **Lines**: 1-168 (NEW FILE)
 **Changes**: 비교 섹션 스타일
 
 **Key Styles**:
+
 - improved (녹색): border-color: #28a745, background: #f0fdf4
 - declined (빨간색): border-color: #dc3545, background: #fef2f2
 - unchanged (회색): border-color: #6c757d, background: #f8f9fa
@@ -215,6 +239,7 @@ async getPreviousResult(): Promise<PreviousResult | null> {
 ---
 
 #### 5. `src/frontend/src/components/TestResults/index.ts`
+
 **Lines**: 1, 6
 **Changes**: ComparisonSection export 추가
 
@@ -223,8 +248,10 @@ async getPreviousResult(): Promise<PreviousResult | null> {
 ---
 
 #### 6. `src/frontend/src/pages/TestResultsPage.tsx`
+
 **Lines**: 1-2, 5-6, 37-56, 147-154
 **Changes**:
+
 - useState, useEffect import
 - ComparisonSection import
 - PreviousResult import
@@ -266,10 +293,12 @@ useEffect(() => {
 ---
 
 #### 7. `src/frontend/src/components/TestResults/__tests__/ComparisonSection.test.tsx`
+
 **Lines**: 1-164 (NEW FILE)
 **Changes**: 6개 테스트 케이스 작성
 
 **Test Coverage**:
+
 - 점수/등급 상승 ✅
 - 점수/등급 하락 ✅
 - 변동 없음 ✅
@@ -282,10 +311,12 @@ useEffect(() => {
 ---
 
 #### 8. `src/frontend/src/pages/__tests__/TestResultsPage.test.tsx`
+
 **Lines**: 1, 154-248
 **Changes**: 3개 integration 테스트 추가
 
 **Test Coverage**:
+
 - 이전 결과 로드 성공 ✅
 - 이전 결과 없을 때 ✅
 - API 에러 처리 ✅
@@ -295,6 +326,7 @@ useEffect(() => {
 ---
 
 ### Code Quality
+
 - ✅ Type safety: TypeScript interfaces 정의
 - ✅ Error handling: try-catch, null fallback
 - ✅ Loading state: isPreviousLoading 관리
@@ -307,11 +339,14 @@ useEffect(() => {
 ## Phase 4: Summary
 
 ### Test Results
+
 ✅ All automated tests passed (9 tests total):
+
 - **ComparisonSection.test.tsx**: 6 tests (all PASS)
 - **TestResultsPage.test.tsx**: 3 tests added (all PASS)
 
 **Test Execution**:
+
 ```bash
 npm test -- ComparisonSection.test.tsx --run
 # Result: 6 passed (6)
@@ -321,6 +356,7 @@ npm test -- TestResultsPage.test.tsx --run
 ```
 
 **Test Coverage**:
+
 - 등급/점수 상승/하락/변동없음 ✅
 - 첫 응시 시나리오 ✅
 - 이전 테스트 날짜 표시 ✅
@@ -340,6 +376,7 @@ npm test -- TestResultsPage.test.tsx --run
 | API 에러 처리 | resultService.ts:73-79<br>TestResultsPage.tsx:45-50 | ✅ TestResultsPage.test (Test 9) |
 
 ### Modified/Created Files
+
 1. `src/frontend/src/lib/transport/mockTransport.ts:85-89`
 2. `src/frontend/src/services/resultService.ts:40-47, 66-81`
 3. `src/frontend/src/components/TestResults/ComparisonSection.tsx` (NEW, 135 lines)
@@ -350,6 +387,7 @@ npm test -- TestResultsPage.test.tsx --run
 8. `src/frontend/src/pages/__tests__/TestResultsPage.test.tsx:1, 154-248` (3 tests added)
 
 ### Related Requirements
+
 - ✅ REQ-F-B4-1: 최종 결과 페이지 (기본 기능)
 - ✅ REQ-F-B5-3: 재응시 시 이전 정보 자동 입력 (이미 구현됨)
 - 🔄 REQ-F-B5-2: "재응시하기" 버튼 (이미 구현됨)
@@ -359,10 +397,12 @@ npm test -- TestResultsPage.test.tsx --run
 ## Notes
 
 **Implementation Decision**: Mock API
+
 - Backend API가 아직 없으므로 mock으로 구현
 - 실제 백엔드 연동 시 `/api/results/previous` 엔드포인트만 추가하면 됨
 
 **User Flow**:
+
 1. 테스트 완료 → TestResultsPage
 2. 이전 결과 자동 조회 (비동기)
 3. 비교 섹션 렌더링:
@@ -370,12 +410,14 @@ npm test -- TestResultsPage.test.tsx --run
    - 이전 결과 없음 → "첫 응시입니다" 표시
 
 **Visual Design**:
+
 - 개선: 녹색 테두리 + 밝은 녹색 배경
 - 하락: 빨간색 테두리 + 밝은 빨간색 배경
 - 변동없음: 회색 테두리 + 밝은 회색 배경
 - 아이콘: ↑ (상승), ↓ (하락), → (변동없음)
 
 **Future Improvements**:
+
 - 여러 이전 결과 비교 (최근 3개 등)
 - 점수 변화 그래프
 - 카테고리별 점수 변화

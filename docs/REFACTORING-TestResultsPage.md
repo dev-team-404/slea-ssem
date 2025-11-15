@@ -74,12 +74,14 @@ gradeHelpers (순수 함수, 의존성 없음)
 ## 💡 핵심 설계 원칙
 
 ### 1. 관심사 분리
+
 - **Data Layer**: `useTestResults` (API 호출만)
 - **Util Layer**: `gradeHelpers` (순수 함수)
 - **UI Layer**: Components (렌더링만)
 - **Page Layer**: TestResultsPage (조합)
 
 ### 2. useTestResults는 gradeHelpers를 쓰지 않는다
+
 **이유**: 데이터 레이어는 원본 데이터만 반환. UI 포맷팅은 컴포넌트의 책임.
 
 ```typescript
@@ -92,6 +94,7 @@ return { grade: "Elite", score: 85.0 }
 ```
 
 ### 3. 각 Component는 필요한 Utils만 import
+
 - `GradeBadge`: 2개 함수 (getGradeKorean, getGradeClass)
 - `MetricCard`: 1개 함수 (formatDecimal만)
 - `ActionButtons`: 0개 (gradeHelpers 안 씀)

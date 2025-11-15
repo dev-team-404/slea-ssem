@@ -25,22 +25,26 @@
 ### Current State Analysis
 
 **기존 구현**:
+
 - ✅ Logic: `showConfidenceWarning` 변수가 이미 존재 (TestResultsPage.tsx:81)
 - ✅ UI: MetricCard에 작은 경고 표시 (MetricCard.tsx:68-70)
 - ⚠️ **문제**: 경고가 MetricCard 안에만 작게 표시되어 "눈에 띄게" 요구사항 미충족
 
 **개선 방안**:
+
 - GradeDistributionChart에 눈에 띄는 경고 배너 추가
 - 더 큰 아이콘, 그라데이션 배경, 두꺼운 테두리로 강조
 
 ### Technical Specification
 
 **Location**:
+
 - `src/frontend/src/components/TestResults/GradeDistributionChart.tsx`
 - `src/frontend/src/pages/TestResultsPage.tsx`
 - `src/frontend/src/pages/TestResultsPage.css`
 
 **Changes**:
+
 1. GradeDistributionChart에 `showConfidenceWarning` prop 추가
 2. 차트 상단에 눈에 띄는 경고 배너 UI 추가
 3. CSS로 강조 스타일링 (주황색 그라데이션, 두꺼운 테두리, 그림자)
@@ -85,6 +89,7 @@
 **File**: `src/frontend/src/components/TestResults/GradeDistributionChart.tsx`
 
 **Changes**:
+
 ```typescript
 // Added showConfidenceWarning prop
 interface GradeDistributionChartProps {
@@ -107,6 +112,7 @@ interface GradeDistributionChartProps {
 ```
 
 **Key Features**:
+
 - `role="alert"` for accessibility
 - Dynamic `totalCohortSize` display
 - Structured layout (icon + content)
@@ -116,6 +122,7 @@ interface GradeDistributionChartProps {
 **File**: `src/frontend/src/pages/TestResultsPage.tsx`
 
 **Changes**:
+
 ```typescript
 // Pass showConfidenceWarning prop to chart
 <GradeDistributionChart
@@ -129,6 +136,7 @@ interface GradeDistributionChartProps {
 **File**: `src/frontend/src/pages/TestResultsPage.css`
 
 **New Styles** (Lines 305-342):
+
 ```css
 /* REQ: REQ-F-B4-4 - Prominent confidence warning banner */
 .distribution-confidence-warning {
@@ -146,6 +154,7 @@ interface GradeDistributionChartProps {
 ```
 
 **Visual Design**:
+
 - 주황색 그라데이션 배경 (#fff3e0 → #ffe0b2)
 - 5px 두꺼운 왼쪽 테두리 (#e65100)
 - 박스 그림자로 입체감
@@ -192,6 +201,7 @@ All 20 tests passed ✅
 ### Implementation Summary
 
 **What Changed**:
+
 1. **Enhanced Visibility**: Added prominent warning banner in distribution chart (previous implementation only had small text in MetricCard)
 2. **Visual Design**: Gradient background, thick border, shadow, large icon
 3. **Accessibility**: Added `role="alert"` for screen readers
@@ -199,6 +209,7 @@ All 20 tests passed ✅
 5. **Comprehensive Testing**: 4 new tests covering display, hiding, content, and styling
 
 **Before vs After**:
+
 - **Before**: Small warning text in MetricCard (not prominent enough)
 - **After**: Large banner at top of distribution chart (highly visible ✅)
 
@@ -215,6 +226,7 @@ All 20 tests passed ✅
 **Commit SHA**: (pending)
 
 **Commit Message**:
+
 ```
 feat: Implement REQ-F-B4-4 - Prominent confidence warning for small cohort
 

@@ -231,7 +231,7 @@ def user_profile_survey_fixture(db_session: Session, authenticated_user: User) -
     survey = UserProfileSurvey(
         id="survey_001",
         user_id=authenticated_user.id,
-        self_level="intermediate",
+        self_level="Intermediate",
         years_experience=3,
         job_role="Senior Engineer",
         duty="ML Model Development",
@@ -451,7 +451,7 @@ def create_survey_for_user(db_session: Session) -> callable:
         survey = UserProfileSurvey(
             id=str(uuid4()),
             user_id=user_id,
-            self_level="intermediate",
+            self_level="Intermediate",
             years_experience=3,
             job_role="Engineer",
             duty="Development",

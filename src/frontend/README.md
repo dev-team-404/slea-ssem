@@ -152,11 +152,13 @@ const data = await transport.post('/profile/nickname/check', ...)
 ### API 호출하기
 
 **복잡한 상태 관리가 필요한 경우** (Hook 사용):
+
 ```typescript
 const { nickname, checkNickname, checkStatus } = useNicknameCheck()
 ```
 
 **단순 API 호출** (Service 직접 사용):
+
 ```typescript
 await profileService.registerNickname(nickname)
 ```
@@ -164,12 +166,14 @@ await profileService.registerNickname(nickname)
 ### 새로운 API 추가하기
 
 1. **services/에 타입 정의**
+
    ```typescript
    export interface NewFeatureRequest { ... }
    export interface NewFeatureResponse { ... }
    ```
 
 2. **Service에 메서드 추가**
+
    ```typescript
    export const profileService = {
      newFeature(data: NewFeatureRequest): Promise<NewFeatureResponse> {
@@ -179,6 +183,7 @@ await profileService.registerNickname(nickname)
    ```
 
 3. **Page/Component에서 사용**
+
    ```typescript
    const result = await profileService.newFeature(data)
    ```
@@ -230,12 +235,14 @@ VITE_MOCK_API=false
 #### Mock 모드 사용 (백엔드 없이 테스트)
 
 **방법 1: 환경변수**
+
 ```bash
 # .env
 VITE_MOCK_API=true
 ```
 
 **방법 2: URL 파라미터**
+
 ```
 http://localhost:3000?mock=true
 ```

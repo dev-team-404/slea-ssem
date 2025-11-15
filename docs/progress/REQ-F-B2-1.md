@@ -23,10 +23,12 @@
 ### Implementation Specification
 
 #### Location
+
 - **File**: `src/frontend/src/pages/TestPage.tsx`
 - **Function**: `handleNextClick` (line 100-143)
 
 #### Behavior
+
 1. 사용자가 답변 선택/입력
 2. "다음" 버튼 클릭 시:
    - `user_answer` 객체 생성 (`{ selected: ... }` 또는 `{ text: ... }`)
@@ -42,6 +44,7 @@
    - 재시도 가능
 
 #### Non-functional Requirements
+
 - **Performance**: API 응답 2초 이내
 - **UX**: 제출 중 버튼 비활성화
 - **Error Handling**: 네트워크 오류 시 에러 메시지 + 재시도
@@ -51,6 +54,7 @@
 ## 🧪 Phase 2: Test Design
 
 ### Test File
+
 `src/frontend/src/pages/__tests__/TestPage.test.tsx`
 
 ### Test Cases (9개)
@@ -68,6 +72,7 @@
 | **Error Handling** | API 실패 처리 | 에러 메시지 표시 + 현재 문항 유지 |
 
 ### Test Results
+
 ```
 ✅ 9 passed (9)
 Duration: 2.24s
@@ -82,6 +87,7 @@ Duration: 2.24s
 #### 1. `src/frontend/src/pages/TestPage.tsx`
 
 **Changes**:
+
 - `questionStartTime` 상태 추가 (응답 시간 측정)
 - `loadingError`와 `submitError` 분리 (에러 상태 구분)
 - `handleNextClick` 함수 구현:
@@ -149,12 +155,14 @@ await transport.post('/questions/autosave', {
 ## 🔍 Testing Results
 
 ### Test Execution
+
 ```bash
 cd src/frontend
 npm test -- src/pages/__tests__/TestPage.test.tsx --run
 ```
 
 ### Results
+
 ```
 ✅ Test Files: 1 passed (1)
 ✅ Tests: 9 passed (9)
@@ -162,6 +170,7 @@ npm test -- src/pages/__tests__/TestPage.test.tsx --run
 ```
 
 ### Coverage
+
 - **Acceptance Criteria**: 2/2 ✅
 - **Happy Path**: 2/2 ✅
 - **Validation**: 1/1 ✅
@@ -173,6 +182,7 @@ npm test -- src/pages/__tests__/TestPage.test.tsx --run
 ## 📝 Summary
 
 ### Completed Tasks
+
 1. ✅ Specification 작성 및 승인
 2. ✅ Test design (9 test cases)
 3. ✅ Implementation:
@@ -183,12 +193,15 @@ npm test -- src/pages/__tests__/TestPage.test.tsx --run
 4. ✅ All tests passing (9/9)
 
 ### Files Modified
+
 - `src/frontend/src/pages/TestPage.tsx`
 - `src/frontend/src/pages/__tests__/TestPage.test.tsx` (new)
 
 ### API Integration
+
 - **Endpoint**: `POST /questions/autosave`
 - **Request**:
+
   ```json
   {
     "session_id": "string",
@@ -200,7 +213,9 @@ npm test -- src/pages/__tests__/TestPage.test.tsx --run
     "response_time_ms": 1234
   }
   ```
+
 - **Response**:
+
   ```json
   {
     "saved": true,
@@ -211,6 +226,7 @@ npm test -- src/pages/__tests__/TestPage.test.tsx --run
   ```
 
 ### Next Steps
+
 - ✅ REQ-F-B2-1 완료
 - 🔜 REQ-F-B2-2: 진행률, 응답 입력, "다음" 버튼, 타이머 (일부 완료, 타이머 추가 필요)
 - 🔜 REQ-F-B2-3: 정오답 피드백

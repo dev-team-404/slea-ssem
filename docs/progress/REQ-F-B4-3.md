@@ -10,11 +10,13 @@
 ## 요구사항
 
 **REQ-F-B4-3**: 결과 화면에 "전사 상대 순위 및 분포" 시각화를 표시해야 한다.
+
 - 최근 90일 응시자의 등급 분포 막대 차트 (Beginner ~ Elite)
 - 사용자의 현재 위치를 차트에 하이라이트
 - "상위 28% (순위 3/506)"과 같은 텍스트 요약
 
 **수용 기준**:
+
 - 분포 차트에 사용자 위치가 하이라이트되고, 텍스트 요약이 표시된다.
 
 ---
@@ -22,6 +24,7 @@
 ## Phase 1: Specification
 
 ### 구현 위치
+
 - `src/services/resultService.ts` - GradeResult 타입 확장
 - `src/lib/transport/mockTransport.ts` - Mock 데이터 추가
 - `src/components/TestResults/GradeDistributionChart.tsx` (신규)
@@ -29,6 +32,7 @@
 - `src/pages/TestResultsPage.css` - 차트 스타일
 
 ### 데이터 구조
+
 ```typescript
 export interface GradeDistribution {
   grade: Grade
@@ -47,9 +51,11 @@ export interface GradeResult {
 ## Phase 2: Test Design
 
 ### 테스트 파일
+
 - `src/components/TestResults/__tests__/GradeDistributionChart.test.tsx`
 
 ### 테스트 케이스 (6개 그룹, 15개 테스트)
+
 1. **Happy Path**: 정상 렌더링 (5개 등급, 인원수/백분율)
 2. **User Grade Highlighting**: 사용자 위치 하이라이트
 3. **Text Summary**: "상위 28% (순위 3/506)" 표시
@@ -64,6 +70,7 @@ export interface GradeResult {
 ### 변경된 파일
 
 #### 1. `src/services/resultService.ts`
+
 **변경 내용**: GradeDistribution 타입 추가 및 GradeResult 확장
 
 ```typescript
@@ -84,6 +91,7 @@ export interface GradeResult {
 ---
 
 #### 2. `src/lib/transport/mockTransport.ts`
+
 **변경 내용**: Mock 데이터에 grade_distribution 추가
 
 ```typescript
@@ -101,7 +109,9 @@ grade_distribution: [
 ---
 
 #### 3. `src/components/TestResults/GradeDistributionChart.tsx` (신규)
+
 **기능**:
+
 - 5개 등급의 막대 차트 렌더링
 - 각 막대: 인원수 + 백분율 표시
 - 사용자 현재 등급 하이라이트 (pulse 애니메이션)
@@ -109,6 +119,7 @@ grade_distribution: [
 - 범례 표시 (전체 분포 / 내 등급)
 
 **주요 로직**:
+
 ```typescript
 const maxCount = Math.max(...distribution.map(d => d.count), 1)
 const barHeight = (item.count / maxCount) * 100
@@ -116,6 +127,7 @@ const isUserGrade = item.grade === userGrade
 ```
 
 **접근성**:
+
 - `role="img"` for chart
 - `aria-label` for each bar
 - "📍 현재 위치" indicator
@@ -123,6 +135,7 @@ const isUserGrade = item.grade === userGrade
 ---
 
 #### 4. `src/components/TestResults/index.ts`
+
 **변경 내용**: GradeDistributionChart export 추가
 
 ```typescript
@@ -132,6 +145,7 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 ---
 
 #### 5. `src/pages/TestResultsPage.tsx`
+
 **변경 내용**: GradeDistributionChart 컴포넌트 추가
 
 ```tsx
@@ -149,9 +163,11 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 ---
 
 #### 6. `src/pages/TestResultsPage.css`
+
 **변경 내용**: Grade Distribution Chart 스타일 추가 (~270 lines)
 
 **주요 스타일**:
+
 - `.grade-distribution-container`: 차트 컨테이너
 - `.distribution-chart`: Flexbox 막대 차트 레이아웃
 - `.bar-fill`: 막대 높이 및 색상 (gradient)
@@ -159,6 +175,7 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 - `.distribution-legend`: 범례
 
 **애니메이션**:
+
 ```css
 @keyframes pulse {
   0%, 100% { box-shadow: 0 -4px 12px rgba(102, 126, 234, 0.4); }
@@ -173,6 +190,7 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 ## 구현 요약
 
 ### 파일 변경
+
 - **Modified**: 5개
   - `src/services/resultService.ts`
   - `src/lib/transport/mockTransport.ts`
@@ -185,6 +203,7 @@ export { GradeDistributionChart } from './GradeDistributionChart'
   - `src/components/TestResults/__tests__/GradeDistributionChart.test.tsx`
 
 ### 주요 기능
+
 1. ✅ 5개 등급 막대 차트 (Beginner ~ Elite)
 2. ✅ 사용자 현재 등급 하이라이트 (pulse 애니메이션)
 3. ✅ 각 막대에 인원수 + 백분율 표시
@@ -198,9 +217,11 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 ## Test Results
 
 ### Test Location
+
 `src/components/TestResults/__tests__/GradeDistributionChart.test.tsx`
 
 ### Test Cases
+
 - ✅ Happy Path: 5개 등급 막대 렌더링
 - ✅ Happy Path: 인원수 + 백분율 표시
 - ✅ User Highlighting: 사용자 등급 CSS 클래스 적용
@@ -232,6 +253,7 @@ export { GradeDistributionChart } from './GradeDistributionChart'
 ## Git Commit
 
 **Commit Message**:
+
 ```
 feat: Implement grade distribution chart (REQ-F-B4-3)
 

@@ -3,6 +3,7 @@
 **Issue**: 프로필 정보를 불러오는데 실패: `Unexpected token '<', "<!doctype "... is not valid JSON`
 
 **Root Cause**:
+
 - `VITE_MOCK_API=false` + `?sso_mock=true` 환경에서
 - 프론트엔드가 가짜 JWT 토큰(`mock_jwt_token_...`)을 생성하여 localStorage에 저장
 - 이후 API 호출 시 백엔드가 이 가짜 토큰을 인증할 수 없어서 HTML 에러 페이지 반환
@@ -13,10 +14,12 @@
 ### 1. SSO Mock 모드 분리 (`useAuthCallback.ts`)
 
 **변경 전:**
+
 - `api_mock=true`: 프론트엔드 mock (가짜 토큰 생성)
 - 나머지: 실제 백엔드 호출
 
 **변경 후:**
+
 - `api_mock=true`: 프론트엔드 mock (백엔드 호출 없음, 가짜 토큰 생성)
 - `sso_mock=true` + `api_mock=false`: **가짜 SSO 데이터를 백엔드에 전달하여 실제 JWT 토큰 받기**
 - 둘 다 false: 실제 SSO 데이터로 백엔드 호출
@@ -109,6 +112,7 @@ export const removeToken = (): void => {
 ## Usage Scenarios
 
 ### Scenario 1: 프론트엔드만 테스트 (백엔드 없음)
+
 ```
 URL: /auth/callback?api_mock=true
 결과: 
@@ -118,6 +122,7 @@ URL: /auth/callback?api_mock=true
 ```
 
 ### Scenario 2: SSO Mock + 실제 백엔드
+
 ```
 URL: /auth/callback?sso_mock=true
 결과:
@@ -128,6 +133,7 @@ URL: /auth/callback?sso_mock=true
 ```
 
 ### Scenario 3: 실제 SSO + 실제 백엔드 (프로덕션)
+
 ```
 URL: /auth/callback?knox_id=...&name=...&...
 결과:

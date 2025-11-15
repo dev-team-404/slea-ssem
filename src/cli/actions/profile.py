@@ -2,6 +2,9 @@
 
 import re
 
+from sqlalchemy import text
+
+from src.backend.database import SessionLocal
 from src.cli.context import CLIContext
 
 
@@ -15,6 +18,9 @@ def profile_help(context: CLIContext, *args: str) -> None:
     context.console.print(
         "  profile update_survey         - Survey 업데이트 (인증 필요, 옵션: job_role, duty, interests)"
     )
+    context.console.print("  profile reset_surveys         - 모든 Survey 기록 강제 삭제 (FK 무시, DEV용)")
+    context.console.print("  profile get-consent           - 개인정보 동의 여부 확인 (인증 필요)")
+    context.console.print("  profile set-consent           - 개인정보 동의 상태 변경 (인증 필요)")
 
 
 def check_nickname_availability(context: CLIContext, *args: str) -> None:
@@ -288,3 +294,207 @@ def update_survey(context: CLIContext, *args: str) -> None:
     context.logger.info(
         f"Survey updated: level={level}, career={career}, job_role={job_role}, duty={duty}, interests={interests_str}."
     )
+
+
+def reset_surveys(context: CLIContext, *args: str) -> None:
+    """모든 Survey 기록을 강제로 삭제합니다 (Foreign Key 제약 무시, DEV용)."""
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        context.console.print("[yellow]Please login first: auth login [username][/yellow]")
+        return
+
+    if not context.session.user_id:
+        context.console.print("[bold red]✗ User ID not found[/bold red]")
+        return
+
+    # Confirm deletion
+    context.console.print(
+        "[bold yellow]⚠️  WARNING: This will permanently delete all survey records for this user[/bold yellow]"
+    )
+    context.console.print("[dim]This will bypass foreign key constraints[/dim]")
+    context.console.print("[bold yellow]Type 'yes' to confirm:[/bold yellow]")
+
+    # In CLI mode, we'll just proceed (can add confirmation logic if needed)
+    try:
+        db = SessionLocal()
+
+        # Convert user_id to int if it's a string
+        user_id_int = (
+            int(context.session.user_id) if isinstance(context.session.user_id, str) else context.session.user_id
+        )
+
+        context.console.print(f"[dim]Deleting surveys for user_id={user_id_int}...[/dim]")
+
+        # Step 1: Get all survey IDs for this user
+        survey_ids_result = db.execute(
+            text("SELECT id FROM user_profile_surveys WHERE user_id = :user_id"),
+            {"user_id": user_id_int},
+        )
+        survey_ids = [row[0] for row in survey_ids_result.fetchall()]
+        context.console.print(f"[dim]Found {len(survey_ids)} survey record(s) to delete[/dim]")
+
+        # Step 2: Delete related records in cascade order (respecting FK constraints)
+        deleted_answers = 0
+        deleted_questions = 0
+        deleted_sessions = 0
+
+        for survey_id in survey_ids:
+            # Step 2.1: Delete attempt_answers (references questions)
+            aa_result = db.execute(
+                text(
+                    "DELETE FROM attempt_answers WHERE question_id IN "
+                    "(SELECT id FROM questions WHERE session_id IN "
+                    "(SELECT id FROM test_sessions WHERE survey_id = :survey_id))"
+                ),
+                {"survey_id": survey_id},
+            )
+            deleted_answers += aa_result.rowcount
+
+            # Step 2.2: Delete questions (references test_sessions)
+            q_result = db.execute(
+                text(
+                    "DELETE FROM questions WHERE session_id IN (SELECT id FROM test_sessions WHERE survey_id = :survey_id)"
+                ),
+                {"survey_id": survey_id},
+            )
+            deleted_questions += q_result.rowcount
+
+            # Step 2.3: Delete test sessions (references user_profile_surveys)
+            s_result = db.execute(
+                text("DELETE FROM test_sessions WHERE survey_id = :survey_id"),
+                {"survey_id": survey_id},
+            )
+            deleted_sessions += s_result.rowcount
+
+        if deleted_answers > 0 or deleted_questions > 0 or deleted_sessions > 0:
+            context.console.print(
+                f"[dim]  Deleted {deleted_answers} answer(s), {deleted_questions} question(s), and {deleted_sessions} session(s)[/dim]"
+            )
+
+        # Step 3: Delete surveys
+        result = db.execute(
+            text("DELETE FROM user_profile_surveys WHERE user_id = :user_id"),
+            {"user_id": user_id_int},
+        )
+        deleted_surveys = result.rowcount
+
+        # Step 4: Commit
+        db.commit()
+
+        context.console.print(
+            f"[bold green]✓ Deleted {deleted_surveys} survey(s), {deleted_sessions} session(s), {deleted_questions} question(s), {deleted_answers} answer(s)[/bold green]"
+        )
+        context.logger.info(
+            f"Reset surveys: deleted {deleted_surveys} surveys, {deleted_sessions} sessions, {deleted_questions} questions, {deleted_answers} answers for user_id={user_id_int}"
+        )
+
+    except Exception as e:
+        db.rollback()
+        context.console.print("[bold red]✗ Deletion failed[/bold red]")
+        context.console.print(f"[red]  Error: {str(e)}[/red]")
+        context.logger.error(f"Failed to reset surveys: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
+def get_consent(context: CLIContext, *args: str) -> None:
+    """현재 사용자의 개인정보 동의 여부를 확인합니다."""
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        context.console.print("[yellow]Please login first: auth login [username][/yellow]")
+        return
+
+    context.console.print("[dim]Fetching privacy consent status...[/dim]")
+
+    # JWT 토큰을 client에 설정
+    context.client.set_token(context.session.token)
+
+    # API 호출
+    status_code, response, error = context.client.make_request(
+        "GET",
+        "/profile/consent",
+    )
+
+    if error:
+        context.console.print("[bold red]✗ Failed to fetch consent status[/bold red]")
+        context.console.print(f"[red]  Error: {error}[/red]")
+        context.logger.error(f"Consent status fetch failed: {error}")
+        return
+
+    if status_code != 200:
+        context.console.print(f"[bold red]✗ Failed (HTTP {status_code})[/bold red]")
+        return
+
+    consented = response.get("consented", False)
+    consent_at = response.get("consent_at")
+
+    if consented:
+        context.console.print("[bold green]✓ Consent Status: GRANTED[/bold green]")
+        if consent_at:
+            context.console.print(f"[dim]  Consented at: {consent_at}[/dim]")
+    else:
+        context.console.print("[bold yellow]✓ Consent Status: NOT GRANTED[/bold yellow]")
+        context.console.print("[dim]  You have not granted privacy consent yet[/dim]")
+
+    context.logger.info("Fetched privacy consent status.")
+
+
+def set_consent(context: CLIContext, *args: str) -> None:
+    """개인정보 동의 상태를 변경합니다."""
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        context.console.print("[yellow]Please login first: auth login [username][/yellow]")
+        return
+
+    if not args:
+        context.console.print("[bold yellow]Usage:[/bold yellow] profile set-consent [true|false]")
+        context.console.print("[bold cyan]Examples:[/bold cyan]")
+        context.console.print("  profile set-consent true       - Grant privacy consent")
+        context.console.print("  profile set-consent false      - Withdraw privacy consent")
+        return
+
+    consent_str = args[0].lower()
+    if consent_str in ("true", "yes", "y", "1"):
+        consent = True
+        action = "Grant"
+    elif consent_str in ("false", "no", "n", "0"):
+        consent = False
+        action = "Withdraw"
+    else:
+        context.console.print(f"[bold red]✗ Invalid consent value: '{consent_str}'[/bold red]")
+        context.console.print("[yellow]Use: true/yes/y/1 or false/no/n/0[/yellow]")
+        return
+
+    context.console.print(f"[dim]{action}ing privacy consent...[/dim]")
+
+    # JWT 토큰을 client에 설정
+    context.client.set_token(context.session.token)
+
+    # API 호출
+    status_code, response, error = context.client.make_request(
+        "POST",
+        "/profile/consent",
+        json_data={"consent": consent},
+    )
+
+    if error:
+        context.console.print("[bold red]✗ Consent update failed[/bold red]")
+        context.console.print(f"[red]  Error: {error}[/red]")
+        context.logger.error(f"Consent update failed: {error}")
+        return
+
+    if status_code != 200:
+        context.console.print(f"[bold red]✗ Consent update failed (HTTP {status_code})[/bold red]")
+        return
+
+    message = response.get("message", "Consent updated")
+    context.console.print(f"[bold green]✓ {message}[/bold green]")
+
+    if consent:
+        consent_at = response.get("consent_at")
+        if consent_at:
+            context.console.print(f"[dim]  Consented at: {consent_at}[/dim]")
+    else:
+        context.console.print("[dim]  Privacy consent withdrawn[/dim]")
+
+    context.logger.info(f"Consent status changed: consent={consent}.")

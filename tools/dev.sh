@@ -17,23 +17,41 @@ cmd="${1:-help}"
 
 case "$cmd" in
   up)
-    echo "🔧 Starting dev server on port $PORT..."
-    if $IS_DJANGO; then
-      export DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-"config.settings.dev"}
-      $PY_RUN python "$MANAGE_PY" migrate
-      $PY_RUN python "$MANAGE_PY" runserver 0.0.0.0:$PORT
-    else
-      if $USE_ALEMBIC; then
-        $PY_RUN alembic upgrade head
-      fi
-      if [ -n "$UVICORN_ENTRY" ]; then
-        APP_ENV=${APP_ENV:-dev} DATASET=${DATASET:-"$DEFAULT_DATASET"} \
-        $PY_RUN uvicorn "$UVICORN_ENTRY" --reload --host 127.0.0.1 --port $PORT
-      else
-        echo "❌ No dev server configured. Edit tools/dev.sh to add your start command."
+    target="${2:-b}" # Default to backend
+    case "$target" in
+      b|backend)
+        echo "🔧 Starting backend dev server on port $PORT..."
+        if $IS_DJANGO; then
+          export DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-"config.settings.dev"}
+          $PY_RUN python "$MANAGE_PY" migrate
+          $PY_RUN python "$MANAGE_PY" runserver 0.0.0.0:$PORT
+        else
+          if $USE_ALEMBIC; then
+            $PY_RUN alembic upgrade head
+          fi
+          if [ -n "$UVICORN_ENTRY" ]; then
+            APP_ENV=${APP_ENV:-dev} DATASET=${DATASET:-"$DEFAULT_DATASET"} \
+            $PY_RUN uvicorn "$UVICORN_ENTRY" --reload --host 127.0.0.1 --port $PORT
+          else
+            echo "❌ No dev server configured. Edit tools/dev.sh to add your start command."
+            exit 1
+          fi
+        fi
+        ;;
+      f|frontend)
+        echo "🎨 Starting frontend dev server..."
+        if [ -d "src/frontend" ]; then
+            (cd src/frontend && npm run dev)
+        else
+            echo "❌ src/frontend directory not found."
+            exit 1
+        fi
+        ;;
+      *)
+        echo "❌ Invalid target for 'up': '$target'. Use 'b' (backend) or 'f' (frontend)."
         exit 1
-      fi
-    fi
+        ;;
+    esac
     ;;
 
   test)
@@ -97,10 +115,10 @@ case "$cmd" in
 
   *)
     cat <<'HELP'
-Usage: ./tools/dev.sh <command>
+Usage: ./tools/dev.sh <command> [target]
 
 Commands:
-  up           Start dev server (uvicorn on http://localhost:PORT)
+  up [b|f]     Start dev server (b: backend (default), f: frontend)
   down         Stop dev server (free port)
   test         Run test suite (pytest)
   format       Format + lint code (tox -e ruff)
@@ -117,8 +135,10 @@ Environment Variables:
                Options: dev|staging|prod
 
 Examples:
-  ./tools/dev.sh up                 # Start on http://localhost:8000
-  PORT=8100 ./tools/dev.sh up       # Start on http://localhost:8100
+  ./tools/dev.sh up                 # Start backend on http://localhost:8000
+  ./tools/dev.sh up b               # Explicitly start backend
+  ./tools/dev.sh up f               # Start frontend dev server
+  PORT=8100 ./tools/dev.sh up       # Start backend on http://localhost:8100
   PORT=8100 ./tools/dev.sh down     # Stop port 8100
   ./tools/dev.sh cli                # Start CLI
   ./tools/dev.sh clean              # Clean Python cache (before restarting CLI)
