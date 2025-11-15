@@ -31,7 +31,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-A2-Signup-2 | "회원가입" 버튼 클릭 시 /signup 페이지로 이동 | 4 | ✅ Done | 1 test (100%), Commit: b757745, Progress: docs/progress/REQ-F-A2-Signup-2.md |
 | REQ-F-A2-Signup-3 | 통합 회원가입 페이지에 닉네임 입력 섹션 표시 | 4 | ✅ Done | 11 tests (100%), Commit: 273c30a, Progress: docs/progress/REQ-F-A2-Signup-3.md |
 | REQ-F-A2-Signup-4 | 통합 회원가입 페이지에 자기평가 입력 섹션 표시 (수준만) | 0 | ⏳ Backlog | 향후 추가: 경력, 직군, 담당 업무, 관심분야 |
-| REQ-F-A2-Signup-5 | 닉네임 중복 확인 완료 + 모든 필수 필드 입력 시 "가입 완료" 버튼 활성화 | 4 | ✅ Done | 6 tests (100%), Commit: TBD, Progress: docs/progress/REQ-F-A2-Signup-5.md |
+| REQ-F-A2-Signup-5 | 닉네임 중복 확인 완료 + 모든 필수 필드 입력 시 "가입 완료" 버튼 활성화 | 4 | ✅ Done | 6 tests (100%), Commit: bc03a83, Progress: docs/progress/REQ-F-A2-Signup-5.md |
 | REQ-F-A2-Signup-6 | "가입 완료" 클릭 시 nickname + profile 저장 및 홈화면 리다이렉트 | 0 | ⏳ Backlog | To be implemented |
 | REQ-F-A2-Signup-7 | 가입 완료 후 홈화면 재진입 시 "회원가입" 버튼 숨김 | 0 | ⏳ Backlog | To be implemented |
 | REQ-F-A2-Profile-Access | 헤더 닉네임 표시 및 드롭다운 메뉴 | 1 | 🚧 In Progress | 8개 sub-tasks (닉네임 표시 → 드롭다운 → 프로필 수정) |
