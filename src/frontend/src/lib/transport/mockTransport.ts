@@ -2,26 +2,52 @@
 
 import { HttpTransport, RequestConfig } from './types'
 
+const API_PROFILE_NICKNAME = '/api/profile/nickname'
+const API_PROFILE_NICKNAME_CHECK = '/api/profile/nickname/check'
+const API_PROFILE_REGISTER = '/api/profile/register'
+const API_PROFILE_SURVEY = '/api/profile/survey'
+const API_QUESTIONS_GENERATE = '/api/questions/generate'
+const API_QUESTIONS_AUTOSAVE = '/api/questions/autosave'
+const API_RESULTS_PREVIOUS = '/api/results/previous'
+
+const ensureApiPath = (url: string): string => {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const parsed = new URL(url)
+      return ensureApiPath(parsed.pathname)
+    } catch {
+      return url
+    }
+  }
+
+  if (url === '/api' || url.startsWith('/api/')) {
+    return url
+  }
+
+  const sanitized = url.startsWith('/') ? url : `/${url}`
+  return `/api${sanitized}`
+}
+
 // Mock data storage: 엔드포인트별로 미리 정의된 가짜 데이터 저장
 const mockData: Record<string, any> = {
-  '/api/profile/nickname': {
+  [API_PROFILE_NICKNAME]: {
     user_id: 'mock_user@samsung.com',
     nickname: null,  // Change to 'mockuser' to test nickname exists
     registered_at: null,
     updated_at: null,
   },
-  '/api/profile/nickname/check': {
+  [API_PROFILE_NICKNAME_CHECK]: {
     available: true,
     suggestions: [],
   },
-  '/profile/survey': {
+  [API_PROFILE_SURVEY]: {
     level: null,
     career: null,
     job_role: null,
     duty: null,
     interests: null,
   },
-  '/questions/generate': {
+  [API_QUESTIONS_GENERATE]: {
     session_id: 'mock_session_123',
     questions: [
       {
@@ -76,13 +102,13 @@ const mockData: Record<string, any> = {
       },
     ],
   },
-  '/questions/autosave': {
+  [API_QUESTIONS_AUTOSAVE]: {
     saved: true,
     session_id: 'mock_session_123',
     question_id: '',
     saved_at: new Date().toISOString(),
   },
-  '/results/previous': {
+  [API_RESULTS_PREVIOUS]: {
     grade: 'Beginner',
     score: 65,
     test_date: '2025-01-10T10:00:00Z',
@@ -103,7 +129,8 @@ export const mockConfig = {
 // 실제로 요청을 처리하는 객체
 class MockTransport implements HttpTransport {
   private async mockRequest<T>(url: string, method: string, requestData?: any): Promise<T> {
-    console.log(`[Mock Transport] ${method} ${url}`, requestData)
+    const normalizedUrl = ensureApiPath(url)
+    console.log(`[Mock Transport] ${method} ${normalizedUrl}`, requestData)
 
     // Simulate network delay
     const delay = mockConfig.slowNetwork ? 3000 : mockConfig.delay
@@ -115,7 +142,7 @@ class MockTransport implements HttpTransport {
     }
 
     // Handle nickname check endpoint
-    if (url === '/profile/nickname/check' && method === 'POST' && requestData?.nickname) {
+    if (normalizedUrl === API_PROFILE_NICKNAME_CHECK && method === 'POST' && requestData?.nickname) {
       const nickname = requestData.nickname
       const isTaken = takenNicknames.has(nickname.toLowerCase())
 
@@ -133,7 +160,7 @@ class MockTransport implements HttpTransport {
     }
 
     // Handle nickname register endpoint
-    if (url === '/api/profile/register' && method === 'POST' && requestData?.nickname) {
+    if (normalizedUrl === API_PROFILE_REGISTER && method === 'POST' && requestData?.nickname) {
       const nickname: string = requestData.nickname
 
       if (nickname.length < 3) {
@@ -154,8 +181,8 @@ class MockTransport implements HttpTransport {
       }
 
       takenNicknames.add(nickname.toLowerCase())
-      mockData['/api/profile/nickname'] = {
-        ...mockData['/api/profile/nickname'],
+      mockData[API_PROFILE_NICKNAME] = {
+        ...mockData[API_PROFILE_NICKNAME],
         nickname,
         registered_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -166,7 +193,7 @@ class MockTransport implements HttpTransport {
         message: '닉네임 등록 완료',
         user_id: 'mock_user@samsung.com',
         nickname,
-        registered_at: mockData['/api/profile/nickname'].registered_at,
+        registered_at: mockData[API_PROFILE_NICKNAME].registered_at,
       }
 
       console.log('[Mock Transport] Response:', response)
@@ -174,7 +201,7 @@ class MockTransport implements HttpTransport {
     }
 
     // Handle survey update endpoint
-    if (url === '/api/profile/survey' && method === 'PUT') {
+    if (normalizedUrl === API_PROFILE_SURVEY && method === 'PUT') {
       const validLevels = ['beginner', 'intermediate', 'advanced']
 
       // Validate level if provided
@@ -212,8 +239,8 @@ class MockTransport implements HttpTransport {
       }
 
       // Update mock survey data
-      mockData['/profile/survey'] = {
-        ...mockData['/profile/survey'],
+      mockData[API_PROFILE_SURVEY] = {
+        ...mockData[API_PROFILE_SURVEY],
         ...requestData,
       }
 
@@ -225,21 +252,21 @@ class MockTransport implements HttpTransport {
         updated_at: new Date().toISOString(),
       }
 
-      console.log('[Mock Transport] Survey updated:', mockData['/profile/survey'])
+      console.log('[Mock Transport] Survey updated:', mockData[API_PROFILE_SURVEY])
       console.log('[Mock Transport] Response:', response)
       return response as T
     }
 
     // Handle questions generate endpoint
-    if (url === '/api/questions/generate' && method === 'POST') {
+    if (normalizedUrl === API_QUESTIONS_GENERATE && method === 'POST') {
       console.log('[Mock Transport] Generating questions for:', requestData)
-      const response = mockData['/questions/generate']
+      const response = mockData[API_QUESTIONS_GENERATE]
       console.log('[Mock Transport] Response:', response)
       return response as T
     }
 
     // Handle questions autosave endpoint
-    if (url === '/api/questions/autosave' && method === 'POST') {
+    if (normalizedUrl === API_QUESTIONS_AUTOSAVE && method === 'POST') {
       console.log('[Mock Transport] Autosaving answer:', requestData)
       const response = {
         saved: true,
@@ -252,15 +279,15 @@ class MockTransport implements HttpTransport {
     }
 
     // Handle GET /profile/nickname endpoint
-    if (url === '/profile/nickname' && method === 'GET') {
-      const response = mockData['/api/profile/nickname']
+    if (normalizedUrl === API_PROFILE_NICKNAME && method === 'GET') {
+      const response = mockData[API_PROFILE_NICKNAME]
       console.log('[Mock Transport] Response:', response)
       return response as T
     }
 
     // Handle GET /api/results/{sessionId} endpoint
-    if (url.startsWith('/api/results/') && method === 'GET') {
-      const sessionId = url.split('/').pop()
+    if (normalizedUrl.startsWith('/api/results/') && method === 'GET') {
+      const sessionId = normalizedUrl.split('/').pop()
       console.log('[Mock Transport] Fetching results for session:', sessionId)
 
       // Mock result data (REQ: REQ-F-B4-1, REQ-F-B4-3)
@@ -288,10 +315,10 @@ class MockTransport implements HttpTransport {
     }
 
     // Find mock data for this endpoint
-    const data = mockData[url]
+    const data = mockData[normalizedUrl]
 
     if (!data) {
-      throw new Error(`Mock data not found for: ${url}`)
+      throw new Error(`Mock data not found for: ${normalizedUrl}`)
     }
 
     console.log('[Mock Transport] Response:', data)
@@ -319,7 +346,7 @@ export const mockTransport = new MockTransport()
 
 // Helper to update mock data at runtime
 export function setMockData(endpoint: string, data: any) {
-  mockData[endpoint] = data
+  mockData[ensureApiPath(endpoint)] = data
 }
 
 // Helper to simulate different scenarios
@@ -328,17 +355,17 @@ export function setMockScenario(
 ) {
   switch (scenario) {
     case 'no-nickname':
-      mockData['/api/profile/nickname'].nickname = null
+      mockData[API_PROFILE_NICKNAME].nickname = null
       mockConfig.simulateError = false
       break
     case 'has-nickname':
-      mockData['/api/profile/nickname'].nickname = 'mockuser'
-      mockData['/api/profile/nickname'].registered_at = '2025-11-11T00:00:00Z'
-      mockData['/api/profile/nickname'].updated_at = '2025-11-11T00:00:00Z'
+      mockData[API_PROFILE_NICKNAME].nickname = 'mockuser'
+      mockData[API_PROFILE_NICKNAME].registered_at = '2025-11-11T00:00:00Z'
+      mockData[API_PROFILE_NICKNAME].updated_at = '2025-11-11T00:00:00Z'
       mockConfig.simulateError = false
       break
     case 'no-survey':
-      mockData['/profile/survey'] = {
+      mockData[API_PROFILE_SURVEY] = {
         level: null,
         career: null,
         job_role: null,
@@ -348,7 +375,7 @@ export function setMockScenario(
       mockConfig.simulateError = false
       break
     case 'has-survey':
-      mockData['/profile/survey'] = {
+      mockData[API_PROFILE_SURVEY] = {
         level: 'intermediate',
         career: 5,
         job_role: 'SW',
