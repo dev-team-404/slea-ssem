@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ nickname, isLoading = false }) =
     navigate('/signup')
   }
 
-  const shouldRenderControls = !isLoading || nickname !== null
+  const shouldRenderControls = !isLoading
 
   return (
     <header className="app-header">

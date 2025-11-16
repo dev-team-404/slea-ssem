@@ -48,19 +48,39 @@ const getLevelText = (level: number | undefined): string => {
 }
 
 const ProfileReviewPage: React.FC = () => {
-  const [nickname, setNickname] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState
+  const [nickname, setNickname] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('lastNickname') : null
+  )
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [cachedLevel, setCachedLevel] = useState<number | null>(
+    typeof state?.level === 'number' ? state.level : null
+  )
 
   useEffect(() => {
-    if (typeof state?.surveyId === 'string' && typeof window !== 'undefined') {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (typeof state?.surveyId === 'string') {
       localStorage.setItem('lastSurveyId', state.surveyId)
     }
-    if (typeof state?.level === 'number' && typeof window !== 'undefined') {
+
+    if (typeof state?.level === 'number') {
       localStorage.setItem('lastSurveyLevel', String(state.level))
+      setCachedLevel(state.level)
+      return
+    }
+
+    const savedLevel = localStorage.getItem('lastSurveyLevel')
+    if (savedLevel) {
+      const parsedLevel = Number(savedLevel)
+      if (!Number.isNaN(parsedLevel)) {
+        setCachedLevel(parsedLevel)
+      }
     }
   }, [state?.surveyId, state?.level])
 
@@ -70,7 +90,22 @@ const ProfileReviewPage: React.FC = () => {
       setError(null)
       try {
         const response = await profileService.getNickname()
-        setNickname(response.nickname)
+
+        if (response.nickname) {
+          setNickname(response.nickname)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('lastNickname', response.nickname)
+          }
+        } else if (typeof window !== 'undefined') {
+          const savedNickname = localStorage.getItem('lastNickname')
+          if (savedNickname) {
+            setNickname(savedNickname)
+          } else {
+            setNickname(null)
+          }
+        } else {
+          setNickname(null)
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : '닉네임 정보를 불러오는데 실패했습니다.'
@@ -150,7 +185,9 @@ const ProfileReviewPage: React.FC = () => {
 
           <div className="profile-item">
             <span className="profile-label">기술 수준</span>
-            <span className="profile-value">{getLevelText(state?.level)}</span>
+            <span className="profile-value">
+              {getLevelText(state?.level ?? cachedLevel ?? undefined)}
+            </span>
           </div>
         </div>
 
