@@ -10,7 +10,7 @@ Tests verify that all 6 tools conform to their defined data contracts:
 - Tool 6: Score & Generate Explanation
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -349,7 +349,7 @@ class TestTool5SaveQuestionContract:
         output = Tool5Output(
             question_id="q_uuid_123",
             round_id="sess_123_1_2025-11-09T10:30:00",
-            saved_at=datetime.utcnow().isoformat(),
+            saved_at=datetime.now(timezone.utc).isoformat(),
             success=True,
         )
 
@@ -424,7 +424,7 @@ class TestTool6ScoringContract:
             explanation="Your answer is correct!",
             keyword_matches=["language", "model"],
             feedback="Good understanding of LLM",
-            graded_at=datetime.utcnow().isoformat(),
+            graded_at=datetime.now(timezone.utc).isoformat(),
         )
 
         assert output.is_correct is True
@@ -448,7 +448,7 @@ class TestTool6ScoringContract:
             explanation="Partially correct - missing some details",
             keyword_matches=["language"],
             feedback="Include 'model' concept",
-            graded_at=datetime.utcnow().isoformat(),
+            graded_at=datetime.now(timezone.utc).isoformat(),
         )
 
         assert output.is_correct is False
@@ -472,7 +472,7 @@ class TestTool6ScoringContract:
             explanation="Answer does not match expected concepts",
             keyword_matches=[],
             feedback="Review LLM fundamentals",
-            graded_at=datetime.utcnow().isoformat(),
+            graded_at=datetime.now(timezone.utc).isoformat(),
         )
 
         assert output.is_correct is False

@@ -4,7 +4,7 @@ Attempt model for storing test attempt history.
 REQ: REQ-B-B5-1, REQ-B-B5-2, REQ-B-B5-3, REQ-B-B5-4, REQ-B-B5-5
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
@@ -59,7 +59,7 @@ class Attempt(Base):
         index=True,
     )
     test_type: Mapped[str] = mapped_column(String(50), nullable=False, default="level_test")
-    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Results (NULL until completed)
@@ -77,7 +77,7 @@ class Attempt(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 

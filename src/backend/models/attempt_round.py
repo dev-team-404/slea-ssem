@@ -4,7 +4,7 @@ AttemptRound model for storing individual round scores within an attempt.
 REQ: REQ-B-B5-1, REQ-B-B5-2
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
@@ -49,7 +49,7 @@ class AttemptRound(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 
