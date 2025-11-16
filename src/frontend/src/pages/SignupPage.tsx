@@ -73,7 +73,7 @@ const SignupPage: React.FC = () => {
           level: level!,
         })
 
-        navigate('/', { replace: true })
+        navigate('/home', { replace: true })
       } catch (error) {
         const message =
           error instanceof Error ? error.message : '가입 완료에 실패했습니다.'

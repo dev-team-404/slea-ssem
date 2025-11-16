@@ -552,9 +552,9 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     await user.click(submitButton)
 
     // Assert: redirect happens after successful signup
-  await waitFor(() => {
-    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
-  })
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true })
+    })
 
   await waitFor(() => {
     expect(getMockRequests({ url: '/api/profile/register', method: 'POST' })).toHaveLength(1)
@@ -589,9 +589,9 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     const submitButton = screen.getByRole('button', { name: /가입 완료/i })
     await user.click(submitButton)
 
-  await waitFor(() => {
-    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
-  })
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true })
+    })
 
   await waitFor(() => {
     const surveyRequests = getMockRequests({ url: '/api/profile/survey', method: 'PUT' })
