@@ -2,8 +2,7 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
-import { profileService } from '../services'
-import { LEVEL_MAPPING } from '../constants/profileLevels'
+import { completeProfileSignup } from '../features/profile/profileSubmission'
 import NicknameInputSection from '../components/NicknameInputSection'
 import LevelSelector from '../components/LevelSelector'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
@@ -69,11 +68,9 @@ const SignupPage: React.FC = () => {
       setSubmitError(null)
 
       try {
-        await profileService.completeSignup({
+        await completeProfileSignup({
           nickname,
-          profile: {
-            level: LEVEL_MAPPING[level!],
-          },
+          level: level!,
         })
 
         navigate('/', { replace: true })

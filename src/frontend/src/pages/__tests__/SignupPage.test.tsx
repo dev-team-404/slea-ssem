@@ -24,19 +24,21 @@ vi.mock('react-router-dom', async () => {
 
 // Use mockTransport instead of vi.mock - set mock mode via environment
 // mockTransport already handles validation and error cases
-beforeEach(() => {
-  // Enable mock mode for tests
-  localStorage.setItem('slea_ssem_api_mock', 'true')
-  // Fast responses for tests
-  mockConfig.delay = 0
-  mockConfig.simulateError = false
-  clearMockRequests()
+  beforeEach(() => {
+    // Enable mock mode for tests
+    localStorage.setItem('slea_ssem_api_mock', 'true')
+    localStorage.removeItem('slea_ssem_cached_nickname')
+    // Fast responses for tests
+    mockConfig.delay = 0
+    mockConfig.simulateError = false
+    clearMockRequests()
     clearMockErrors()
-})
+  })
 
-afterEach(() => {
-  localStorage.removeItem('slea_ssem_api_mock')
-})
+  afterEach(() => {
+    localStorage.removeItem('slea_ssem_api_mock')
+    localStorage.removeItem('slea_ssem_cached_nickname')
+  })
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>)
@@ -550,22 +552,20 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     await user.click(submitButton)
 
     // Assert: redirect happens after successful signup
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
-    })
-
-    await waitFor(() => {
-      const requests = getMockRequests({ url: '/api/signup', method: 'POST' })
-      expect(requests).toHaveLength(1)
-    })
-    const [request] = getMockRequests({ url: '/api/signup', method: 'POST' })
-    expect(request.body).toEqual({
-      nickname: 'signup_user1',
-      profile: {
-        level: 'intermediate',
-      },
-    })
+  await waitFor(() => {
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
   })
+
+  await waitFor(() => {
+    expect(getMockRequests({ url: '/api/profile/register', method: 'POST' })).toHaveLength(1)
+    expect(getMockRequests({ url: '/api/profile/survey', method: 'PUT' })).toHaveLength(1)
+  })
+  const [registerRequest] = getMockRequests({ url: '/api/profile/register', method: 'POST' })
+  const [surveyRequest] = getMockRequests({ url: '/api/profile/survey', method: 'PUT' })
+  expect(registerRequest.body).toEqual({ nickname: 'signup_user1' })
+  expect(surveyRequest.body).toMatchObject({ level: 'intermediate', career: 0, interests: [] })
+  expect(localStorage.getItem('slea_ssem_cached_nickname')).toBe('signup_user1')
+})
 
   // Test 2: Signup with different levels
   test('successfully completes signup with level 5', async () => {
@@ -589,17 +589,16 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     const submitButton = screen.getByRole('button', { name: /가입 완료/i })
     await user.click(submitButton)
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
-    })
-
-    await waitFor(() => {
-      const requests = getMockRequests({ url: '/api/signup', method: 'POST' })
-      expect(requests).toHaveLength(1)
-    })
-    const [request] = getMockRequests({ url: '/api/signup', method: 'POST' })
-    expect(request.body.profile.level).toBe('advanced')
+  await waitFor(() => {
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
   })
+
+  await waitFor(() => {
+    const surveyRequests = getMockRequests({ url: '/api/profile/survey', method: 'PUT' })
+    expect(surveyRequests).toHaveLength(1)
+    expect(surveyRequests[0].body.level).toBe('advanced')
+  })
+})
 
   // Test 3: Loading state during submission
   test('shows loading state during submission', async () => {
@@ -680,18 +679,19 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     const level4Radio = screen.getByLabelText(/4 - 고급/i)
     await user.click(level4Radio)
 
-      setMockError('/api/signup', '통합 가입 처리 실패')
+  setMockError('/api/profile/register', '통합 가입 처리 실패')
 
     const submitButton = screen.getByRole('button', { name: /가입 완료/i })
     await user.click(submitButton)
 
     // Assert: Error message displayed
-      await waitFor(() => {
-        expect(screen.getByText(/통합 가입 처리 실패/i)).toBeInTheDocument()
-      })
-
-    // Button should be enabled again for retry
-    expect(submitButton).not.toBeDisabled()
-    clearMockErrors('/api/signup')
+  await waitFor(() => {
+    expect(screen.getByText(/통합 가입 처리 실패/i)).toBeInTheDocument()
   })
+
+  // Button should be enabled again for retry
+  expect(submitButton).not.toBeDisabled()
+  expect(localStorage.getItem('slea_ssem_cached_nickname')).toBeNull()
+  clearMockErrors('/api/profile/register')
+})
 })

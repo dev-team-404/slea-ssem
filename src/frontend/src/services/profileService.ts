@@ -63,37 +63,6 @@ export interface SurveyUpdateResponse {
 }
 
 /**
- * Unified signup profile payload
- */
-export interface SignupProfilePayload {
-  level: string
-  career?: number | null
-  job_role?: string | null
-  duty?: string | null
-  interests?: string[]
-}
-
-/**
- * Complete signup request payload
- */
-export interface CompleteSignupRequest {
-  nickname: string
-  profile: SignupProfilePayload
-}
-
-/**
- * Complete signup response payload
- */
-export interface CompleteSignupResponse {
-  success: boolean
-  message: string
-  user_id: string
-  nickname: string
-  survey_id: string
-  updated_at: string
-}
-
-/**
  * Profile service
  * Handles all profile-related API calls
  */
@@ -141,13 +110,4 @@ export const profileService = {
     return transport.put<SurveyUpdateResponse>('/api/profile/survey', surveyData)
   },
 
-  /**
-   * Complete unified signup (nickname + profile in one transaction)
-   *
-   * @param payload - Signup payload
-   * @returns Signup response metadata
-   */
-  async completeSignup(payload: CompleteSignupRequest): Promise<CompleteSignupResponse> {
-    return transport.post<CompleteSignupResponse>('/api/signup', payload)
-  },
 }
