@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import SignupPage from '../SignupPage'
-import { mockConfig, setMockScenario } from '../../lib/transport'
+import { mockConfig } from '../../lib/transport'
 
 const mockNavigate = vi.fn()
 
