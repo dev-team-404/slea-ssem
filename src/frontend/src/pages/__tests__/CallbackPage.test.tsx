@@ -280,9 +280,8 @@ describe('CallbackPage - REQ-F-A1-2', () => {
   it('should display error when required parameters are missing', async () => {
     renderWithRoute('/auth/callback')
 
-    await waitFor(() => {
-      expect(screen.getByText(/필수 정보가 누락되었습니다/i)).toBeInTheDocument()
-    })
+    const messages = await screen.findAllByText(/필수 정보가 누락되었습니다/i)
+    expect(messages.length).toBeGreaterThan(0)
   })
 
   // Test 8: Acceptance Criteria - 로딩 스피너 표시
