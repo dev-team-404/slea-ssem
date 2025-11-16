@@ -1,17 +1,24 @@
 """
 Explanation generation service for generating question explanations with reference links.
 
-REQ: REQ-B-B3-Explain
+REQ: REQ-B-B3-Explain, REQ-B-B3-Explain-2
+
+Uses Gemini LLM to generate dynamic explanations based on problem context.
 """
 
+import json
+import logging
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from src.agent.config import create_llm
 from src.backend.models.answer_explanation import AnswerExplanation
 from src.backend.models.question import Question
+
+logger = logging.getLogger(__name__)
 
 
 class ExplainService:
@@ -192,7 +199,9 @@ class ExplainService:
         is_correct: bool,
     ) -> dict[str, Any]:
         """
-        Generate explanation using LLM.
+        Generate explanation using LLM (Gemini with fallback to Mock).
+
+        REQ: REQ-B-B3-Explain-2
 
         Args:
             question: Question object
@@ -206,9 +215,182 @@ class ExplainService:
             TimeoutError: If LLM request times out
 
         """
-        # Mock implementation - placeholder for actual LLM integration
-        # In production, replace with OpenAI/Claude API calls
-        return self._generate_mock_explanation(question, user_answer, is_correct)
+        try:
+            return self._generate_with_gemini(question, user_answer, is_correct)
+        except Exception as e:
+            logger.warning(f"Gemini API failed, falling back to Mock: {e}")
+            return self._generate_mock_explanation(question, user_answer, is_correct)
+
+    def _generate_with_gemini(
+        self,
+        question: Question,
+        user_answer: str | dict,
+        is_correct: bool,
+    ) -> dict[str, Any]:
+        """
+        Generate explanation using Gemini LLM.
+
+        REQ: REQ-B-B3-Explain-2
+
+        Args:
+            question: Question object
+            user_answer: User's submitted answer
+            is_correct: Whether answer is correct
+
+        Returns:
+            Dictionary with 'explanation' and 'reference_links'
+
+        """
+        # Create Gemini LLM client
+        llm = create_llm()
+
+        # Build prompt with question context
+        prompt = self._build_explanation_prompt(question, user_answer, is_correct)
+
+        # Call Gemini LLM
+        response = llm.invoke(prompt)
+        response_text = response.content
+
+        logger.debug(f"Gemini response: {response_text[:200]}...")
+
+        return self._parse_llm_response(response_text)
+
+    def _build_explanation_prompt(
+        self, question: Question, user_answer: str | dict, is_correct: bool
+    ) -> str:
+        """
+        Build LLM prompt with question context for explanation generation.
+
+        REQ: REQ-B-B3-Explain-2
+
+        Args:
+            question: Question object
+            user_answer: User's submitted answer
+            is_correct: Whether answer is correct
+
+        Returns:
+            Formatted prompt string
+
+        """
+        # Format user answer for display
+        if isinstance(user_answer, dict):
+            if "selected_key" in user_answer:
+                user_answer_str = f"선택: {user_answer['selected_key']}"
+            elif "answer" in user_answer:
+                val = user_answer["answer"]
+                user_answer_str = "참" if val else "거짓" if isinstance(val, bool) else str(val)
+            elif "text" in user_answer:
+                user_answer_str = str(user_answer["text"])
+            else:
+                user_answer_str = str(user_answer)
+        else:
+            user_answer_str = str(user_answer)
+
+        # Extract correct answer
+        answer_schema = question.answer_schema or {}
+        correct_key = self._extract_correct_answer_key(answer_schema, question.item_type or "unknown")
+
+        # Build detailed prompt
+        prompt = f"""다음 문제에 대해 사용자 답변을 평가하고 맞춤형 해설을 작성해주세요.
+
+문제 유형: {question.item_type}
+문제 주제: {question.category}
+
+<문제>
+{question.stem}
+</문제>
+
+"""
+
+        # Add choices if available
+        if question.choices:
+            prompt += f"""선택지:
+{chr(10).join(f"- {choice}" for choice in question.choices)}
+
+"""
+
+        # Add answer info
+        prompt += f"""사용자 답변: {user_answer_str}
+정답: {correct_key}
+정오답: {'정답' if is_correct else '오답'}
+
+다음 JSON 포맷으로 해설을 작성해주세요. 괄호는 포함하지 마세요:
+{{
+  "explanation": "[틀린 이유]\\n사용자가 왜 틀렸을 가능성이 있는지 구체적으로 분석해주세요. (50-100자)\\n\\n[정답의 원리]\\n정답이 왜 맞는지, 개념 설명 + 구체적 예시를 포함해주세요. (100-150자)\\n\\n[개념 구분]\\n유사한 개념들을 비교하여 구분해주세요. (50-100자)\\n\\n[복습 팁]\\n사용자가 이 유형의 문제를 잘하기 위한 팁을 제시해주세요. (50-100자)",
+  "reference_links": [
+    {{"title": "참고자료 제목 1", "url": "https://example.com/resource1"}},
+    {{"title": "참고자료 제목 2", "url": "https://example.com/resource2"}},
+    {{"title": "참고자료 제목 3", "url": "https://example.com/resource3"}}
+  ]
+}}
+
+요구사항:
+- 각 섹션은 200자 이상의 구체적이고 유용한 설명이어야 합니다.
+- 문제의 구체적인 내용(stem, 선택지 등)을 활용하여 맞춤형 해설을 작성해주세요.
+- 참고 링크는 3개 이상, 한글 제목 포함해야 합니다.
+- JSON은 유효한 형식이어야 합니다.
+"""
+
+        return prompt
+
+    def _parse_llm_response(self, response_text: str) -> dict[str, Any]:
+        """
+        Parse LLM response and extract structured explanation.
+
+        REQ: REQ-B-B3-Explain-2
+
+        Args:
+            response_text: Claude API response text
+
+        Returns:
+            Dictionary with 'explanation' and 'reference_links'
+
+        Raises:
+            ValueError: If response cannot be parsed
+
+        """
+        try:
+            # Extract JSON from response (may be wrapped in markdown code blocks)
+            if "```json" in response_text:
+                json_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                json_text = response_text.split("```")[1].split("```")[0].strip()
+            else:
+                json_text = response_text.strip()
+
+            # Parse JSON
+            data = json.loads(json_text)
+
+            # Validate structure
+            if "explanation" not in data or "reference_links" not in data:
+                raise ValueError("Missing required fields: explanation, reference_links")
+
+            explanation = data["explanation"]
+            reference_links = data["reference_links"]
+
+            # Validate explanation length
+            if len(explanation) < 200:
+                logger.warning(f"Explanation too short ({len(explanation)} chars), using fallback")
+                raise ValueError(f"Explanation must be at least 200 chars, got {len(explanation)}")
+
+            # Validate reference links
+            if len(reference_links) < 3:
+                logger.warning(f"Not enough reference links ({len(reference_links)}), using fallback")
+                raise ValueError(f"Must have at least 3 reference links, got {len(reference_links)}")
+
+            # Validate link structure
+            for link in reference_links:
+                if not isinstance(link, dict) or "title" not in link or "url" not in link:
+                    raise ValueError(f"Invalid link format: {link}")
+
+            return {
+                "explanation": explanation,
+                "reference_links": reference_links,
+            }
+
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            raise ValueError(f"Invalid LLM response format: {e}")
 
     def _generate_mock_explanation(
         self,
