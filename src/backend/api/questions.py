@@ -238,6 +238,21 @@ class GenerateExplanationRequest(BaseModel):
     attempt_answer_id: str | None = Field(default=None, description="Attempt answer ID (optional)")
 
 
+class ExplanationSection(BaseModel):
+    """Single section of structured explanation."""
+
+    title: str = Field(..., description="Section title (e.g., '핵심 개념', '복습 팁')")
+    content: str = Field(..., description="Section content text")
+
+
+class UserAnswerSummary(BaseModel):
+    """User's answer vs correct answer comparison."""
+
+    user_answer_text: str | None = Field(..., description="User's answer in readable format")
+    correct_answer_text: str | None = Field(..., description="Correct answer in readable format")
+    question_type: str = Field(..., description="Question type (multiple_choice, true_false, short_answer)")
+
+
 class ExplanationResponse(BaseModel):
     """
     Response model for explanation generation.
@@ -248,8 +263,11 @@ class ExplanationResponse(BaseModel):
         id: Explanation ID
         question_id: Question ID
         attempt_answer_id: Attempt answer ID (if provided)
-        explanation_text: Generated explanation (≥500 chars)
+        explanation_text: Generated explanation (≥200 chars)
+        explanation_sections: Structured explanation sections
         reference_links: Reference links with title and url (≥3)
+        user_answer_summary: User's answer vs correct answer
+        problem_statement: Question stem with explanation type context
         is_correct: Whether this is for correct/incorrect answer
         created_at: Timestamp when explanation was generated
         is_fallback: Whether fallback explanation was used
@@ -260,8 +278,14 @@ class ExplanationResponse(BaseModel):
     id: str = Field(..., description="Explanation ID")
     question_id: str = Field(..., description="Question ID")
     attempt_answer_id: str | None = Field(..., description="Attempt answer ID")
-    explanation_text: str = Field(..., description="Generated explanation (≥500 chars)")
+    explanation_text: str = Field(..., description="Generated explanation (≥200 chars)")
+    explanation_sections: list[ExplanationSection] = Field(
+        ...,
+        description="Explanation divided into structured sections for better UX",
+    )
     reference_links: list[dict[str, str]] = Field(..., description="Reference links (≥3)")
+    user_answer_summary: UserAnswerSummary | None = Field(..., description="User's answer vs correct answer comparison")
+    problem_statement: str | None = Field(..., description="Question stem with 오답/정답 해설 context")
     is_correct: bool | None = Field(..., description="Answer correctness context")
     created_at: str = Field(..., description="Creation timestamp (ISO format)")
     is_fallback: bool = Field(..., description="Fallback flag (timeout/error)")

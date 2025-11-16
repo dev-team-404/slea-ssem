@@ -4,7 +4,7 @@ User badge model for storing awarded badges.
 REQ: REQ-B-B4-Plus-1, REQ-B-B4-Plus-2, REQ-B-B4-Plus-3
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
@@ -49,12 +49,12 @@ class UserBadge(Base):
     awarded_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
     )
 
