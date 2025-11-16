@@ -63,8 +63,13 @@ vi.mock('../../lib/transport', async () => {
 })
 
 describe('CallbackPage - REQ-F-A1-2', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     vi.clearAllMocks()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockNavigate.mockReset()
     localStorageMock.clear()
     mockConfig.delay = 0
@@ -74,6 +79,8 @@ describe('CallbackPage - REQ-F-A1-2', () => {
   })
 
   afterEach(() => {
+    consoleErrorSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
     vi.restoreAllMocks()
   })
 
