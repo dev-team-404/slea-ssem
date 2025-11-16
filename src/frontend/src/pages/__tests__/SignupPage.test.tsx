@@ -4,7 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import SignupPage from '../SignupPage'
-import { clearMockRequests, getMockRequests, mockConfig, setMockError } from '../../lib/transport'
+import {
+  clearMockErrors,
+  clearMockRequests,
+  getMockRequests,
+  mockConfig,
+  setMockError,
+} from '../../lib/transport'
 
 const mockNavigate = vi.fn()
 
@@ -25,6 +31,7 @@ beforeEach(() => {
   mockConfig.delay = 0
   mockConfig.simulateError = false
   clearMockRequests()
+    clearMockErrors()
 })
 
 afterEach(() => {
@@ -520,7 +527,6 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
   // Test 1: Happy path - successful signup and redirect
   test('submits nickname and profile, then redirects to home on success', async () => {
     // REQ: REQ-F-A2-Signup-6 - 버튼 클릭 시 nickname + profile 저장 + 홈으로 리다이렉트
-    // mockTransport: handles registration and survey update automatically
     const user = userEvent.setup()
     renderWithRouter(<SignupPage />)
 
@@ -546,6 +552,18 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     // Assert: redirect happens after successful signup
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
+    })
+
+    await waitFor(() => {
+      const requests = getMockRequests({ url: '/api/signup', method: 'POST' })
+      expect(requests).toHaveLength(1)
+    })
+    const [request] = getMockRequests({ url: '/api/signup', method: 'POST' })
+    expect(request.body).toEqual({
+      nickname: 'signup_user1',
+      profile: {
+        level: 'intermediate',
+      },
     })
   })
 
@@ -574,6 +592,13 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
     })
+
+    await waitFor(() => {
+      const requests = getMockRequests({ url: '/api/signup', method: 'POST' })
+      expect(requests).toHaveLength(1)
+    })
+    const [request] = getMockRequests({ url: '/api/signup', method: 'POST' })
+    expect(request.body.profile.level).toBe('advanced')
   })
 
   // Test 3: Loading state during submission
@@ -610,7 +635,7 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     })
 
     mockConfig.delay = 0
-  })
+    })
 
   // Test 4: Error handling - nickname already taken during registration
   test('shows error message when nickname registration fails', async () => {
@@ -655,20 +680,18 @@ describe('SignupPage - REQ-F-A2-Signup-6 (Signup Submission)', () => {
     const level4Radio = screen.getByLabelText(/4 - 고급/i)
     await user.click(level4Radio)
 
-    // Enable error simulation for the submit
-    mockConfig.simulateError = true
+      setMockError('/api/signup', '통합 가입 처리 실패')
 
     const submitButton = screen.getByRole('button', { name: /가입 완료/i })
     await user.click(submitButton)
 
     // Assert: Error message displayed
-    await waitFor(() => {
-      expect(screen.getByText(/Simulated API error/i)).toBeInTheDocument()
-    })
+      await waitFor(() => {
+        expect(screen.getByText(/통합 가입 처리 실패/i)).toBeInTheDocument()
+      })
 
     // Button should be enabled again for retry
     expect(submitButton).not.toBeDisabled()
-
-    mockConfig.simulateError = false
+    clearMockErrors('/api/signup')
   })
 })

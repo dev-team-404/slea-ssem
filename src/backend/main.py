@@ -11,7 +11,7 @@ load_dotenv(dotenv_path=env_file)
 from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from src.backend.api import auth, profile, questions, signup, survey  # noqa: E402
+from src.backend.api import auth, profile, questions, survey  # noqa: E402
 from src.backend.database import init_db  # noqa: E402
 
 app = FastAPI(
@@ -40,7 +40,6 @@ def startup_event() -> None:
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(survey.router, prefix="/survey", tags=["survey"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
-app.include_router(signup.router, prefix="/signup", tags=["signup"])
 app.include_router(questions.router, prefix="/questions", tags=["questions"])
 
 
