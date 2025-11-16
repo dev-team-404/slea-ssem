@@ -74,14 +74,10 @@ describe('SelfAssessmentPage', () => {
   })
 
   test('converts level 1 to "beginner" when submitting', async () => {
-    // REQ: REQ-F-A2-2-2
+    // REQ: REQ-F-A2-2-2 - Uses shared LEVEL_MAPPING from profileLevels.ts
     const mockPut = vi.mocked(transport.transport.put)
     mockPut.mockResolvedValueOnce({
-      success: true,
-      message: '자기평가 정보 업데이트 완료',
-      user_id: 'mock_user',
       survey_id: 'mock_survey_id',
-      updated_at: '2025-11-12T00:00:00Z',
     })
 
     const user = userEvent.setup()
@@ -94,26 +90,24 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/profile/survey', {
+      expect(mockPut).toHaveBeenCalledWith('/api/profile/survey', {
         level: 'beginner',
+        career: 0,
+        interests: [],
       })
     })
   })
 
   test('converts level 2 and 3 to "intermediate" when submitting', async () => {
-    // REQ: REQ-F-A2-2-2
+    // REQ: REQ-F-A2-2-2 - Uses shared LEVEL_MAPPING from profileLevels.ts
     const mockPut = vi.mocked(transport.transport.put)
     mockPut.mockResolvedValue({
-      success: true,
-      message: '자기평가 정보 업데이트 완료',
-      user_id: 'mock_user',
       survey_id: 'mock_survey_id',
-      updated_at: '2025-11-12T00:00:00Z',
     })
 
     const user = userEvent.setup()
 
-    // Test level 2
+    // Test level 2 -> intermediate
     const { unmount } = renderWithRouter(<SelfAssessmentPage />)
     let level2Radio = screen.getByLabelText(/2 - 초급/i)
     await user.click(level2Radio)
@@ -121,12 +115,14 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/profile/survey', {
+      expect(mockPut).toHaveBeenCalledWith('/api/profile/survey', {
         level: 'intermediate',
+        career: 0,
+        interests: [],
       })
     })
 
-    // Reset and test level 3
+    // Reset and test level 3 -> intermediate
     unmount()
     mockPut.mockClear()
     renderWithRouter(<SelfAssessmentPage />)
@@ -136,26 +132,24 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/profile/survey', {
+      expect(mockPut).toHaveBeenCalledWith('/api/profile/survey', {
         level: 'intermediate',
+        career: 0,
+        interests: [],
       })
     })
   })
 
   test('converts level 4 and 5 to "advanced" when submitting', async () => {
-    // REQ: REQ-F-A2-2-2
+    // REQ: REQ-F-A2-2-2 - Uses shared LEVEL_MAPPING from profileLevels.ts
     const mockPut = vi.mocked(transport.transport.put)
     mockPut.mockResolvedValue({
-      success: true,
-      message: '자기평가 정보 업데이트 완료',
-      user_id: 'mock_user',
       survey_id: 'mock_survey_id',
-      updated_at: '2025-11-12T00:00:00Z',
     })
 
     const user = userEvent.setup()
 
-    // Test level 4
+    // Test level 4 -> advanced
     const { unmount } = renderWithRouter(<SelfAssessmentPage />)
     let level4Radio = screen.getByLabelText(/4 - 고급/i)
     await user.click(level4Radio)
@@ -163,12 +157,14 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/profile/survey', {
+      expect(mockPut).toHaveBeenCalledWith('/api/profile/survey', {
         level: 'advanced',
+        career: 0,
+        interests: [],
       })
     })
 
-    // Reset and test level 5
+    // Reset and test level 5 -> advanced
     unmount()
     mockPut.mockClear()
     renderWithRouter(<SelfAssessmentPage />)
@@ -178,8 +174,10 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith('/profile/survey', {
+      expect(mockPut).toHaveBeenCalledWith('/api/profile/survey', {
         level: 'advanced',
+        career: 0,
+        interests: [],
       })
     })
   })
@@ -188,11 +186,7 @@ describe('SelfAssessmentPage', () => {
     // REQ: REQ-F-A2-2-4
     const mockPut = vi.mocked(transport.transport.put)
     mockPut.mockResolvedValueOnce({
-      success: true,
-      message: '자기평가 정보 업데이트 완료',
-      user_id: 'mock_user',
       survey_id: 'mock_survey_id',
-      updated_at: '2025-11-12T00:00:00Z',
     })
 
     const user = userEvent.setup()
@@ -205,7 +199,10 @@ describe('SelfAssessmentPage', () => {
     await user.click(completeButton)
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/profile-review', { replace: true })
+      expect(mockNavigate).toHaveBeenCalledWith('/profile-review', {
+        replace: true,
+        state: { level: 3, surveyId: 'mock_survey_id' },
+      })
     })
   })
 
@@ -249,11 +246,7 @@ describe('SelfAssessmentPage', () => {
           setTimeout(
             () =>
               resolve({
-                success: true,
-                message: '자기평가 정보 업데이트 완료',
-                user_id: 'mock_user',
                 survey_id: 'mock_survey_id',
-                updated_at: '2025-11-12T00:00:00Z',
               }),
             100
           )
@@ -274,7 +267,10 @@ describe('SelfAssessmentPage', () => {
     expect(screen.getByText(/제출 중.../i)).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/profile-review', { replace: true })
+      expect(mockNavigate).toHaveBeenCalledWith('/profile-review', {
+        replace: true,
+        state: { level: 3, surveyId: 'mock_survey_id' },
+      })
     })
   })
 })

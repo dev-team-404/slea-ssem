@@ -258,6 +258,19 @@
   margin-top: 2rem;
 }
 
+/* Submit error message (REQ-F-A2-Signup-6) */
+.submit-error-message {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background-color: var(--color-error);
+  color: var(--color-error-text);
+  border: 1px solid var(--color-error-border);
+  text-align: center;
+}
+
 .submit-button {
   width: 100%;
   padding: 0.9rem;

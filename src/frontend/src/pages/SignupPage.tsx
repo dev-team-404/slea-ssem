@@ -1,6 +1,11 @@
-// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4
+// REQ: REQ-F-A2-Signup-3, REQ-F-A2-Signup-4, REQ-F-A2-Signup-5, REQ-F-A2-Signup-6
 import React, { useCallback, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNicknameCheck } from '../hooks/useNicknameCheck'
+import { profileService } from '../services'
+import { LEVEL_MAPPING } from '../constants/profileLevels'
+import NicknameInputSection from '../components/NicknameInputSection'
+import LevelSelector from '../components/LevelSelector'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SignupPage.css'
 
@@ -9,6 +14,8 @@ import './SignupPage.css'
  *
  * REQ: REQ-F-A2-Signup-3 - 통합 회원가입 페이지에 닉네임 입력 섹션 표시
  * REQ: REQ-F-A2-Signup-4 - 통합 회원가입 페이지에 자기평가 입력 섹션 표시 (수준만)
+ * REQ: REQ-F-A2-Signup-5 - 닉네임 중복 확인 완료 + 모든 필수 필드 입력 시 "가입 완료" 버튼 활성화
+ * REQ: REQ-F-A2-Signup-6 - "가입 완료" 버튼 클릭 시 nickname + profile 저장 후 홈화면으로 리다이렉트
  *
  * Features:
  * - Nickname input section (REQ-F-A2-Signup-3)
@@ -18,27 +25,19 @@ import './SignupPage.css'
  *   - Suggestions on duplicate (up to 3)
  * - Profile input section (REQ-F-A2-Signup-4)
  *   - Level slider (1-5)
- * - Submit button (REQ-F-A2-Signup-5/6, to be implemented)
+ * - Submit button activation (REQ-F-A2-Signup-5)
+ *   - Enabled when: checkStatus === 'available' AND level !== null
+ *   - Disabled otherwise
+ * - Signup submission (REQ-F-A2-Signup-6)
+ *   - Calls registerNickname API
+ *   - Calls updateSurvey API with LEVEL_MAPPING
+ *   - Redirects to home on success
  *
  * Route: /signup
  */
 
-type LevelOption = {
-  value: number
-  label: string
-  description: string
-}
-
-const LEVEL_OPTIONS: LevelOption[] = [
-  { value: 1, label: '1 - 입문', description: '기초 개념 학습 중' },
-  { value: 2, label: '2 - 초급', description: '기본 업무 수행 가능' },
-  { value: 3, label: '3 - 중급', description: '독립적으로 업무 수행' },
-  { value: 4, label: '4 - 고급', description: '복잡한 문제 해결 가능' },
-  { value: 5, label: '5 - 전문가', description: '다른 사람을 지도 가능' },
-]
-
 const SignupPage: React.FC = () => {
-  // REQ-F-A2-Signup-3: Nickname state
+  // REQ-F-A2-Signup-3: Nickname state (from useNicknameCheck hook)
   const {
     nickname,
     setNickname,
@@ -51,39 +50,45 @@ const SignupPage: React.FC = () => {
   // REQ-F-A2-Signup-4: Level state
   const [level, setLevel] = useState<number | null>(null)
 
-  const handleCheckClick = useCallback(() => {
-    checkNickname()
-  }, [checkNickname])
+  // REQ-F-A2-Signup-6: Submit state
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
-  // Memoize status message to avoid recalculation on every render
-  const statusMessage = useMemo(() => {
-    if (checkStatus === 'available') {
-      return {
-        text: '사용 가능한 닉네임입니다.',
-        className: 'status-message success',
-      }
-    }
-    if (checkStatus === 'taken') {
-      return {
-        text: '이미 사용 중인 닉네임입니다.',
-        className: 'status-message error',
-      }
-    }
-    if (checkStatus === 'error' && errorMessage) {
-      return {
-        text: errorMessage,
-        className: 'status-message error',
-      }
-    }
-    return null
-  }, [checkStatus, errorMessage])
+  // REQ-F-A2-Signup-5: Submit button activation logic
+  // Enable when: nickname is available AND level is selected AND not submitting
+  const isSubmitDisabled = useMemo(() => {
+    return checkStatus !== 'available' || level === null || isSubmitting
+  }, [checkStatus, level, isSubmitting])
 
-  const handleLevelChange = useCallback((selectedLevel: number) => {
-    setLevel(selectedLevel)
-  }, [])
+  // REQ-F-A2-Signup-6: Submit handler (NicknameSetupPage pattern reuse)
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitDisabled || isSubmitting) return
 
-  const isChecking = checkStatus === 'checking'
-  const isCheckButtonDisabled = isChecking || nickname.length === 0
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      // Step 1: Register nickname (reusing profileService)
+      await profileService.registerNickname(nickname)
+
+      // Step 2: Update survey (reusing profileService + LEVEL_MAPPING)
+      await profileService.updateSurvey({
+        level: LEVEL_MAPPING[level!],
+        career: 0, // MVP: placeholder
+        interests: [], // MVP: placeholder
+      })
+
+      // Step 3: Navigate to home (success case)
+      navigate('/', { replace: true })
+    } catch (error) {
+      // Error handling pattern (reusing from NicknameSetupPage)
+      const message =
+        error instanceof Error ? error.message : '가입 완료에 실패했습니다.'
+      setSubmitError(message)
+      setIsSubmitting(false)
+    }
+  }, [nickname, level, isSubmitting, isSubmitDisabled, navigate])
 
   return (
     <main className="signup-page">
@@ -94,112 +99,46 @@ const SignupPage: React.FC = () => {
         </p>
 
         {/* REQ-F-A2-Signup-3: Nickname Section */}
-        <section className="nickname-section">
-          <h2 className="section-title">닉네임 설정</h2>
-
-          <div className="form-group">
-            <label htmlFor="nickname-input" className="form-label">
-              닉네임
-            </label>
-            <div className="input-group">
-              <input
-                id="nickname-input"
-                type="text"
-                className="nickname-input"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="영문자, 숫자, 언더스코어 (3-30자)"
-                maxLength={30}
-                disabled={isChecking}
-              />
-              <button
-                className="check-button"
-                onClick={handleCheckClick}
-                disabled={isCheckButtonDisabled}
-              >
-                {isChecking ? '확인 중...' : '중복 확인'}
-              </button>
-            </div>
-
-            {statusMessage && (
-              <p className={statusMessage.className}>{statusMessage.text}</p>
-            )}
-
-            {checkStatus === 'taken' && suggestions.length > 0 && (
-              <div className="suggestions">
-                <p className="suggestions-title">추천 닉네임:</p>
-                <ul className="suggestions-list">
-                  {suggestions.map((suggestion) => (
-                    <li key={suggestion}>
-                      <button
-                        className="suggestion-button"
-                        onClick={() => setNickname(suggestion)}
-                      >
-                        {suggestion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <InfoBox title="닉네임 규칙">
-            <ul className="info-list">
-              <li>3-30자 사이로 입력해주세요</li>
-              <li>영문자, 숫자, 언더스코어(_)만 사용 가능합니다</li>
-              <li>금칙어는 사용할 수 없습니다</li>
-            </ul>
-          </InfoBox>
-        </section>
+        <NicknameInputSection
+          nickname={nickname}
+          setNickname={setNickname}
+          checkStatus={checkStatus}
+          errorMessage={errorMessage}
+          suggestions={suggestions}
+          onCheckClick={checkNickname}
+          disabled={false}
+          showInfoBox={true}
+        />
 
         {/* REQ-F-A2-Signup-4: Profile Section (Level only) */}
-        <section className="profile-section">
-          <h2 className="section-title">자기평가 정보</h2>
+        <LevelSelector
+          value={level}
+          onChange={setLevel}
+          disabled={false}
+          showTitle={true}
+        />
 
-          <div className="form-group">
-            <label className="form-label">기술 수준</label>
-            <div className="level-options">
-              {LEVEL_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className={`level-option ${level === option.value ? 'selected' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="level"
-                    value={option.value}
-                    checked={level === option.value}
-                    onChange={() => handleLevelChange(option.value)}
-                    aria-label={option.label}
-                  />
-                  <div className="level-content">
-                    <div className="level-label">{option.label}</div>
-                    <div className="level-description">{option.description}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
+        <InfoBox title="향후 추가 예정" icon={InfoBoxIcons.clock}>
+          <ul className="info-list">
+            <li>경력(연차) 입력</li>
+            <li>직군 선택</li>
+            <li>담당 업무 입력</li>
+            <li>관심분야 다중 선택</li>
+          </ul>
+        </InfoBox>
 
-          <InfoBox title="향후 추가 예정" icon={InfoBoxIcons.clock}>
-            <ul className="info-list">
-              <li>경력(연차) 입력</li>
-              <li>직군 선택</li>
-              <li>담당 업무 입력</li>
-              <li>관심분야 다중 선택</li>
-            </ul>
-          </InfoBox>
-        </section>
-
-        {/* REQ-F-A2-Signup-5/6: Submit Button (to be implemented) */}
+        {/* REQ-F-A2-Signup-5/6: Submit Button */}
         <div className="form-actions">
+          {submitError && (
+            <p className="submit-error-message">{submitError}</p>
+          )}
           <button
             type="button"
             className="submit-button"
-            disabled={true}
+            disabled={isSubmitDisabled}
+            onClick={handleSubmit}
           >
-            가입 완료
+            {isSubmitting ? '가입 중...' : '가입 완료'}
           </button>
         </div>
       </div>
