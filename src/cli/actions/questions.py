@@ -1237,6 +1237,12 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
         context.console.print(f"[yellow]{user_answer_summary.get('correct_answer_text', 'N/A')}[/yellow]")
         context.console.print()
 
+    # Display problem statement if available
+    problem_statement = response.get("problem_statement")
+    if problem_statement:
+        context.console.print(f"[dim]{problem_statement}[/dim]")
+        context.console.print()
+
     # Display explanation sections in a clean, readable format
     explanation_sections = response.get("explanation_sections", [])
     if explanation_sections:

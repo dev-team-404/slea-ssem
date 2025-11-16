@@ -577,6 +577,13 @@ class ExplainService:
                 is_correct=explanation.is_correct,
             )
 
+        # Extract problem statement for display
+        problem_statement = None
+        if question:
+            problem_statement = self._extract_problem_statement(
+                question.stem, explanation.is_correct
+            )
+
         return {
             "id": explanation.id,
             "question_id": explanation.question_id,
@@ -585,6 +592,7 @@ class ExplainService:
             "explanation_sections": sections,
             "reference_links": explanation.reference_links,
             "user_answer_summary": user_answer_summary,
+            "problem_statement": problem_statement,
             "is_correct": explanation.is_correct,
             "created_at": explanation.created_at.isoformat(),
             "is_fallback": False,
@@ -714,6 +722,23 @@ class ExplainService:
             return f"정답: {correct_answer}"
 
         return "정답: [정보 없음]"
+
+    def _extract_problem_statement(self, stem: str, is_correct: bool) -> str:
+        """
+        Extract problem statement for display.
+
+        Formats the question stem with "오답/정답 해설입니다" suffix.
+
+        Args:
+            stem: Question stem/text
+            is_correct: Whether this is for correct answer
+
+        Returns:
+            Formatted problem statement string
+
+        """
+        statement_type = "정답" if is_correct else "오답"
+        return f"'{stem}'에 대한 {statement_type} 해설입니다."
 
     def _create_fallback_explanation(
         self,

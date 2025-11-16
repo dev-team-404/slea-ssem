@@ -267,6 +267,7 @@ class ExplanationResponse(BaseModel):
         explanation_sections: Structured explanation sections
         reference_links: Reference links with title and url (≥3)
         user_answer_summary: User's answer vs correct answer
+        problem_statement: Question stem with explanation type context
         is_correct: Whether this is for correct/incorrect answer
         created_at: Timestamp when explanation was generated
         is_fallback: Whether fallback explanation was used
@@ -284,6 +285,7 @@ class ExplanationResponse(BaseModel):
     )
     reference_links: list[dict[str, str]] = Field(..., description="Reference links (≥3)")
     user_answer_summary: UserAnswerSummary | None = Field(..., description="User's answer vs correct answer comparison")
+    problem_statement: str | None = Field(..., description="Question stem with 오답/정답 해설 context")
     is_correct: bool | None = Field(..., description="Answer correctness context")
     created_at: str = Field(..., description="Creation timestamp (ISO format)")
     is_fallback: bool = Field(..., description="Fallback flag (timeout/error)")
