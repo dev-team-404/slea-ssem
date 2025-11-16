@@ -64,4 +64,5 @@ export {
   clearMockRequests,
   setMockError,
   clearMockErrors,
+  resetMockResults,
 } from './mockTransport'
