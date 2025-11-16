@@ -115,13 +115,156 @@ const mockData: Record<string, any> = {
       question_id: '',
       saved_at: new Date().toISOString(),
     },
-    [API_RESULTS_PREVIOUS]: {
-      grade: 'Beginner',
-      score: 65,
-      test_date: '2025-01-10T10:00:00Z',
-    },
   // Add more mock endpoints here
 }
+
+type GradeResultMock = {
+  user_id: number
+  grade: string
+  score: number
+  rank: number
+  total_cohort_size: number
+  percentile: number
+  percentile_confidence: 'medium' | 'high'
+  percentile_description: string
+  grade_distribution: Array<{
+    grade: string
+    count: number
+    percentage: number
+  }>
+}
+
+type PreviousResultSummary = {
+  grade: string
+  score: number
+  test_date: string
+}
+
+const RESULT_SEQUENCE: GradeResultMock[] = [
+  {
+    user_id: 1,
+    grade: 'Beginner',
+    score: 58,
+    rank: 420,
+    total_cohort_size: 506,
+    percentile: 24,
+    percentile_confidence: 'medium',
+    percentile_description: '상위 76%',
+    grade_distribution: [
+      { grade: 'Beginner', count: 198, percentage: 39.1 },
+      { grade: 'Intermediate', count: 152, percentage: 30.0 },
+      { grade: 'Intermediate-Advanced', count: 76, percentage: 15.0 },
+      { grade: 'Advanced', count: 52, percentage: 10.3 },
+      { grade: 'Elite', count: 28, percentage: 5.6 },
+    ],
+  },
+  {
+    user_id: 1,
+    grade: 'Advanced',
+    score: 88,
+    rank: 48,
+    total_cohort_size: 506,
+    percentile: 91,
+    percentile_confidence: 'high',
+    percentile_description: '상위 9%',
+    grade_distribution: [
+      { grade: 'Beginner', count: 80, percentage: 15.8 },
+      { grade: 'Intermediate', count: 146, percentage: 28.8 },
+      { grade: 'Intermediate-Advanced', count: 138, percentage: 27.3 },
+      { grade: 'Advanced', count: 94, percentage: 18.6 },
+      { grade: 'Elite', count: 48, percentage: 9.5 },
+    ],
+  },
+]
+
+const TEST_DATE_SEQUENCE = [
+  '2025-01-10T10:00:00Z',
+  '2025-02-18T09:45:00Z',
+  '2025-03-22T09:30:00Z',
+]
+
+let sessionSequenceCounter = 0
+const sessionAttemptOrder = new Map<string, number>()
+const sessionResultsCache = new Map<string, GradeResultMock>()
+const completedResultsHistory: PreviousResultSummary[] = []
+let nextPreviousResult: PreviousResultSummary | null = null
+
+const hasMockOverride = (endpoint: string): boolean =>
+  Object.prototype.hasOwnProperty.call(mockData, endpoint)
+
+const isEndpointOverridden = (endpoint: string): boolean =>
+  overriddenEndpoints.has(endpoint)
+
+const deepClone = <T>(data: T): T => JSON.parse(JSON.stringify(data))
+
+const cloneQuestions = (questions: any[]) =>
+  questions.map(question => ({
+    ...question,
+    choices: Array.isArray(question.choices) ? [...question.choices] : null,
+  }))
+
+const determineTestDate = (attemptIndex: number): string => {
+  const templateIndex = Math.min(attemptIndex - 1, TEST_DATE_SEQUENCE.length - 1)
+  return TEST_DATE_SEQUENCE[templateIndex] ?? new Date().toISOString()
+}
+
+const preparePreviousResultForAttempt = (attemptIndex: number) => {
+  const previousAttemptIndex = attemptIndex - 1
+  if (previousAttemptIndex <= 0) {
+    nextPreviousResult = null
+    return
+  }
+
+  const fallback = completedResultsHistory[completedResultsHistory.length - 1] ?? null
+  nextPreviousResult = completedResultsHistory[previousAttemptIndex - 1] ?? fallback
+}
+
+const buildSessionId = (attemptIndex: number) =>
+  `mock_session_${String(attemptIndex).padStart(3, '0')}`
+
+const beginAttempt = (): number => {
+  sessionSequenceCounter += 1
+  preparePreviousResultForAttempt(sessionSequenceCounter)
+  return sessionSequenceCounter
+}
+
+const registerSessionAttempt = (sessionId: string, attemptIndex: number) => {
+  sessionAttemptOrder.set(sessionId, attemptIndex)
+}
+
+const resolveAttemptIndex = (sessionId: string): number => {
+  const existing = sessionAttemptOrder.get(sessionId)
+  if (existing) {
+    return existing
+  }
+  const fallback = sessionSequenceCounter || 1
+  sessionAttemptOrder.set(sessionId, fallback)
+  return fallback
+}
+
+const recordCompletedResult = (attemptIndex: number, result: GradeResultMock) => {
+  const summary: PreviousResultSummary = {
+    grade: result.grade,
+    score: Math.round(result.score),
+    test_date: determineTestDate(attemptIndex),
+  }
+  completedResultsHistory[attemptIndex - 1] = summary
+}
+
+const getResultForAttempt = (attemptIndex: number): GradeResultMock => {
+  const templateIndex = Math.min(attemptIndex - 1, RESULT_SEQUENCE.length - 1)
+  return deepClone(RESULT_SEQUENCE[templateIndex])
+}
+
+const resetResultProgression = () => {
+  sessionSequenceCounter = 0
+  sessionAttemptOrder.clear()
+  sessionResultsCache.clear()
+  completedResultsHistory.length = 0
+  nextPreviousResult = null
+}
+
+const overriddenEndpoints = new Set<string>()
 
 // Track taken nicknames for mock: 이미 사용 중인 닉네임 목록
 const takenNicknames = new Set(['admin', 'test', 'mockuser', 'existing_user'])
@@ -170,6 +313,7 @@ class MockTransport implements HttpTransport {
       if (!response) {
         throw new Error('Mock login response not configured')
       }
+        resetResultProgression()
       console.log('[Mock Transport] Response:', response)
       return response as T
     }
@@ -293,9 +437,24 @@ class MockTransport implements HttpTransport {
     // Handle questions generate endpoint
     if (normalizedUrl === API_QUESTIONS_GENERATE && method === 'POST') {
       console.log('[Mock Transport] Generating questions for:', requestData)
-      const response = mockData[API_QUESTIONS_GENERATE]
-      console.log('[Mock Transport] Response:', response)
-      return response as T
+        const template = mockData[API_QUESTIONS_GENERATE]
+        if (!template) {
+          throw new Error('Mock questions response not configured')
+        }
+
+        const attemptIndex = beginAttempt()
+        const preferredSessionId = isEndpointOverridden(API_QUESTIONS_GENERATE)
+          ? template.session_id
+          : undefined
+        const sessionId = preferredSessionId ?? buildSessionId(attemptIndex)
+        registerSessionAttempt(sessionId, attemptIndex)
+        const response = {
+          ...template,
+          session_id: sessionId,
+          questions: cloneQuestions(template.questions || []),
+        }
+        console.log('[Mock Transport] Response:', response)
+        return response as T
     }
 
     // Handle questions autosave endpoint
@@ -318,39 +477,39 @@ class MockTransport implements HttpTransport {
       return response as T
     }
 
-    // Handle GET /api/results/{sessionId} endpoint
-    if (normalizedUrl.startsWith('/api/results/') && method === 'GET') {
-      const storedResult = mockData[normalizedUrl]
-      if (typeof storedResult !== 'undefined') {
-        console.log('[Mock Transport] Response:', storedResult)
-        return storedResult as T
-      }
-
-      const sessionId = normalizedUrl.split('/').pop()
-      if (sessionId && sessionId !== 'previous') {
-        console.log('[Mock Transport] Fetching results for session:', sessionId)
-        const mockResultData = {
-          user_id: 1,
-          grade: 'Advanced',
-          score: 82.5,
-          rank: 3,
-          total_cohort_size: 506,
-          percentile: 72.0,
-          percentile_confidence: 'high',
-          percentile_description: '상위 28%',
-          grade_distribution: [
-            { grade: 'Beginner', count: 102, percentage: 20.2 },
-            { grade: 'Intermediate', count: 156, percentage: 30.8 },
-            { grade: 'Intermediate-Advanced', count: 98, percentage: 19.4 },
-            { grade: 'Advanced', count: 95, percentage: 18.8 },
-            { grade: 'Elite', count: 55, percentage: 10.8 },
-          ],
+      // Handle GET /api/results/{sessionId} endpoint
+      if (normalizedUrl.startsWith('/api/results/') && method === 'GET') {
+        if (normalizedUrl === API_RESULTS_PREVIOUS) {
+          if (hasMockOverride(normalizedUrl)) {
+            const override = mockData[normalizedUrl]
+            console.log('[Mock Transport] Response (override):', override)
+            return override as T
+          }
+          console.log('[Mock Transport] Response (previous):', nextPreviousResult)
+          return (nextPreviousResult ?? null) as T
         }
 
-        console.log('[Mock Transport] Response:', mockResultData)
-        return mockResultData as T
+        if (hasMockOverride(normalizedUrl)) {
+          const override = mockData[normalizedUrl]
+          console.log('[Mock Transport] Response (override):', override)
+          return override as T
+        }
+
+        const sessionId = normalizedUrl.split('/').pop()
+        if (sessionId && sessionId !== 'previous') {
+          const attemptIndex = resolveAttemptIndex(sessionId)
+          let result = sessionResultsCache.get(sessionId)
+
+          if (!result) {
+            result = getResultForAttempt(attemptIndex)
+            sessionResultsCache.set(sessionId, result)
+            recordCompletedResult(attemptIndex, result)
+          }
+
+          console.log('[Mock Transport] Response:', result)
+          return deepClone(result) as T
+        }
       }
-    }
 
     // Find mock data for this endpoint
     const data = mockData[normalizedUrl]
@@ -384,7 +543,9 @@ export const mockTransport = new MockTransport()
 
 // Helper to update mock data at runtime
 export function setMockData(endpoint: string, data: any) {
-  mockData[ensureApiPath(endpoint)] = data
+  const normalized = ensureApiPath(endpoint)
+  mockData[normalized] = data
+  overriddenEndpoints.add(normalized)
 }
 
 // Helper to read mock data (useful for assertions in tests)
@@ -420,9 +581,13 @@ export function clearMockErrors(endpoint?: string) {
   }
 }
 
+export function resetMockResults() {
+  resetResultProgression()
+}
+
 // Helper to simulate different scenarios
 export function setMockScenario(
-  scenario: 'no-nickname' | 'has-nickname' | 'no-survey' | 'has-survey' | 'error'
+  scenario: 'no-nickname' | 'has-nickname' | 'no-survey' | 'has-survey' | 'error' | 'reset-results'
 ) {
   switch (scenario) {
     case 'no-nickname':
@@ -457,6 +622,10 @@ export function setMockScenario(
       break
     case 'error':
       mockConfig.simulateError = true
+      break
+    case 'reset-results':
+      resetMockResults()
+      mockConfig.simulateError = false
       break
   }
   console.log(`[Mock Transport] Scenario set to: ${scenario}`)
