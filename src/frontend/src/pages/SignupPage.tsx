@@ -55,40 +55,35 @@ const SignupPage: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  // REQ-F-A2-Signup-5: Submit button activation logic
-  // Enable when: nickname is available AND level is selected AND not submitting
-  const isSubmitDisabled = useMemo(() => {
-    return checkStatus !== 'available' || level === null || isSubmitting
-  }, [checkStatus, level, isSubmitting])
+    // REQ-F-A2-Signup-5: Submit button activation logic
+    // Enable when: nickname is available AND level is selected AND not submitting
+    const isSubmitDisabled = useMemo(() => {
+      return checkStatus !== 'available' || level === null || isSubmitting
+    }, [checkStatus, level, isSubmitting])
 
-  // REQ-F-A2-Signup-6: Submit handler (NicknameSetupPage pattern reuse)
-  const handleSubmit = useCallback(async () => {
-    if (isSubmitDisabled || isSubmitting) return
+    // REQ-F-A2-Signup-6: Submit handler (NicknameSetupPage pattern reuse)
+    const handleSubmit = useCallback(async () => {
+      if (isSubmitDisabled || isSubmitting) return
 
-    setIsSubmitting(true)
-    setSubmitError(null)
+      setIsSubmitting(true)
+      setSubmitError(null)
 
-    try {
-      // Step 1: Register nickname (reusing profileService)
-      await profileService.registerNickname(nickname)
+      try {
+        await profileService.completeSignup({
+          nickname,
+          profile: {
+            level: LEVEL_MAPPING[level!],
+          },
+        })
 
-      // Step 2: Update survey (reusing profileService + LEVEL_MAPPING)
-      await profileService.updateSurvey({
-        level: LEVEL_MAPPING[level!],
-        career: 0, // MVP: placeholder
-        interests: [], // MVP: placeholder
-      })
-
-      // Step 3: Navigate to home (success case)
-      navigate('/', { replace: true })
-    } catch (error) {
-      // Error handling pattern (reusing from NicknameSetupPage)
-      const message =
-        error instanceof Error ? error.message : '가입 완료에 실패했습니다.'
-      setSubmitError(message)
-      setIsSubmitting(false)
-    }
-  }, [nickname, level, isSubmitting, isSubmitDisabled, navigate])
+        navigate('/', { replace: true })
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : '가입 완료에 실패했습니다.'
+        setSubmitError(message)
+        setIsSubmitting(false)
+      }
+    }, [nickname, level, isSubmitting, isSubmitDisabled, navigate])
 
   return (
     <main className="signup-page">

@@ -7,6 +7,7 @@ const API_PROFILE_NICKNAME = '/api/profile/nickname'
 const API_PROFILE_NICKNAME_CHECK = '/api/profile/nickname/check'
 const API_PROFILE_REGISTER = '/api/profile/register'
 const API_PROFILE_SURVEY = '/api/profile/survey'
+const API_SIGNUP = '/api/signup'
 const API_QUESTIONS_GENERATE = '/api/questions/generate'
 const API_QUESTIONS_AUTOSAVE = '/api/questions/autosave'
 const API_RESULTS_PREVIOUS = '/api/results/previous'
@@ -106,20 +107,20 @@ const mockData: Record<string, any> = {
         choices: null,
         difficulty: 6,
         category: 'ML Fundamentals',
-      },
-    ],
-  },
-  [API_QUESTIONS_AUTOSAVE]: {
-    saved: true,
-    session_id: 'mock_session_123',
-    question_id: '',
-    saved_at: new Date().toISOString(),
-  },
-  [API_RESULTS_PREVIOUS]: {
-    grade: 'Beginner',
-    score: 65,
-    test_date: '2025-01-10T10:00:00Z',
-  },
+        },
+      ],
+    },
+    [API_QUESTIONS_AUTOSAVE]: {
+      saved: true,
+      session_id: 'mock_session_123',
+      question_id: '',
+      saved_at: new Date().toISOString(),
+    },
+    [API_RESULTS_PREVIOUS]: {
+      grade: 'Beginner',
+      score: 65,
+      test_date: '2025-01-10T10:00:00Z',
+    },
   // Add more mock endpoints here
 }
 
@@ -192,7 +193,68 @@ class MockTransport implements HttpTransport {
       return response as T
     }
 
-    // Handle nickname register endpoint
+      // Handle unified signup endpoint
+      if (normalizedUrl === API_SIGNUP && method === 'POST') {
+        const nickname: string | undefined = requestData?.nickname
+        const profilePayload = requestData?.profile ?? {}
+
+        if (!nickname) {
+          throw new Error('닉네임을 입력해주세요.')
+        }
+
+        if (nickname.length < 3) {
+          throw new Error('닉네임은 3자 이상이어야 합니다.')
+        }
+
+        if (nickname.length > 30) {
+          throw new Error('닉네임은 30자 이하여야 합니다.')
+        }
+
+        const validPattern = /^[a-zA-Z0-9_]+$/
+        if (!validPattern.test(nickname)) {
+          throw new Error('닉네임은 영문자, 숫자, 언더스코어만 사용 가능합니다.')
+        }
+
+        if (takenNicknames.has(nickname.toLowerCase())) {
+          throw new Error('이미 사용 중인 닉네임입니다.')
+        }
+
+        const validLevels = ['beginner', 'intermediate', 'advanced']
+        if (profilePayload.level && !validLevels.includes(profilePayload.level)) {
+          throw new Error('Invalid level. Must be one of: beginner, intermediate, advanced')
+        }
+
+        takenNicknames.add(nickname.toLowerCase())
+        const timestamp = new Date().toISOString()
+        mockData[API_PROFILE_NICKNAME] = {
+          ...mockData[API_PROFILE_NICKNAME],
+          nickname,
+          registered_at: timestamp,
+          updated_at: timestamp,
+        }
+
+        mockData[API_PROFILE_SURVEY] = {
+          level: profilePayload.level ?? null,
+          career: profilePayload.career ?? null,
+          job_role: profilePayload.job_role ?? null,
+          duty: profilePayload.duty ?? null,
+          interests: profilePayload.interests ?? null,
+        }
+
+        const response = {
+          success: true,
+          message: '회원가입 완료',
+          user_id: mockData[API_PROFILE_NICKNAME].user_id,
+          nickname,
+          survey_id: `survey_${Date.now()}`,
+          updated_at: timestamp,
+        }
+
+        console.log('[Mock Transport] Response:', response)
+        return response as T
+      }
+
+      // Handle nickname register endpoint
     if (normalizedUrl === API_PROFILE_REGISTER && method === 'POST' && requestData?.nickname) {
       const nickname: string = requestData.nickname
 

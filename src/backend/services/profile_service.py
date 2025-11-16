@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.backend.models.user import User
@@ -292,6 +293,70 @@ class ProfileService:
             "survey_id": survey.id,
             "user_id": survey.user_id,
             "self_level": survey.self_level,
+            "submitted_at": survey.submitted_at.isoformat(),
+        }
+
+    def complete_signup(self, user_id: int, nickname: str, profile_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Complete signup by updating nickname and creating profile survey in a single transaction.
+
+        REQ: REQ-B-A2-Signup
+
+        Args:
+            user_id: Authenticated user ID
+            nickname: Desired nickname
+            profile_data: Survey payload using service field names
+
+        Returns:
+            Dictionary with nickname and survey metadata
+
+        Raises:
+            ValueError: If nickname or survey data invalid
+            Exception: On database errors or missing user
+        """
+
+        # Validate nickname upfront
+        is_valid, error_msg = NicknameValidator.validate(nickname)
+        if not is_valid:
+            raise ValueError(error_msg)
+
+        # Check for duplicate nickname
+        existing = self.session.query(User).filter_by(nickname=nickname).first()
+        if existing:
+            raise ValueError(f"Nickname '{nickname}' is already taken.")
+
+        # Validate survey data if provided
+        self._validate_survey_data(profile_data)
+
+        # Ensure user exists
+        user = self.session.query(User).filter_by(id=user_id).first()
+        if not user:
+            raise Exception(f"User with id {user_id} not found.")
+
+        now = datetime.now(UTC)
+        survey = UserProfileSurvey(
+            user_id=user_id,
+            self_level=profile_data.get("self_level"),
+            years_experience=profile_data.get("years_experience"),
+            job_role=profile_data.get("job_role"),
+            duty=profile_data.get("duty"),
+            interests=profile_data.get("interests"),
+            submitted_at=now,
+        )
+
+        try:
+            with self.session.begin():
+                user.nickname = nickname
+                user.updated_at = now
+                self.session.add(survey)
+        except SQLAlchemyError as exc:
+            self.session.rollback()
+            raise Exception("Failed to complete signup transaction") from exc
+
+        return {
+            "user_id": user_id,
+            "nickname": nickname,
+            "survey_id": survey.id,
             "submitted_at": survey.submitted_at.isoformat(),
         }
 

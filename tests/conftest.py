@@ -160,6 +160,7 @@ def client(db_session: Session, authenticated_user: User) -> Generator[TestClien
     from src.backend.api.auth import router as auth_router
     from src.backend.api.profile import router as profile_router
     from src.backend.api.questions import router as questions_router
+    from src.backend.api.signup import router as signup_router
     from src.backend.api.survey import router as survey_router
     from src.backend.utils.auth import get_current_user
 
@@ -167,6 +168,7 @@ def client(db_session: Session, authenticated_user: User) -> Generator[TestClien
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
     app.include_router(profile_router, prefix="/profile", tags=["profile"])
     app.include_router(survey_router, prefix="/survey", tags=["survey"])
+    app.include_router(signup_router, prefix="/signup", tags=["signup"])
     app.include_router(questions_router, prefix="/questions", tags=["questions"])
 
     # Override database dependency to use the test session
