@@ -19,6 +19,7 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/nickname-setup" element={<NicknameSetupPage />} />
         <Route path="/self-assessment" element={<SelfAssessmentPage />} />
+        <Route path="/profile/edit" element={<SelfAssessmentPage />} />
         <Route path="/profile-review" element={<ProfileReviewPage />} />
         <Route path="/test" element={<TestPage />} />
         <Route path="/test-results" element={<TestResultsPage />} />
