@@ -69,7 +69,9 @@ class TestScoreCalculation:
 
         answers = db_session.query(AttemptAnswer).filter_by(session_id=test_session_round1_fixture.id).all()
 
+        # Reset answers to unscored state with all wrong answers
         for answer in answers:
+            answer.user_answer = {"selected_key": "B"}  # All answers are wrong (correct is "A")
             answer.is_correct = False
             answer.score = 0.0
 
