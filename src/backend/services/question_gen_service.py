@@ -286,8 +286,6 @@ class QuestionGenerationService:
             Exception: If survey not found
 
         """
-        logger.info(f"📝 Question generation started: survey_id={survey_id}, round={round_num}, domain={domain}")
-
         try:
             # Step 1: Validate survey and get context
             survey = self.session.query(UserProfileSurvey).filter_by(user_id=user_id, id=survey_id).first()
@@ -334,21 +332,9 @@ class QuestionGenerationService:
             )
 
             agent_response = await agent.generate_questions(agent_request)
-            logger.info(f"✅ Agent response received: {len(agent_response.items)} items generated")
-            logger.debug("📊 Agent response structure:")
-            logger.debug(f"  - type: {type(agent_response)}")
-            logger.debug(f"  - round_id: {agent_response.round_id}")
-            logger.debug(f"  - items count: {len(agent_response.items)}")
-            logger.debug(f"  - agent_steps: {agent_response.agent_steps}")
-            logger.debug(f"  - failed_count: {agent_response.failed_count}")
-            logger.debug(f"  - error_message: {agent_response.error_message}")
-            if agent_response.items:
-                first_item = agent_response.items[0]
-                logger.debug(
-                    f"  - first item id: {first_item.id}, type: {first_item.type}, stem: {first_item.stem[:50] if first_item.stem else 'N/A'}"
-                )
-            else:
-                logger.warning(f"⚠️  Agent response has no items! error_message: {agent_response.error_message}")
+            logger.debug(
+                f"Agent response received: {len(agent_response.items)} items, tokens={agent_response.total_tokens}"
+            )
 
             # Step 5: Save generated items to DB
             questions_list = []
@@ -370,10 +356,9 @@ class QuestionGenerationService:
                 )
                 self.session.add(question)
                 questions_list.append(question)
-                logger.debug(f"  - Saved question: id={item.id}, type={item.type}")
+                logger.debug(f"Saved question: id={item.id}, type={item.type}")
 
             self.session.commit()
-            logger.info(f"✅ {len(questions_list)} questions saved to database")
 
             # Step 6: Format and return response (backwards compatible dict format)
             response = {
@@ -391,7 +376,7 @@ class QuestionGenerationService:
                     for q in questions_list
                 ],
             }
-            logger.info(f"✅ Question generation completed successfully: {len(questions_list)} questions")
+            logger.info(f"✅ Generated {len(questions_list)} questions (tokens: {agent_response.total_tokens})")
             return response
 
         except Exception as e:

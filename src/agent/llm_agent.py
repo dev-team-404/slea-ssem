@@ -87,6 +87,7 @@ class GenerateQuestionsResponse(BaseModel):
     time_limit_seconds: int = Field(default=1200, description="시간 제한 (초, 기본 20분)")
     agent_steps: int = Field(default=0, description="에이전트 반복 횟수 - 내부 메타데이터")
     failed_count: int = Field(default=0, description="실패한 문항 개수 - 내부 메타데이터")
+    total_tokens: int = Field(default=0, description="LLM 응답 총 토큰 수 (input + output)")
     error_message: str | None = Field(default=None, description="에러 메시지")
 
 
@@ -766,6 +767,16 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
         """
         logger.info(f"문항 생성 결과 파싱 중... round_id={round_id}")
 
+        # Extract total_tokens from LangGraph messages
+        total_tokens = 0
+        if "messages" in result:
+            for msg in result.get("messages", []):
+                if hasattr(msg, "response_metadata") and msg.response_metadata:
+                    usage_metadata = msg.response_metadata.get("usage_metadata", {})
+                    if "total_tokens" in usage_metadata:
+                        total_tokens = usage_metadata["total_tokens"]
+                        break
+
         try:
             # DEBUG: Agent output 구조 분석
             logger.info("=" * 80)
@@ -1052,6 +1063,7 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                 time_limit_seconds=1200,  # 기본 20분
                 agent_steps=agent_steps,
                 failed_count=failed_count,
+                total_tokens=total_tokens,
                 error_message=error_msg,
             )
 
@@ -1066,6 +1078,7 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                 time_limit_seconds=1200,
                 agent_steps=0,
                 failed_count=0,
+                total_tokens=total_tokens,
                 error_message=f"Parsing error: {str(e)}",
             )
 
