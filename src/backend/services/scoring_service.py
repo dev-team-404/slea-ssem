@@ -162,7 +162,11 @@ class ScoringService:
         selected_key = str(user_answer["selected_key"]).strip()
 
         # Try correct_key first (standard format), fallback to correct_answer (agent format)
-        correct_key = str(answer_schema.get("correct_key") or answer_schema.get("correct_answer", "")).strip()
+        # Use explicit None check to handle falsy values like False correctly
+        correct_key_value = answer_schema.get("correct_key")
+        if correct_key_value is None:
+            correct_key_value = answer_schema.get("correct_answer", "")
+        correct_key = str(correct_key_value).strip()
 
         # Normalize both answers for robust comparison:
         # 1. Normalize internal whitespace (multiple spaces → single space)

@@ -1038,7 +1038,8 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                 # Short answer: include keywords only
                                 answer_schema = AnswerSchema(
                                     type=schema_from_tool.get("type", "keyword_match"),
-                                    keywords=schema_from_tool.get("correct_keywords") or schema_from_tool.get("keywords"),
+                                    keywords=schema_from_tool.get("correct_keywords")
+                                    or schema_from_tool.get("keywords"),
                                     correct_answer=None,  # Not used for short answer
                                 )
                             else:
