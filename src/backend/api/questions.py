@@ -30,12 +30,14 @@ class GenerateQuestionsRequest(BaseModel):
         survey_id: UserProfileSurvey ID to determine user interests
         round: Test round number (1 or 2, default 1)
         domain: Question domain/topic (e.g., "AI", "food", default "AI")
+        question_count: Number of questions to generate (default 5, min 1, max 10)
 
     """
 
     survey_id: str = Field(..., description="UserProfileSurvey ID")
     round: int = Field(default=1, ge=1, le=2, description="Test round (1 or 2)")
     domain: str = Field(default="AI", description="Question domain/topic (e.g., AI, food, science)")
+    question_count: int = Field(default=5, ge=1, le=10, description="Number of questions (1-10, default 5)")
 
 
 class QuestionResponse(BaseModel):

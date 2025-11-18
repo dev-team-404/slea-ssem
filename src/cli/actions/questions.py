@@ -240,7 +240,7 @@ def _print_generate_questions_help(context: CLIContext) -> None:
     context.console.print("╚═══════════════════════════════════════════════════════════════════════════════╝")
     context.console.print()
     context.console.print("[bold cyan]Usage:[/bold cyan]")
-    context.console.print("  questions generate [--survey-id ID] [--domain DOMAIN] [--round 1|2]")
+    context.console.print("  questions generate [--survey-id ID] [--domain DOMAIN] [--round 1|2] [--count N]")
     context.console.print()
     context.console.print("[bold cyan]Options:[/bold cyan]")
     context.console.print("  --survey-id TEXT   Survey ID (auto-uses latest if not provided)")
@@ -248,6 +248,8 @@ def _print_generate_questions_help(context: CLIContext) -> None:
     context.console.print("                     Default: AI")
     context.console.print("  --round INTEGER    Round number: 1 (initial) or 2 (adaptive)")
     context.console.print("                     Default: 1")
+    context.console.print("  --count INTEGER    Number of questions to generate (1-10)")
+    context.console.print("                     Default: 5")
     context.console.print("  --help             Show this help message")
     context.console.print()
     context.console.print("[bold cyan]Examples:[/bold cyan]")
@@ -257,8 +259,11 @@ def _print_generate_questions_help(context: CLIContext) -> None:
     context.console.print("  # Generate with specific domain")
     context.console.print("  questions generate --domain food")
     context.console.print()
-    context.console.print("  # Generate with specific survey and domain")
-    context.console.print("  questions generate --survey-id survey_abc --domain science")
+    context.console.print("  # Generate 3 questions instead of default 5")
+    context.console.print("  questions generate --count 3")
+    context.console.print()
+    context.console.print("  # Generate with specific survey, domain, and count")
+    context.console.print("  questions generate --survey-id survey_abc --domain science --count 7")
     context.console.print()
     context.console.print("  # Show this help message")
     context.console.print("  questions generate --help")
@@ -817,6 +822,7 @@ def generate_questions(context: CLIContext, *args: str) -> None:
     survey_id = None
     domain = "AI"  # Default domain
     round_num = 1  # Default round
+    question_count = 5  # Default count
 
     i = 0
     while i < len(args):
@@ -831,6 +837,16 @@ def generate_questions(context: CLIContext, *args: str) -> None:
                 round_num = int(args[i + 1])
             except ValueError:
                 context.console.print(f"[yellow]⚠ Invalid round number: {args[i + 1]}. Using default: 1[/yellow]")
+            i += 2
+        elif args[i] == "--count" and i + 1 < len(args):
+            try:
+                count_val = int(args[i + 1])
+                if 1 <= count_val <= 10:
+                    question_count = count_val
+                else:
+                    context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Must be 1-10. Using default: 5[/yellow]")
+            except ValueError:
+                context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Using default: 5[/yellow]")
             i += 2
         elif args[i] == "--help":
             _print_generate_questions_help(context)
@@ -853,7 +869,7 @@ def generate_questions(context: CLIContext, *args: str) -> None:
 
         context.console.print(f"[dim]Using latest survey from DB: {survey_id}[/dim]")
 
-    context.console.print(f"[dim]Generating Round {round_num} questions ({domain})...[/dim]")
+    context.console.print(f"[dim]Generating Round {round_num} questions ({domain}, count={question_count})...[/dim]")
 
     # API 호출
     status_code, response, error = context.client.make_request(
@@ -863,6 +879,7 @@ def generate_questions(context: CLIContext, *args: str) -> None:
             "survey_id": survey_id,
             "domain": domain,
             "round": round_num,
+            "question_count": question_count,
         },
     )
 
@@ -886,7 +903,8 @@ def generate_questions(context: CLIContext, *args: str) -> None:
     context.console.print("[bold green]✓ Round 1 questions generated[/bold green]")
     context.console.print(f"[dim]  Session: {session_id}[/dim]")
     context.console.print(f"[dim]  Questions: {questions_count}[/dim]")
-    context.logger.info("Round 1 questions generated.")
+    if context.logger:
+        context.logger.info("Round 1 questions generated.")
 
 
 def generate_adaptive_questions(context: CLIContext, *args: str) -> None:
