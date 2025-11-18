@@ -121,19 +121,40 @@ def normalize_answer_schema(answer_schema_raw: str | dict | None) -> str:
     """
     Normalize answer_schema to ensure it's always a string.
 
-    Handles cases where LLM returns answer_schema as a dict instead of string.
+    Handles multiple formats:
+    1. Tool 5 format: {"type": "exact_match", "keywords": null, "correct_answer": "..."}
+    2. Mock format: {"correct_key": "B", "explanation": "..."}
+    3. LLM format: {"answer_type": "exact_match"}
+    4. String format: "exact_match"
 
     Args:
-        answer_schema_raw: Raw answer_schema value from LLM (could be str or dict)
+        answer_schema_raw: Raw answer_schema value (could be str or dict)
 
     Returns:
         Normalized answer_schema as string: "exact_match" | "keyword_match" | "semantic_match"
     """
     if isinstance(answer_schema_raw, dict):
-        # Extract 'type' field if it's a dict
-        schema_type = answer_schema_raw.get("type")
-        if isinstance(schema_type, str):
-            return schema_type
+        # Case 1: Tool 5 format - has 'type' field
+        if "type" in answer_schema_raw:
+            schema_type = answer_schema_raw.get("type")
+            if isinstance(schema_type, str):
+                return schema_type
+
+        # Case 2: Mock/LLM format - has correct_key or answer_type
+        # Mock questions use "correct_key" but it's still exact_match
+        if "correct_key" in answer_schema_raw or "explanation" in answer_schema_raw:
+            return "exact_match"
+
+        # Case 3: Keywords present - likely keyword_match
+        if "keywords" in answer_schema_raw:
+            return "keyword_match"
+
+        # Case 4: Unknown dict - try 'type' or 'answer_type'
+        for key in ["type", "answer_type", "schema_type"]:
+            if key in answer_schema_raw:
+                val = answer_schema_raw.get(key)
+                if isinstance(val, str):
+                    return val
 
     if isinstance(answer_schema_raw, str):
         return answer_schema_raw
@@ -1011,7 +1032,17 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                     # answer_schema 구성 (type-aware)
                                     # Tool 5 반환값에서 flattened 필드 사용 (correct_answer, correct_keywords)
                                     # Normalize answer_schema to handle both string and dict formats
-                                    normalized_schema_type = normalize_answer_schema(q.get("answer_schema"))
+                                    raw_answer_schema = q.get("answer_schema")
+                                    normalized_schema_type = normalize_answer_schema(raw_answer_schema)
+
+                                    # Extract correct_answer from multiple possible fields
+                                    # Priority: correct_answer > correct_key > (from raw_answer_schema dict)
+                                    correct_answer_value = (
+                                        q.get("correct_answer") or
+                                        q.get("correct_key") or
+                                        (raw_answer_schema.get("correct_answer") if isinstance(raw_answer_schema, dict) else None) or
+                                        (raw_answer_schema.get("correct_key") if isinstance(raw_answer_schema, dict) else None)
+                                    )
 
                                     if question_type == "short_answer":
                                         # Short answer: include keywords only
@@ -1025,7 +1056,7 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                                         answer_schema = AnswerSchema(
                                             type=normalized_schema_type,
                                             keywords=None,  # Not used for MC/TF
-                                            correct_answer=q.get("correct_answer"),
+                                            correct_answer=correct_answer_value,
                                         )
                                     logger.info(
                                         f"  ✓ answer_schema populated: type={answer_schema.type}, keywords={answer_schema.keywords is not None}, correct_answer={answer_schema.correct_answer is not None}"

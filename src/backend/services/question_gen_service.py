@@ -247,6 +247,73 @@ class QuestionGenerationService:
         """
         self.session = session
 
+    def _normalize_answer_schema(self, raw_schema: dict | str | None, item_type: str) -> dict:
+        """
+        Normalize answer_schema from various formats to standard format.
+
+        Converts Mock format {"correct_key": "B", "explanation": "..."} to
+        standard format {"type": "exact_match", "keywords": null, "correct_answer": "B"}
+
+        Args:
+            raw_schema: Raw answer_schema from mock data or LLM
+            item_type: Question type (multiple_choice, true_false, short_answer)
+
+        Returns:
+            Normalized answer_schema dict with type, keywords, correct_answer
+        """
+        if raw_schema is None:
+            return {
+                "type": "keyword_match" if item_type == "short_answer" else "exact_match",
+                "keywords": None,
+                "correct_answer": None
+            }
+
+        if isinstance(raw_schema, str):
+            return {
+                "type": raw_schema,
+                "keywords": None,
+                "correct_answer": None
+            }
+
+        if isinstance(raw_schema, dict):
+            # Case 1: Standard Tool 5 format
+            if "type" in raw_schema and ("keywords" in raw_schema or "correct_answer" in raw_schema):
+                return {
+                    "type": raw_schema.get("type", "exact_match"),
+                    "keywords": raw_schema.get("keywords"),
+                    "correct_answer": raw_schema.get("correct_answer")
+                }
+
+            # Case 2: Mock format with correct_key
+            if "correct_key" in raw_schema:
+                return {
+                    "type": "exact_match",
+                    "keywords": None,
+                    "correct_answer": raw_schema.get("correct_key")
+                }
+
+            # Case 3: Mock format with keywords (short answer)
+            if "keywords" in raw_schema:
+                return {
+                    "type": "keyword_match",
+                    "keywords": raw_schema.get("keywords"),
+                    "correct_answer": None
+                }
+
+            # Case 4: Unknown format - best effort
+            return {
+                "type": raw_schema.get("type", raw_schema.get("answer_type", "exact_match")),
+                "keywords": raw_schema.get("keywords"),
+                "correct_answer": raw_schema.get("correct_answer", raw_schema.get("correct_key"))
+            }
+
+        # Fallback
+        return {
+            "type": "exact_match",
+            "keywords": None,
+            "correct_answer": None
+        }
+
     async def generate_questions(
         self,
         user_id: int,
@@ -635,13 +702,19 @@ class QuestionGenerationService:
                 final_difficulty = max(1, min(10, adjusted_diff_int))
 
                 # Create Question record
+                # Normalize answer_schema from mock data format to standard format
+                normalized_answer_schema = self._normalize_answer_schema(
+                    mock_q["answer_schema"],
+                    mock_q["item_type"]
+                )
+
                 question = Question(
                     id=str(uuid4()),
                     session_id=new_session_id,
                     item_type=mock_q["item_type"],
                     stem=mock_q["stem"],
                     choices=mock_q.get("choices"),
-                    answer_schema=mock_q["answer_schema"],
+                    answer_schema=normalized_answer_schema,
                     difficulty=final_difficulty,
                     category=category,
                     round=round_num,
