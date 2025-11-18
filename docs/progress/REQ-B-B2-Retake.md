@@ -265,5 +265,49 @@ Round 2 시작 → generate_questions_adaptive(previous_session_id=r1_uuid, roun
 ---
 
 **구현 완료**: 2025-11-18
-**Git Commit**: [아래 참조]
+**Git Commit**: `f296fe3` - feat: Implement REQ-B-B2-Retake (Retake Question Generation)
+
+### Commit Message
+```
+feat: Implement REQ-B-B2-Retake (Retake Question Generation)
+
+## Summary
+- Implemented backend validation for retake functionality
+- Created comprehensive test suite (8 test cases, all passing)
+- Documented frontend requirements (REQ-F-B5-Retake)
+
+## Implementation Details
+
+### Backend (REQ-B-B2-Retake-1~3)
+- ✅ Verified generate_questions() creates new TestSession on each retake
+- ✅ Confirmed previous session status='completed' is preserved
+- ✅ Validated Round 2 adaptive uses previous_session_id correctly
+- ✅ All retakes create independent sessions (no state pollution)
+
+### Test Coverage (8/8 PASS)
+1. TC-1: Retake Round 1 → new session_id (completed → in_progress)
+2. TC-2: Multiple retakes → independent sessions
+3. TC-3: Retake with new survey_id → proper linking
+4. TC-4: Round 1 completed → Round 2 adaptive (previous_session_id)
+5. TC-5: No state pollution across retakes
+6. TC-6: Previous session preserved (completed status)
+7. TC-7: Error handling (survey not found)
+8. TC-8: Graceful degradation (Agent failure)
+
+### Frontend Requirements (REQ-F-B5-Retake-1~5)
+- Documented complete retake flow
+- 5 frontend test cases defined
+- API sequence documented
+- Error handling requirements specified
+
+## Acceptance Criteria
+- ✅ New session_id on retake
+- ✅ Status transitions: completed → new in_progress
+- ✅ Previous session unchanged
+- ✅ Round 2 adaptive with previous_session_id
+- ✅ Error handling (graceful degradation)
+
+🤖 Generated with Claude Code
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
 
