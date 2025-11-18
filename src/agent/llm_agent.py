@@ -964,8 +964,9 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                             # Add saved_at timestamp and append
                             for item in extracted_items:
                                 try:
-                                    # Recreate item with saved_at timestamp
-                                    item_dict = item.model_dump()
+                                    # extracted_items are already dicts, not Pydantic models
+                                    # Add saved_at timestamp to dict
+                                    item_dict = item if isinstance(item, dict) else item.model_dump()
                                     item_dict["saved_at"] = datetime.now(UTC).isoformat()
                                     updated_item = GeneratedItem(**item_dict)
                                     items.append(updated_item)
