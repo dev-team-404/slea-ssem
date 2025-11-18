@@ -114,6 +114,43 @@ def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str
         return None, "", None
 
 
+def _get_all_questions_in_session(session_id: str | None) -> list[dict[str, Any]]:
+    """
+    Get all questions in a session, ordered by creation.
+
+    Returns list of dicts with keys: id, stem, choices, item_type, answer_schema, category, difficulty
+    """
+    try:
+        if not session_id:
+            return []
+
+        db = SessionLocal()
+        questions = (
+            db.query(Question)
+            .filter_by(session_id=session_id)
+            .order_by(Question.created_at.asc())
+            .all()
+        )
+        db.close()
+
+        result = []
+        for question in questions:
+            result.append(
+                {
+                    "id": question.id,
+                    "stem": question.stem,
+                    "choices": question.choices,
+                    "item_type": question.item_type,
+                    "answer_schema": question.answer_schema,
+                    "category": question.category,
+                    "difficulty": question.difficulty,
+                }
+            )
+        return result
+    except Exception:
+        return []
+
+
 def _get_unscored_answers(session_id: str | None) -> list[dict[str, Any]]:
     """
     Get all unscored attempt answers from a session.
@@ -378,6 +415,51 @@ def _print_score_answer_help(context: CLIContext) -> None:
     context.console.print()
     context.console.print("  # Show this help message")
     context.console.print("  questions answer score --help")
+    context.console.print()
+
+
+def _print_solve_help(context: CLIContext) -> None:
+    """Print help for questions solve command."""
+    context.console.print()
+    context.console.print("╔═══════════════════════════════════════════════════════════════════════════════╗")
+    context.console.print("║  questions solve - Interactive Question Solver                             ║")
+    context.console.print("╚═══════════════════════════════════════════════════════════════════════════════╝")
+    context.console.print()
+    context.console.print("[bold cyan]Usage:[/bold cyan]")
+    context.console.print("  questions solve [--session-id ID] [--help]")
+    context.console.print()
+    context.console.print("[bold cyan]Description:[/bold cyan]")
+    context.console.print("  Interactive question solver with beautiful UI.")
+    context.console.print("  Displays questions one by one with formatted choices.")
+    context.console.print("  Supports multiple_choice, true_false, and short_answer types.")
+    context.console.print()
+    context.console.print("[bold cyan]Features:[/bold cyan]")
+    context.console.print("  • Display questions [N/M] format with progress")
+    context.console.print("  • Format choices nicely for multiple_choice (A, B, C, D)")
+    context.console.print("  • Simple True/False selection for true_false")
+    context.console.print("  • Free text input for short_answer")
+    context.console.print("  • Auto-save answers to database")
+    context.console.print("  • Navigate with next/previous")
+    context.console.print()
+    context.console.print("[bold cyan]Options:[/bold cyan]")
+    context.console.print("  --session-id ID   Solve questions from specific session (auto-uses latest if not provided)")
+    context.console.print("  --help            Show this help message")
+    context.console.print()
+    context.console.print("[bold cyan]Examples:[/bold cyan]")
+    context.console.print("  # Solve latest session questions (interactive)")
+    context.console.print("  questions solve")
+    context.console.print()
+    context.console.print("  # Solve questions from specific session")
+    context.console.print("  questions solve --session-id abc123def456")
+    context.console.print()
+    context.console.print("  # Show this help message")
+    context.console.print("  questions solve --help")
+    context.console.print()
+    context.console.print("[bold cyan]Keyboard Commands:[/bold cyan]")
+    context.console.print("  • Type answer and press [Enter] to save")
+    context.console.print("  • Type 'n' and press [Enter] to go to next question")
+    context.console.print("  • Type 'p' and press [Enter] to go to previous question")
+    context.console.print("  • Type 'q' and press [Enter] to quit")
     context.console.print()
 
 
@@ -1129,6 +1211,242 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
 
     context.console.print("[bold green]✓ Answer autosaved[/bold green]")
     context.logger.info(f"Answer autosaved for question {question_id}.")
+
+
+def solve(context: CLIContext, *args: str) -> None:
+    """
+    Interactive question solver.
+
+    Displays questions one by one with formatted choices.
+    Supports multiple_choice, true_false, and short_answer types.
+    Auto-saves answers as user provides them.
+    """
+    # Check for help first
+    if args and args[0] == "help":
+        _print_solve_help(context)
+        return
+
+    if not context.session.token:
+        context.console.print("[bold red]✗ Not authenticated[/bold red]")
+        return
+
+    # Parse arguments with flags
+    session_id = None
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--session-id" and i + 1 < len(args):
+            session_id = args[i + 1]
+            i += 2
+        elif args[i] == "--help":
+            _print_solve_help(context)
+            return
+        else:
+            i += 1
+
+    # Auto-detect session_id from DB if not provided
+    if not session_id:
+        session_id, session_info = _get_latest_session(context.session.user_id)
+
+        if not session_id:
+            context.console.print(
+                "[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]"
+            )
+            return
+
+        context.console.print(f"[dim]Using latest session from DB: {session_id}{session_info}[/dim]")
+
+    # Get all questions for this session
+    questions = _get_all_questions_in_session(session_id)
+
+    if not questions:
+        context.console.print("[bold yellow]⚠ No questions found in this session[/bold yellow]")
+        return
+
+    context.console.print(
+        f"[bold green]✓ Loaded {len(questions)} questions[/bold green]"
+    )
+    context.console.print()
+
+    # Interactive question loop
+    current_idx = 0
+
+    while current_idx < len(questions):
+        question = questions[current_idx]
+        question_num = current_idx + 1
+        total_questions = len(questions)
+
+        # Display question header
+        context.console.print(
+            f"[bold cyan]Question {question_num}/{total_questions}[/bold cyan] "
+            f"[dim]({question['category']}, Difficulty: {question['difficulty']}/10)[/dim]"
+        )
+        context.console.print()
+
+        # Display question stem
+        context.console.print(f"[bold]{question['stem']}[/bold]")
+        context.console.print()
+
+        # Display choices based on question type
+        question_type = question["item_type"]
+
+        if question_type == "multiple_choice":
+            _display_multiple_choice(context, question)
+        elif question_type == "true_false":
+            _display_true_false(context, question)
+        elif question_type == "short_answer":
+            _display_short_answer(context, question)
+
+        # Get user input
+        context.console.print()
+        user_input = context.console.input("[bold cyan]Your answer:[/bold cyan] ").strip()
+
+        # Process input
+        if user_input.lower() == "q":
+            context.console.print("[yellow]Exiting solver...[/yellow]")
+            break
+        elif user_input.lower() == "n":
+            current_idx += 1
+            context.console.print()
+            continue
+        elif user_input.lower() == "p":
+            if current_idx > 0:
+                current_idx -= 1
+            else:
+                context.console.print("[yellow]Already at first question[/yellow]")
+            context.console.print()
+            continue
+        elif not user_input:
+            context.console.print("[yellow]⚠ Please enter an answer[/yellow]")
+            context.console.print()
+            continue
+
+        # Format answer based on question type
+        formatted_answer = _format_answer_for_solve(user_input, question_type, question)
+
+        if formatted_answer is None:
+            context.console.print("[red]✗ Invalid answer format[/red]")
+            context.console.print()
+            continue
+
+        # Auto-save answer
+        _autosave_answer_internal(
+            context,
+            session_id=session_id,
+            question_id=question["id"],
+            formatted_answer=formatted_answer,
+        )
+
+        # Move to next question
+        current_idx += 1
+        context.console.print()
+
+    context.console.print("[bold green]✓ Solver complete[/bold green]")
+    if context.logger:
+        context.logger.info(f"Completed solving session {session_id}")
+
+
+def _display_multiple_choice(context: CLIContext, question: dict) -> None:
+    """Display multiple choice question with formatted options."""
+    choices = question.get("choices", [])
+    if not choices:
+        context.console.print("[yellow]⚠ No choices available[/yellow]")
+        return
+
+    # Display choices with A, B, C, D, etc.
+    for idx, choice in enumerate(choices):
+        letter = chr(65 + idx)  # A, B, C, D, ...
+        context.console.print(f"  [cyan]{letter}[/cyan] {choice}")
+
+
+def _display_true_false(context: CLIContext, question: dict) -> None:
+    """Display true/false question."""
+    context.console.print("  [cyan]T[/cyan] True")
+    context.console.print("  [cyan]F[/cyan] False")
+
+
+def _display_short_answer(context: CLIContext, question: dict) -> None:
+    """Display short answer question."""
+    context.console.print("[dim](Type your answer)[/dim]")
+
+
+def _format_answer_for_solve(user_input: str, question_type: str, question: dict) -> dict | None:
+    """
+    Format user answer for database storage based on question type.
+
+    Returns formatted dict or None if invalid.
+    """
+    user_input_lower = user_input.lower().strip()
+
+    if question_type == "multiple_choice":
+        # User entered letter (A, B, C, etc.) or number (0, 1, 2, ...)
+        choices = question.get("choices", [])
+
+        if not choices:
+            return None
+
+        # Try letter first (A, B, C, etc.)
+        if len(user_input) == 1 and user_input.isalpha():
+            idx = ord(user_input.upper()) - ord("A")
+            if 0 <= idx < len(choices):
+                return {"selected_key": choices[idx]}
+
+        # Try number (0, 1, 2, etc.)
+        if user_input.isdigit():
+            idx = int(user_input)
+            if 0 <= idx < len(choices):
+                return {"selected_key": choices[idx]}
+
+        return None
+
+    elif question_type == "true_false":
+        # User entered T/F or True/False or Yes/No or 1/0
+        if user_input_lower in ("t", "true", "yes", "y", "1"):
+            return {"answer": True}
+        elif user_input_lower in ("f", "false", "no", "n", "0"):
+            return {"answer": False}
+        return None
+
+    elif question_type == "short_answer":
+        # Any text is valid
+        return {"text": user_input}
+
+    return None
+
+
+def _autosave_answer_internal(
+    context: CLIContext,
+    session_id: str,
+    question_id: str,
+    formatted_answer: dict[str, Any],
+) -> bool:
+    """
+    Internal function to autosave answer without user interaction.
+
+    Returns True if successful, False otherwise.
+    """
+    # API 호출
+    status_code, response, error = context.client.make_request(
+        "POST",
+        "/questions/autosave",
+        json_data={
+            "session_id": session_id,
+            "question_id": question_id,
+            "user_answer": formatted_answer,
+            "response_time_ms": 0,  # Default for auto-save
+        },
+    )
+
+    if error:
+        context.console.print("[bold red]✗ Failed to save answer[/bold red]")
+        return False
+
+    if status_code not in (200, 201):
+        context.console.print("[bold red]✗ Failed to save answer[/bold red]")
+        return False
+
+    context.console.print("[bold green]✓ Answer saved[/bold green]")
+    return True
 
 
 def score_answer(context: CLIContext, *args: str) -> None:
