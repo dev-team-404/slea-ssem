@@ -127,10 +127,45 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 | REQ ID | 요구사항 | 우선순위 |
 |--------|---------|---------|
 | **REQ-F-A2-2-1** | 닉네임 설정 완료 후 또는 "시작하기" 클릭 시 (nickname 있고 profile 없음), 자기평가 입력 페이지로 이동해야 한다. | **M** |
-| **REQ-F-A2-2-2** | 입력 항목을 명확하게 레이아웃하고 다음을 포함해야 한다: <br> - 본인이 생각하는 수준 (1~5 슬라이더, 숫자가 클수록 수준이 높음) <br> - 경력(연차): 회사에 입사한 연차 입력 (숫자 또는 범위 선택 드롭다운) <br> - 직군: SW, HW, 마케팅, 기획, 인사 등 드롭다운 <br> - 담당 업무: 텍스트 입력 필드 <br> - 관심분야: AI, Backend, Frontend 등 체크박스 다중 선택 | **M** |
+| **REQ-F-A2-2-2** | 입력 항목을 명확하게 레이아웃하고 다음을 포함해야 한다: <br> - 본인이 생각하는 수준 (1~5 슬라이더, 숫자가 클수록 수준이 높음, 디폴트: None) <br> - 경력(연차): 숫자 입력 필드 (정수, 디폴트: 0 또는 None) <br> - 직군: 라디오버튼 (S, E, M, G, F, 디폴트: None 또는 "") <br> - 담당 업무: 텍스트 입력 필드 (디폴트: "") <br> - 관심분야: 라디오버튼 단일 선택 (AI, ML, Backend, Frontend, 디폴트: None 또는 "") | **M** |
 | **REQ-F-A2-2-3** | 필수 필드 누락 시, 누락된 필드를 명확히 표시하고 오류 메시지를 보여야 한다. | **M** |
 | **REQ-F-A2-2-4** | 모든 필수 필드가 입력되면 "완료" 버튼이 활성화되어야 한다. | **M** |
 | **REQ-F-A2-2-5** | "완료" 버튼 클릭 시, user_profile 테이블에 저장하고 프로필 리뷰 페이지로 리다이렉트해야 한다. | **M** |
+
+**필드 상세 설명**:
+
+| 필드 | 입력 타입 | 선택지 | 디폴트값 | 필수 여부 | 백엔드 API 필드 |
+|------|-----------|--------|----------|----------|-----------------|
+| 수준 | 슬라이더 (1~5) | 1, 2, 3, 4, 5 | None | 선택 | `level` (문자열 변환 필요*) |
+| 경력(연차) | 숫자 입력 | 정수 (0~50) | 0 또는 None | 선택 | `career` (정수) |
+| 직군 | 라디오버튼 | S (Software), E (Engineering), M (Marketing), G (기획), F (Finance/인사) | None 또는 "" | 선택 | `job_role` (문자열) |
+| 담당 업무 | 텍스트 입력 | 자유 입력 (최대 500자) | "" | 선택 | `duty` (문자열) |
+| 관심분야 | 라디오버튼 (단일 선택) | AI, ML, Backend, Frontend | None 또는 "" | 선택 | `interests` (배열 변환 필요**) |
+
+**백엔드 API 변환 규칙**:
+
+*수준(level) 변환:
+- 프론트엔드: 1~5 정수
+- 백엔드: "Beginner" | "Intermediate" | "Intermediate-Advanced" | "Advanced" | "Elite"
+- 매핑: 1→Beginner, 2→Intermediate, 3→Intermediate-Advanced, 4→Advanced, 5→Elite
+
+**관심분야(interests) 변환:
+- 프론트엔드: "AI" | "ML" | "Backend" | "Frontend" (단일 선택)
+- 백엔드: ["AI"] | ["ML"] | ["Backend"] | ["Frontend"] (배열)
+- 변환: 선택한 값을 배열로 감싸서 전송 (예: "AI" → ["AI"])
+
+**백엔드 API 엔드포인트**: `PUT /profile/survey` (인증 필수)
+
+**요청 예시**:
+```json
+{
+  "level": "Advanced",
+  "career": 10,
+  "job_role": "E",
+  "duty": "System Architecture",
+  "interests": ["Backend"]
+}
+```
 
 **수용 기준**:
 
@@ -151,10 +186,45 @@ SLEA-SSEM MVP 1.0.0은 S.LSI 임직원의 **AI 역량 수준을 객관적으로 
 | **REQ-F-A2-Signup-1** | 홈화면 헤더 오른쪽 상단에 "회원가입" 버튼을 표시해야 한다. nickname == NULL일 때만 표시하고, nickname != NULL일 때는 숨김 처리해야 한다. | **M** |
 | **REQ-F-A2-Signup-2** | "회원가입" 버튼 클릭 시, 통합 회원가입 페이지(/signup)로 이동해야 한다. | **M** |
 | **REQ-F-A2-Signup-3** | 통합 회원가입 페이지에 닉네임 입력 섹션을 표시해야 한다: <br> - 닉네임 입력 필드 <br> - "중복 확인" 버튼 <br> - 실시간 유효성 검사 및 에러 메시지 <br> - 중복 시 대안 3개 제안 (선택) | **M** |
-| **REQ-F-A2-Signup-4** | 통합 회원가입 페이지에 자기평가 입력 섹션을 표시해야 한다: <br> - 수준 (1~5 슬라이더) <br> - 경력(연차) <br> - 직군 <br> - 담당 업무 <br> - 관심분야 (다중 선택) | **M** |
+| **REQ-F-A2-Signup-4** | 통합 회원가입 페이지에 자기평가 입력 섹션을 표시해야 한다: <br> - 수준 (1~5 슬라이더, 디폴트: None) <br> - 경력(연차): 숫자 입력 필드 (정수, 디폴트: 0 또는 None) <br> - 직군: 라디오버튼 (S, E, M, G, F, 디폴트: None 또는 "") <br> - 담당 업무: 텍스트 입력 필드 (디폴트: "") <br> - 관심분야: 라디오버튼 단일 선택 (AI, ML, Backend, Frontend, 디폴트: None 또는 "") | **M** |
 | **REQ-F-A2-Signup-5** | 닉네임 중복 확인 완료 + 모든 필수 필드 입력 시 "가입 완료" 버튼을 활성화해야 한다. | **M** |
 | **REQ-F-A2-Signup-6** | "가입 완료" 버튼 클릭 시, users.nickname 업데이트 + user_profile 저장을 동시에 수행하고, 홈화면으로 리다이렉트해야 한다. | **M** |
 | **REQ-F-A2-Signup-7** | 가입 완료 후 홈화면 재진입 시, 헤더의 "회원가입" 버튼이 사라져야 한다. (nickname != NULL) | **M** |
+
+**필드 상세 설명** (자기평가 섹션):
+
+| 필드 | 입력 타입 | 선택지 | 디폴트값 | 필수 여부 | 백엔드 API 필드 |
+|------|-----------|--------|----------|----------|-----------------|
+| 수준 | 슬라이더 (1~5) | 1, 2, 3, 4, 5 | None | 선택 | `level` (문자열 변환 필요*) |
+| 경력(연차) | 숫자 입력 | 정수 (0~50) | 0 또는 None | 선택 | `career` (정수) |
+| 직군 | 라디오버튼 | S (Software), E (Engineering), M (Marketing), G (기획), F (Finance/인사) | None 또는 "" | 선택 | `job_role` (문자열) |
+| 담당 업무 | 텍스트 입력 | 자유 입력 (최대 500자) | "" | 선택 | `duty` (문자열) |
+| 관심분야 | 라디오버튼 (단일 선택) | AI, ML, Backend, Frontend | None 또는 "" | 선택 | `interests` (배열 변환 필요**) |
+
+**백엔드 API 변환 규칙**:
+
+*수준(level) 변환:
+- 프론트엔드: 1~5 정수
+- 백엔드: "Beginner" | "Intermediate" | "Intermediate-Advanced" | "Advanced" | "Elite"
+- 매핑: 1→Beginner, 2→Intermediate, 3→Intermediate-Advanced, 4→Advanced, 5→Elite
+
+**관심분야(interests) 변환:
+- 프론트엔드: "AI" | "ML" | "Backend" | "Frontend" (단일 선택)
+- 백엔드: ["AI"] | ["ML"] | ["Backend"] | ["Frontend"] (배열)
+- 변환: 선택한 값을 배열로 감싸서 전송 (예: "AI" → ["AI"])
+
+**백엔드 API 엔드포인트**: `PUT /profile/survey` (인증 필수)
+
+**요청 예시**:
+```json
+{
+  "level": "Advanced",
+  "career": 10,
+  "job_role": "E",
+  "duty": "System Architecture",
+  "interests": ["Backend"]
+}
+```
 
 **수용 기준**:
 
@@ -724,7 +794,7 @@ REQ-F-B1은 원래 "레벨 테스트 시작 전 자기평가 입력"으로 정�
 | REQ ID | 요구사항 | 우선순위 |
 |--------|---------|---------|
 | **REQ-B-A2-Prof-1** | JWT 토큰으로 현재 사용자를 식별하여 자기평가 정보 변경 요청을 처리해야 한다. (인증 필수) | **M** |
-| **REQ-B-A2-Prof-2** | 자기평가 정보(수준, 경력, 직군, 업무, 관심분야) 변경 요청을 받아, user_profile_surveys 테이블에 새 레코드를 생성해야 한다. | **M** |
+| **REQ-B-A2-Prof-2** | 자기평가 정보(수준 1~5, 경력 숫자, 직군 S/E/M/G/F, 업무 텍스트, 관심분야 단일 선택) 변경 요청을 받아, user_profile_surveys 테이블에 새 레코드를 생성해야 한다. | **M** |
 | **REQ-B-A2-Prof-3** | 자기평가 수정 API는 1초 내에 응답해야 한다. | **M** |
 
 **API 엔드포인트**: `PUT /profile/survey` (인증 필수: Authorization 헤더의 JWT)
