@@ -260,20 +260,17 @@ class QuestionGenerationService:
 
         Returns:
             Normalized answer_schema dict with type, keywords, correct_answer
+
         """
         if raw_schema is None:
             return {
                 "type": "keyword_match" if item_type == "short_answer" else "exact_match",
                 "keywords": None,
-                "correct_answer": None
+                "correct_answer": None,
             }
 
         if isinstance(raw_schema, str):
-            return {
-                "type": raw_schema,
-                "keywords": None,
-                "correct_answer": None
-            }
+            return {"type": raw_schema, "keywords": None, "correct_answer": None}
 
         if isinstance(raw_schema, dict):
             # Case 1: Standard Tool 5 format
@@ -281,38 +278,26 @@ class QuestionGenerationService:
                 return {
                     "type": raw_schema.get("type", "exact_match"),
                     "keywords": raw_schema.get("keywords"),
-                    "correct_answer": raw_schema.get("correct_answer")
+                    "correct_answer": raw_schema.get("correct_answer"),
                 }
 
             # Case 2: Mock format with correct_key
             if "correct_key" in raw_schema:
-                return {
-                    "type": "exact_match",
-                    "keywords": None,
-                    "correct_answer": raw_schema.get("correct_key")
-                }
+                return {"type": "exact_match", "keywords": None, "correct_answer": raw_schema.get("correct_key")}
 
             # Case 3: Mock format with keywords (short answer)
             if "keywords" in raw_schema:
-                return {
-                    "type": "keyword_match",
-                    "keywords": raw_schema.get("keywords"),
-                    "correct_answer": None
-                }
+                return {"type": "keyword_match", "keywords": raw_schema.get("keywords"), "correct_answer": None}
 
             # Case 4: Unknown format - best effort
             return {
                 "type": raw_schema.get("type", raw_schema.get("answer_type", "exact_match")),
                 "keywords": raw_schema.get("keywords"),
-                "correct_answer": raw_schema.get("correct_answer", raw_schema.get("correct_key"))
+                "correct_answer": raw_schema.get("correct_answer", raw_schema.get("correct_key")),
             }
 
         # Fallback
-        return {
-            "type": "exact_match",
-            "keywords": None,
-            "correct_answer": None
-        }
+        return {"type": "exact_match", "keywords": None, "correct_answer": None}
 
     async def generate_questions(
         self,
@@ -456,8 +441,7 @@ class QuestionGenerationService:
                 # Limit items to requested question_count (safety filter)
                 items_to_save = agent_response.items[:question_count]
                 logger.debug(
-                    f"Agent returned {len(agent_response.items)} items, "
-                    f"limiting to {question_count} as requested"
+                    f"Agent returned {len(agent_response.items)} items, limiting to {question_count} as requested"
                 )
                 for item in items_to_save:
                     # Handle both Pydantic model and dict for answer_schema
@@ -685,9 +669,7 @@ class QuestionGenerationService:
             for item in items_to_save:
                 # Handle both Pydantic model and dict for answer_schema
                 answer_schema_value = (
-                    item.answer_schema.model_dump()
-                    if hasattr(item.answer_schema, "model_dump")
-                    else item.answer_schema
+                    item.answer_schema.model_dump() if hasattr(item.answer_schema, "model_dump") else item.answer_schema
                 )
 
                 question = Question(

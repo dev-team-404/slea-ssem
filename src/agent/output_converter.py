@@ -24,7 +24,6 @@ import json
 import logging
 import re
 import uuid
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class AgentOutputConverter:
-    """
+    r"""
     LangChain Agent 출력을 구조화된 형식으로 변환.
 
     지원하는 입력 형식:
@@ -85,6 +84,7 @@ class AgentOutputConverter:
         Raises:
             json.JSONDecodeError: 모든 cleanup 시도 실패 시
             ValueError: content가 None이거나 Final Answer 패턴 없을 시
+
         """
         if not content or not isinstance(content, str):
             raise ValueError("content must be a non-empty string")
@@ -105,9 +105,9 @@ class AgentOutputConverter:
         # Step 4: Robust JSON 파싱
         try:
             parsed = AgentOutputConverter._parse_json_robust(json_str, max_attempts)
-            logger.info(f"✅ Successfully parsed Final Answer JSON")
+            logger.info("✅ Successfully parsed Final Answer JSON")
             return parsed
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             logger.error(f"❌ Failed to parse Final Answer JSON after {max_attempts} attempts")
             raise
 
@@ -122,7 +122,7 @@ class AgentOutputConverter:
 
     @staticmethod
     def _unescape_json_string(json_str: str) -> str:
-        """
+        r"""
         JSON 문자열의 escaped 문자 처리.
 
         처리 대상:
@@ -158,6 +158,7 @@ class AgentOutputConverter:
 
         Raises:
             json.JSONDecodeError: 모든 전략 실패 시
+
         """
         cleanup_strategies = [
             ("no_cleanup", lambda s: s),
@@ -244,6 +245,7 @@ class AgentOutputConverter:
 
         Raises:
             ValueError: 필수 필드 부족 시
+
         """
         if not isinstance(questions_data, list):
             questions_data = [questions_data]
@@ -283,6 +285,7 @@ class AgentOutputConverter:
 
         Raises:
             ValueError: 필수 필드 부족 시
+
         """
         # 필수 필드 검증
         if "type" not in q_dict or "stem" not in q_dict:
@@ -361,6 +364,7 @@ class AgentOutputConverter:
 
         Returns:
             정규화된 타입 문자열
+
         """
         if isinstance(answer_schema_raw, dict):
             # Case 1: Tool 5 형식 - 명시적 'type' 필드
@@ -400,8 +404,7 @@ class AgentOutputConverter:
 
         # 기본값
         logger.warning(
-            f"⚠️  answer_schema has unexpected type: {type(answer_schema_raw).__name__}. "
-            f"Defaulting to 'exact_match'"
+            f"⚠️  answer_schema has unexpected type: {type(answer_schema_raw).__name__}. Defaulting to 'exact_match'"
         )
         return "exact_match"
 
@@ -431,6 +434,7 @@ class AgentOutputConverter:
 
         Returns:
             정규화된 answer_schema dict
+
         """
         schema_type = AgentOutputConverter.normalize_schema_type(answer_schema_raw)
 
@@ -480,6 +484,7 @@ class AgentOutputConverter:
 
         Returns:
             bool: 유효하면 True, 아니면 False
+
         """
         if not isinstance(answer_schema, dict):
             logger.warning(f"❌ answer_schema must be dict, got {type(answer_schema).__name__}")
@@ -515,6 +520,7 @@ class AgentOutputConverter:
 
         Returns:
             bool: 유효하면 True
+
         """
         if not isinstance(item, dict):
             logger.warning(f"❌ item must be dict, got {type(item).__name__}")

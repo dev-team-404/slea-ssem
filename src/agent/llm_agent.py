@@ -62,6 +62,7 @@ def parse_json_robust(json_str: str, max_attempts: int = 5) -> dict | list:
 
     Raises:
         json.JSONDecodeError: If all cleanup strategies fail
+
     """
     if not json_str or not isinstance(json_str, str):
         raise ValueError("json_str must be a non-empty string")
@@ -70,18 +71,17 @@ def parse_json_robust(json_str: str, max_attempts: int = 5) -> dict | list:
     cleanup_strategies = [
         # Strategy 1: No cleanup - try as-is
         ("no_cleanup", lambda s: s),
-
         # Strategy 2: Fix Python literals (True/False/None)
-        ("fix_python_literals", lambda s: re.sub(r"\b(True|False)\b", lambda m: m.group(1).lower(), re.sub(r"\bNone\b", "null", s))),
-
+        (
+            "fix_python_literals",
+            lambda s: re.sub(r"\b(True|False)\b", lambda m: m.group(1).lower(), re.sub(r"\bNone\b", "null", s)),
+        ),
         # Strategy 3: Remove trailing commas
         ("fix_trailing_commas", lambda s: re.sub(r",(\s*[}\]])", r"\1", s)),
-
         # Strategy 4: Fix escaped quotes and backslashes
         ("fix_escapes", lambda s: re.sub(r"\\(?!\\|/|[btnfr])", "\\\\", s)),
-
         # Strategy 5: Remove control characters
-        ("remove_control_chars", lambda s: s.encode('utf-8', 'ignore').decode('utf-8')),
+        ("remove_control_chars", lambda s: s.encode("utf-8", "ignore").decode("utf-8")),
     ]
 
     last_error = None
@@ -130,6 +130,7 @@ def normalize_answer_schema(answer_schema_raw: str | dict | None) -> str:
 
     Returns:
         Normalized answer_schema as string: "exact_match" | "keyword_match" | "semantic_match"
+
     """
     return AgentOutputConverter.normalize_schema_type(answer_schema_raw)
 
@@ -955,7 +956,7 @@ Tool 6 will return: is_correct (boolean), score (0-100), explanation, keyword_ma
                         try:
                             # Use AgentOutputConverter for robust JSON parsing
                             questions_data = AgentOutputConverter.parse_final_answer_json(content)
-                            logger.info(f"✅ Parsed JSON successfully using AgentOutputConverter")
+                            logger.info("✅ Parsed JSON successfully using AgentOutputConverter")
 
                             # Extract items using converter
                             extracted_items = AgentOutputConverter.extract_items_from_questions(questions_data)

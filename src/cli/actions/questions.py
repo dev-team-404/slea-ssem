@@ -125,12 +125,7 @@ def _get_all_questions_in_session(session_id: str | None) -> list[dict[str, Any]
             return []
 
         db = SessionLocal()
-        questions = (
-            db.query(Question)
-            .filter_by(session_id=session_id)
-            .order_by(Question.created_at.asc())
-            .all()
-        )
+        questions = db.query(Question).filter_by(session_id=session_id).order_by(Question.created_at.asc()).all()
         db.close()
 
         result = []
@@ -450,7 +445,9 @@ def _print_solve_help(context: CLIContext) -> None:
     context.console.print("  • Navigate with next/previous")
     context.console.print()
     context.console.print("[bold cyan]Options:[/bold cyan]")
-    context.console.print("  --session-id ID   Solve questions from specific session (auto-uses latest if not provided)")
+    context.console.print(
+        "  --session-id ID   Solve questions from specific session (auto-uses latest if not provided)"
+    )
     context.console.print("  --help            Show this help message")
     context.console.print()
     context.console.print("[bold cyan]Examples:[/bold cyan]")
@@ -970,7 +967,9 @@ def generate_questions(context: CLIContext, *args: str) -> None:
                 if 1 <= count_val <= 10:
                     question_count = count_val
                 else:
-                    context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Must be 1-10. Using default: 5[/yellow]")
+                    context.console.print(
+                        f"[yellow]⚠ Invalid count: {args[i + 1]}. Must be 1-10. Using default: 5[/yellow]"
+                    )
             except ValueError:
                 context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Using default: 5[/yellow]")
             i += 2
@@ -1059,7 +1058,9 @@ def generate_adaptive_questions(context: CLIContext, *args: str) -> None:
             try:
                 round_num = int(args[i + 1])
                 if not (2 <= round_num <= 3):
-                    context.console.print(f"[yellow]⚠ Invalid round: {args[i + 1]}. Must be 2 or 3. Using default: 2[/yellow]")
+                    context.console.print(
+                        f"[yellow]⚠ Invalid round: {args[i + 1]}. Must be 2 or 3. Using default: 2[/yellow]"
+                    )
                     round_num = 2
             except ValueError:
                 context.console.print(f"[yellow]⚠ Invalid round: {args[i + 1]}. Using default: 2[/yellow]")
@@ -1068,7 +1069,9 @@ def generate_adaptive_questions(context: CLIContext, *args: str) -> None:
             try:
                 question_count = int(args[i + 1])
                 if not (1 <= question_count <= 20):
-                    context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Must be 1-20. Using default: 5[/yellow]")
+                    context.console.print(
+                        f"[yellow]⚠ Invalid count: {args[i + 1]}. Must be 1-20. Using default: 5[/yellow]"
+                    )
                     question_count = 5
             except ValueError:
                 context.console.print(f"[yellow]⚠ Invalid count: {args[i + 1]}. Using default: 5[/yellow]")
@@ -1282,9 +1285,7 @@ def solve(context: CLIContext, *args: str) -> None:
         context.console.print("[bold yellow]⚠ No questions found in this session[/bold yellow]")
         return
 
-    context.console.print(
-        f"[bold green]✓ Loaded {len(questions)} questions[/bold green]"
-    )
+    context.console.print(f"[bold green]✓ Loaded {len(questions)} questions[/bold green]")
     context.console.print()
 
     # Interactive question loop
@@ -1596,11 +1597,11 @@ def calculate_round_score(context: CLIContext, *args: str) -> None:
 
     context.console.print("[dim]Calculating round score...[/dim]")
 
-    # API call: session_id is passed as query parameter
+    # API call: session_id is passed as query parameter with auto_complete=True (default)
     status_code, response, error = context.client.make_request(
         "POST",
         "/questions/score",
-        params={"session_id": session_id},
+        params={"session_id": session_id, "auto_complete": True},
     )
 
     if error:
@@ -1612,15 +1613,24 @@ def calculate_round_score(context: CLIContext, *args: str) -> None:
         context.console.print(f"[bold red]✗ Calculation failed (HTTP {status_code})[/bold red]")
         return
 
-    # Response keys from API: score, correct_count, total_count
+    # Response keys from API: score, correct_count, total_count, auto_completed
     score = response.get("score", 0)
     correct_count = response.get("correct_count", 0)
     total_count = response.get("total_count", 0)
+    auto_completed = response.get("auto_completed", False)
 
     context.console.print("[bold green]✓ Round score calculated[/bold green]")
     context.console.print(f"[dim]  Total: {score}/100[/dim]")
     context.console.print(f"[dim]  Correct: {correct_count}/{total_count}[/dim]")
-    context.logger.info("Round score calculated and saved.")
+
+    # NEW: Show auto-complete status
+    if auto_completed:
+        context.console.print("[bold green]✓ Session automatically completed[/bold green]")
+        context.logger.info("Round score calculated and session auto-completed.")
+    else:
+        context.console.print("[yellow]⚠️  Session not auto-completed (unscored answers remain)[/yellow]")
+        context.console.print("[dim]  Call 'questions complete' to manually complete[/dim]")
+        context.logger.info("Round score calculated. Session not auto-completed.")
 
 
 def _display_explanation(context: CLIContext, response: dict, question_id: str) -> None:

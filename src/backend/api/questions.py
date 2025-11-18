@@ -22,6 +22,36 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["questions"])
 
 
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def all_answers_scored(session_id: str, db: Session) -> bool:
+    """
+    Check if all answers in a session have been scored.
+
+    REQ: REQ-B-B3-Score (Auto-Complete)
+
+    Args:
+        session_id: TestSession ID
+        db: Database session
+
+    Returns:
+        bool: True if all answers have been scored, False otherwise
+
+    """
+    from src.backend.models.attempt_answer import AttemptAnswer
+
+    # Count unscored answers (where score is None)
+    unscored_count = (
+        db.query(AttemptAnswer).filter(AttemptAnswer.session_id == session_id, AttemptAnswer.score.is_(None)).count()
+    )
+
+    # All scored if unscored_count == 0
+    return unscored_count == 0
+
+
 class GenerateQuestionsRequest(BaseModel):
     """
     Request model for generating test questions.
@@ -350,10 +380,11 @@ async def generate_questions(
     "/score",
     status_code=200,
     summary="Calculate Round Score",
-    description="Calculate and save test result for completed round",
+    description="Calculate and save test result for completed round, with optional auto-complete",
 )
 def calculate_round_score(
     session_id: str,
+    auto_complete: bool = True,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> dict[str, Any]:
     """
@@ -365,13 +396,15 @@ def calculate_round_score(
     - Multiple choice / True-False: exact match
     - Short answer: keyword-based scoring
     - Identifies weak categories for adaptive Round 2
+    - NEW: Auto-completes session if all answers are scored
 
     Args:
         session_id: TestSession ID to score
+        auto_complete: Whether to auto-complete session if all answers scored (default True)
         db: Database session
 
     Returns:
-        TestResult with score, correct count, weak categories
+        TestResult with score, correct count, weak categories, auto_completed status
 
     Raises:
         HTTPException: If session not found or no answers
@@ -380,6 +413,7 @@ def calculate_round_score(
     try:
         scoring_service = ScoringService(db)
         # Get the round number from TestSession
+
         from src.backend.models.test_session import TestSession
 
         test_session = db.query(TestSession).filter_by(id=session_id).first()
@@ -388,6 +422,15 @@ def calculate_round_score(
 
         result = scoring_service.save_round_result(session_id, test_session.round)
 
+        # NEW: Auto-complete if enabled and all answers are scored
+        auto_completed = False
+        if auto_complete and all_answers_scored(session_id, db):
+            test_session.status = "completed"
+            db.commit()
+            db.refresh(test_session)
+            auto_completed = True
+            logger.info(f"Auto-completed session {session_id} (Round {test_session.round})")
+
         return {
             "session_id": result.session_id,
             "round": result.round,
@@ -395,6 +438,7 @@ def calculate_round_score(
             "correct_count": result.correct_count,
             "total_count": result.total_count,
             "wrong_categories": result.wrong_categories,
+            "auto_completed": auto_completed,
         }
     except Exception as e:
         if "not found" in str(e).lower():
