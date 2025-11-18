@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { submitProfileSurvey } from '../features/profile/profileSubmission'
 import LevelSelector from '../components/LevelSelector'
 import NumberInput from '../components/NumberInput'
-import RadioGroup, { type RadioOption } from '../components/RadioGroup'
+import RadioButtonGrid, { type RadioButtonOption } from '../components/RadioButtonGrid'
 import TextAreaInput from '../components/TextAreaInput'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SelfAssessmentPage.css'
@@ -26,23 +26,23 @@ import './SelfAssessmentPage.css'
  * Shared Components:
  * - LevelSelector: Reused with REQ-F-A2-Signup-4
  * - NumberInput: Reusable number input field
- * - RadioGroup: Reusable radio button group
+ * - RadioButtonGrid: Reusable radio button grid (3 columns per row)
  * - TextAreaInput: Reusable textarea with character counter
  * - LEVEL_MAPPING: Centralized level conversion
  * - InfoBox: Consistent info display
  */
 
-// Radio options for Job Role field
-const JOB_ROLE_OPTIONS: RadioOption[] = [
-  { value: 'S', label: 'Software' },
-  { value: 'E', label: 'Engineering' },
-  { value: 'M', label: 'Marketing' },
-  { value: 'G', label: '기획' },
-  { value: 'F', label: 'Finance/인사' },
+// Radio button grid options for Job Role field (abbreviations only)
+const JOB_ROLE_OPTIONS: RadioButtonOption[] = [
+  { value: 'S', label: 'S' },
+  { value: 'E', label: 'E' },
+  { value: 'M', label: 'M' },
+  { value: 'G', label: 'G' },
+  { value: 'F', label: 'F' },
 ]
 
-// Radio options for Interests field
-const INTERESTS_OPTIONS: RadioOption[] = [
+// Radio button grid options for Interests field
+const INTERESTS_OPTIONS: RadioButtonOption[] = [
   { value: 'AI', label: 'AI' },
   { value: 'ML', label: 'ML' },
   { value: 'Backend', label: 'Backend' },
@@ -151,8 +151,8 @@ const SelfAssessmentPage: React.FC = () => {
             placeholder="0"
           />
 
-          {/* 3. 직군 - 라디오버튼 */}
-          <RadioGroup
+          {/* 3. 직군 - 라디오버튼 그리드 (3열) */}
+          <RadioButtonGrid
             name="jobRole"
             legend="직군"
             options={JOB_ROLE_OPTIONS}
@@ -173,8 +173,8 @@ const SelfAssessmentPage: React.FC = () => {
             rows={3}
           />
 
-          {/* 5. 관심분야 - 라디오버튼 */}
-          <RadioGroup
+          {/* 5. 관심분야 - 라디오버튼 그리드 (3열) */}
+          <RadioButtonGrid
             name="interests"
             legend="관심분야"
             options={INTERESTS_OPTIONS}

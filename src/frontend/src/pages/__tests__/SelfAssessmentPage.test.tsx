@@ -63,11 +63,11 @@ describe('SelfAssessmentPage', () => {
     expect(screen.getByLabelText(/경력/i)).toHaveAttribute('type', 'number')
 
     // 3. 직군 - 라디오버튼 (S, E, M, G, F)
-    expect(screen.getByLabelText(/Software/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Engineering/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Marketing/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/기획/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Finance/i)).toBeInTheDocument()
+    expect(screen.getByLabelText('S')).toBeInTheDocument()
+    expect(screen.getByLabelText('E')).toBeInTheDocument()
+    expect(screen.getByLabelText('M')).toBeInTheDocument()
+    expect(screen.getByLabelText('G')).toBeInTheDocument()
+    expect(screen.getByLabelText('F')).toBeInTheDocument()
 
     // 4. 담당 업무 - 텍스트 입력
     expect(screen.getByLabelText(/담당 업무/i)).toBeInTheDocument()
@@ -275,7 +275,7 @@ describe('SelfAssessmentPage', () => {
     // Fill all fields
     await user.click(screen.getByLabelText(/4 - 고급/i))
     await user.type(screen.getByLabelText(/경력/i), '10')
-    await user.click(screen.getByLabelText(/Engineering/i))
+    await user.click(screen.getByLabelText('E'))
     await user.type(screen.getByLabelText(/담당 업무/i), 'System Architecture')
     await user.click(screen.getByLabelText(/Backend/i))
 
