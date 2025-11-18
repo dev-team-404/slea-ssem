@@ -6,6 +6,7 @@ const API_AUTH_LOGIN = '/api/auth/login'
 const API_PROFILE_NICKNAME = '/api/profile/nickname'
 const API_PROFILE_NICKNAME_CHECK = '/api/profile/nickname/check'
 const API_PROFILE_REGISTER = '/api/profile/register'
+const API_PROFILE_CONSENT = '/api/profile/consent'
 const API_PROFILE_SURVEY = '/api/profile/survey'
 const API_QUESTIONS_GENERATE = '/api/questions/generate'
 const API_QUESTIONS_AUTOSAVE = '/api/questions/autosave'
@@ -46,6 +47,10 @@ const mockData: Record<string, any> = {
   [API_PROFILE_NICKNAME_CHECK]: {
     available: true,
     suggestions: [],
+  },
+  [API_PROFILE_CONSENT]: {
+    consented: false,  // Change to true to test already consented user
+    consent_at: null,
   },
   [API_PROFILE_SURVEY]: {
     level: null,
@@ -271,7 +276,68 @@ const resetResultProgression = () => {
 const overriddenEndpoints = new Set<string>()
 
 // Track taken nicknames for mock: 이미 사용 중인 닉네임 목록
-const takenNicknames = new Set(['admin', 'test', 'mockuser', 'existing_user'])
+const takenNicknames = new Set(['mockuser', 'existing_user'])
+
+// REQ: REQ-F-A2-5 - Forbidden words list (금칙어)
+const FORBIDDEN_WORDS = [
+  'admin',
+  'administrator',
+  'system',
+  'root',
+  'moderator',
+  'mod',
+  'staff',
+  'support',
+  'bot',
+  'service',
+  'account',
+  'user',
+  'test',
+  'temp',
+  'guest',
+  'anonymous',
+]
+
+// REQ: REQ-F-A2-3, REQ-F-A2-5 - Nickname validation helper
+const validateNickname = (nickname: string): { valid: boolean; error?: string } => {
+  // Validate length (3-30 characters)
+  if (nickname.length < 3) {
+    return { valid: false, error: '닉네임은 3자 이상이어야 합니다.' }
+  }
+
+  if (nickname.length > 30) {
+    return { valid: false, error: '닉네임은 30자 이하여야 합니다.' }
+  }
+
+  // Validate format: alphanumeric + underscore only
+  const validPattern = /^[a-zA-Z0-9_]+$/
+  if (!validPattern.test(nickname)) {
+    return { valid: false, error: '닉네임은 영문자, 숫자, 언더스코어만 사용 가능합니다.' }
+  }
+
+  // Check forbidden words (case-insensitive)
+  const nicknameLower = nickname.toLowerCase()
+
+  // Exact match check
+  if (FORBIDDEN_WORDS.includes(nicknameLower)) {
+    return {
+      valid: false,
+      error: `'${nickname}'은(는) 사용할 수 없는 닉네임입니다. 다른 닉네임을 선택해주세요.`,
+    }
+  }
+
+  // Check if nickname starts with forbidden word
+  for (const forbidden of FORBIDDEN_WORDS) {
+    if (nicknameLower.startsWith(forbidden)) {
+      return {
+        valid: false,
+        error: '닉네임에 사용할 수 없는 단어가 포함되어 있습니다. 다른 닉네임을 선택해주세요.',
+      }
+    }
+  }
+
+  return { valid: true }
+}
 
 type RequestLogEntry = {
   url: string
@@ -324,6 +390,13 @@ class MockTransport implements HttpTransport {
     // Handle nickname check endpoint
     if (normalizedUrl === API_PROFILE_NICKNAME_CHECK && method === 'POST' && requestData?.nickname) {
       const nickname = requestData.nickname
+
+      // REQ: REQ-F-A2-3, REQ-F-A2-5 - Validate nickname format and forbidden words
+      const validation = validateNickname(nickname)
+      if (!validation.valid) {
+        throw new Error(validation.error)
+      }
+
       const isTaken = takenNicknames.has(nickname.toLowerCase())
 
       const response = {
@@ -343,17 +416,10 @@ class MockTransport implements HttpTransport {
     if (normalizedUrl === API_PROFILE_REGISTER && method === 'POST' && requestData?.nickname) {
       const nickname: string = requestData.nickname
 
-      if (nickname.length < 3) {
-        throw new Error('닉네임은 3자 이상이어야 합니다.')
-      }
-
-      if (nickname.length > 30) {
-        throw new Error('닉네임은 30자 이하여야 합니다.')
-      }
-
-      const validPattern = /^[a-zA-Z0-9_]+$/
-      if (!validPattern.test(nickname)) {
-        throw new Error('닉네임은 영문자, 숫자, 언더스코어만 사용 가능합니다.')
+      // REQ: REQ-F-A2-3, REQ-F-A2-5 - Validate nickname format and forbidden words
+      const validation = validateNickname(nickname)
+      if (!validation.valid) {
+        throw new Error(validation.error)
       }
 
       if (takenNicknames.has(nickname.toLowerCase())) {
@@ -376,6 +442,31 @@ class MockTransport implements HttpTransport {
         registered_at: mockData[API_PROFILE_NICKNAME].registered_at,
       }
 
+      console.log('[Mock Transport] Response:', response)
+      return response as T
+    }
+
+    // Handle consent update endpoint
+    if (normalizedUrl === API_PROFILE_CONSENT && method === 'POST') {
+      const consent = requestData?.consent
+
+      if (typeof consent !== 'boolean') {
+        throw new Error('consent must be a boolean')
+      }
+
+      // Update mock consent data
+      mockData[API_PROFILE_CONSENT] = {
+        consented: consent,
+        consent_at: consent ? new Date().toISOString() : null,
+      }
+
+      const response = {
+        message: consent ? '개인정보 수집 및 이용에 동의하였습니다.' : '동의가 철회되었습니다.',
+        consented: consent,
+        consent_at: mockData[API_PROFILE_CONSENT].consent_at,
+      }
+
+      console.log('[Mock Transport] Consent updated:', mockData[API_PROFILE_CONSENT])
       console.log('[Mock Transport] Response:', response)
       return response as T
     }
@@ -502,6 +593,13 @@ class MockTransport implements HttpTransport {
       return response as T
     }
 
+    // Handle GET /profile/consent endpoint
+    if (normalizedUrl === API_PROFILE_CONSENT && method === 'GET') {
+      const response = mockData[API_PROFILE_CONSENT]
+      console.log('[Mock Transport] Response:', response)
+      return response as T
+    }
+
       // Handle GET /api/results/{sessionId} endpoint
       if (normalizedUrl.startsWith('/api/results/') && method === 'GET') {
         if (normalizedUrl === API_RESULTS_PREVIOUS) {
@@ -612,7 +710,7 @@ export function resetMockResults() {
 
 // Helper to simulate different scenarios
 export function setMockScenario(
-  scenario: 'no-nickname' | 'has-nickname' | 'no-survey' | 'has-survey' | 'error' | 'reset-results'
+  scenario: 'no-nickname' | 'has-nickname' | 'no-consent' | 'has-consent' | 'no-survey' | 'has-survey' | 'error' | 'reset-results'
 ) {
   switch (scenario) {
     case 'no-nickname':
@@ -623,6 +721,20 @@ export function setMockScenario(
       mockData[API_PROFILE_NICKNAME].nickname = 'mockuser'
       mockData[API_PROFILE_NICKNAME].registered_at = '2025-11-11T00:00:00Z'
       mockData[API_PROFILE_NICKNAME].updated_at = '2025-11-11T00:00:00Z'
+      mockConfig.simulateError = false
+      break
+    case 'no-consent':
+      mockData[API_PROFILE_CONSENT] = {
+        consented: false,
+        consent_at: null,
+      }
+      mockConfig.simulateError = false
+      break
+    case 'has-consent':
+      mockData[API_PROFILE_CONSENT] = {
+        consented: true,
+        consent_at: '2025-11-18T00:00:00Z',
+      }
       mockConfig.simulateError = false
       break
     case 'no-survey':

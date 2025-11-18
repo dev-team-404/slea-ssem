@@ -3,11 +3,13 @@ import LoginPage from './pages/LoginPage'
 import CallbackPage from './pages/CallbackPage'
 import HomePage from './pages/HomePage'
 import SignupPage from './pages/SignupPage'
+import ConsentPage from './pages/ConsentPage'
 import NicknameSetupPage from './pages/NicknameSetupPage'
 import SelfAssessmentPage from './pages/SelfAssessmentPage'
 import ProfileReviewPage from './pages/ProfileReviewPage'
 import TestPage from './pages/TestPage'
 import TestResultsPage from './pages/TestResultsPage'
+import ExplanationPage from './pages/ExplanationPage'
 
 function App() {
   return (
@@ -17,11 +19,13 @@ function App() {
         <Route path="/auth/callback" element={<CallbackPage />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/consent" element={<ConsentPage />} />
         <Route path="/nickname-setup" element={<NicknameSetupPage />} />
         <Route path="/self-assessment" element={<SelfAssessmentPage />} />
         <Route path="/profile-review" element={<ProfileReviewPage />} />
         <Route path="/test" element={<TestPage />} />
         <Route path="/test-results" element={<TestResultsPage />} />
+        <Route path="/test-explanations/:sessionId" element={<ExplanationPage />} />
       </Routes>
     </BrowserRouter>
   )
