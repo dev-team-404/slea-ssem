@@ -11,6 +11,7 @@
 ### Issue 1: answer_schema 필드 구조 불일치
 
 **로그 증거 (첫 번째 실패)**:
+
 ```
 ✗ Failed to create GeneratedItem: 1 validation error for AnswerSchema
 type
@@ -19,7 +20,9 @@ type
 ```
 
 **원인**:
+
 1. **Tool 5 (save_question_tool)** 응답:
+
    ```python
    answer_schema = {
        "type": "exact_match",        # ← 문자열 ✓
@@ -28,6 +31,7 @@ type
    ```
 
 2. **LLM Final Answer JSON에서**:
+
    ```json
    {
      "answer_schema": {
@@ -38,6 +42,7 @@ type
    ```
 
 3. **AnswerSchema Pydantic 모델**:
+
    ```python
    class AnswerSchema(BaseModel):
        type: str                    # ← 문자열만 기대
@@ -52,6 +57,7 @@ type
 ### Issue 2: JSON 문법 오류 (개행 + 이스케이프)
 
 **로그 증거 (두 번째 실패)**:
+
 ```
 ⚠️  Initial JSON parse failed at char 1117, applying additional cleanup
 ❌ Failed to parse Final Answer JSON: Expecting ',' delimiter: line 40 column 38 (char 1117)
@@ -60,6 +66,7 @@ type
 **원인**: LLM이 생성한 JSON에 **이스케이프되지 않은 개행/특수문자** 포함
 
 예시:
+
 ```json
 {
   "answer_schema": "exact_match",
@@ -76,12 +83,14 @@ type
 ### Issue 3: 파싱 재시도 로직 부족
 
 **문제**:
+
 1. **Initial JSON parse** 실패 → Cleanup 적용
 2. **Cleanup 후 재파싱** 실패 → 예외로 처리
 3. **Tool results 추출 시도** → 실패 (Final Answer 이미 실패)
 4. **3회 재시도 후 최종 실패**
 
 현재 코드 (line 887-904):
+
 ```python
 try:
     questions_data = json.loads(json_str)
@@ -212,6 +221,7 @@ def parse_and_clean_json(json_str: str, max_attempts: int = 3) -> dict | list:
 ```
 
 **사용**:
+
 ```python
 try:
     questions_data = parse_and_clean_json(json_str)
@@ -273,23 +283,27 @@ if not items:
 ## 🚀 구현 우선순위
 
 ### Priority 1: LLM Prompt 개선 (가장 효과적)
+
 - **난이도**: ⭐ Easy
 - **효과**: 70-80% 문제 해결
 - **작업**: Prompt 수정 (1-2분)
 - **테스트**: 즉시 효과 확인 가능
 
 ### Priority 2: Robust JSON 파싱
+
 - **난이도**: ⭐⭐ Medium
 - **효과**: 15-20% 추가 개선
 - **작업**: Parser 함수 추가 (30분)
 - **테스트**: 단위 테스트 (cleanup 전략별)
 
 ### Priority 3: Answer Schema 정규화
+
 - **난이도**: ⭐ Easy
 - **효과**: 5% 추가 개선
 - **작업**: Helper 함수 추가 (10분)
 
 ### Priority 4: Tool Result Fallback
+
 - **난이도**: ⭐⭐ Medium
 - **효과**: 3% 추가 개선
 - **작업**: 도구 이름 확장 (15분)
@@ -330,23 +344,27 @@ if not items:
 ## 📝 Implementation Checklist
 
 ### Phase 1: LLM Prompt 개선
+
 - [ ] `src/agent/prompts/react_prompt.py`에 명확한 JSON 포맷 지시 추가
 - [ ] answer_schema를 "string ONLY" 명시
 - [ ] 이스케이프 규칙 명확화
 - [ ] Manual test: `questions generate --count 3` 5회 실행 (모두 성공)
 
 ### Phase 2: Robust Parser 구현
+
 - [ ] `parse_and_clean_json()` 함수 구현
 - [ ] Cleanup strategies 배열로 정의
 - [ ] Logging으로 어떤 전략이 성공했는지 추적
 - [ ] Unit test: 다양한 JSON 문법 오류에 대한 테스트
 
 ### Phase 3: Schema 정규화
+
 - [ ] `normalize_answer_schema()` 헬퍼 함수 구현
 - [ ] Dict → String 변환 로직
 - [ ] Type checking 추가
 
 ### Phase 4: Fallback 개선
+
 - [ ] Tool name list 정의
 - [ ] 여러 도구 이름으로 시도
 - [ ] Logging 상세화

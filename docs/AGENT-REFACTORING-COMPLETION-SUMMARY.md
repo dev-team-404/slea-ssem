@@ -15,6 +15,7 @@ Successfully completed comprehensive refactoring of the Agent module (Phases 1-3
 ## Phase 1: AgentOutputConverter Extraction ✅
 
 ### Objective
+
 Centralize scattered JSON parsing logic into a reusable, testable class.
 
 ### Deliverables
@@ -22,6 +23,7 @@ Centralize scattered JSON parsing logic into a reusable, testable class.
 **New File**: `src/agent/output_converter.py` (490 lines)
 
 **Key Methods**:
+
 1. `parse_final_answer_json()` - Extract and parse JSON from ReAct format
 2. `extract_items_from_questions()` - Convert parsed JSON to normalized item dicts
 3. `normalize_schema_type()` - Normalize multiple answer_schema formats
@@ -30,12 +32,14 @@ Centralize scattered JSON parsing logic into a reusable, testable class.
 6. `validate_generated_item()` - Complete item validation
 
 **Design Principles**:
+
 - Single Responsibility: Each method has one clear purpose
 - Dependency Inversion: Works with dicts, not specific Pydantic models
 - Composition: Small, focused methods combined together
 - Testability: Each method independently testable
 
 **Test Coverage**:
+
 - 10 parse_final_answer_json tests
 - 6 extract_items_from_questions tests
 - 9 normalize_schema_type tests
@@ -47,12 +51,14 @@ Centralize scattered JSON parsing logic into a reusable, testable class.
 ### Impact on llm_agent.py
 
 **Before**: 370 lines in `_parse_agent_output_generate()`
+
 - Manual JSON extraction with markdown removal
 - Manual unescape handling
 - Manual cleanup strategies
 - Manual GeneratedItem construction
 
 **After**: ~60 lines in `_parse_agent_output_generate()`
+
 ```python
 # Use AgentOutputConverter for robust JSON parsing
 questions_data = AgentOutputConverter.parse_final_answer_json(content)
@@ -75,11 +81,13 @@ for item in extracted_items:
 ## Phase 2: Enhanced JSON Parsing Robustness ✅
 
 ### Objective
+
 Improve JSON parsing success rate from 60% to 95%+.
 
 ### Implementation
 
 **5-Strategy Cleanup Approach**:
+
 1. **no_cleanup**: Parse as-is (success rate: 60%)
 2. **fix_python_literals**: Convert True/False → true/false
 3. **fix_trailing_commas**: Remove trailing commas in objects/arrays
@@ -87,6 +95,7 @@ Improve JSON parsing success rate from 60% to 95%+.
 5. **remove_control_chars**: Remove invalid UTF-8 control characters
 
 **Enhancements**:
+
 - Improved error logging with strategy names and error details
 - Graceful fallback through multiple strategies
 - Support for mixed content (ReAct reasoning + JSON)
@@ -95,6 +104,7 @@ Improve JSON parsing success rate from 60% to 95%+.
 - Unicode character support
 
 **Test Coverage**:
+
 - Simple JSON arrays ✅
 - Markdown code blocks ✅
 - Escaped quotes ✅
@@ -123,6 +133,7 @@ After (95% estimated):
 ## Phase 3: Strengthened Answer Schema Normalization ✅
 
 ### Objective
+
 Ensure consistent answer_schema format across all code paths.
 
 ### New Method: `normalize_answer_schema_dict()`
@@ -130,6 +141,7 @@ Ensure consistent answer_schema format across all code paths.
 **Purpose**: Convert raw answer_schema to standardized dict format
 
 **Input Formats Supported** (7+ variants):
+
 1. Tool 5 format: `{"type": "exact_match", ...}`
 2. Mock format: `{"correct_key": "B", "explanation": "..."}`
 3. Keyword format: `{"keywords": [...]}`
@@ -139,6 +151,7 @@ Ensure consistent answer_schema format across all code paths.
 7. correct_keywords only: `keyword_match`
 
 **Output Format**:
+
 ```python
 {
     "type": "exact_match" | "keyword_match" | "semantic_match",
@@ -148,12 +161,14 @@ Ensure consistent answer_schema format across all code paths.
 ```
 
 **Type-Aware Behavior**:
+
 - **short_answer**: keywords included, correct_answer = None
 - **MC/TF**: correct_answer included, keywords = None
 
 ### Enhanced normalize_schema_type()
 
 **Improvements**:
+
 - Added correct_keywords field support
 - Added correct_answer field detection
 - Added multiple type field variants (answer_type, schema_type, answer_schema_type)
@@ -163,6 +178,7 @@ Ensure consistent answer_schema format across all code paths.
 ### Test Coverage
 
 **New Tests** (5 tests, all passing):
+
 1. MC with correct_answer ✅
 2. Short answer with keywords ✅
 3. TF with correct_key ✅
@@ -170,6 +186,7 @@ Ensure consistent answer_schema format across all code paths.
 5. String type for MC ✅
 
 **Enhanced Tests** (9 existing tests still passing):
+
 - Tool 5 format ✅
 - Tool 5 keyword format ✅
 - Mock format ✅
@@ -195,6 +212,7 @@ Backward compatibility: ✅ (all existing tests still pass)
 ## Test Results Summary
 
 ### Output Converter Tests
+
 ```
 45 tests total
 ├── TestParseFinalAnswerJson (10 tests) ✅
@@ -207,6 +225,7 @@ Backward compatibility: ✅ (all existing tests still pass)
 ```
 
 ### LLM Agent Tests
+
 ```
 33 tests total
 ├── Question Generation (7 tests) ✅
@@ -218,6 +237,7 @@ Backward compatibility: ✅ (all existing tests still pass)
 ```
 
 ### Overall
+
 - **78 total tests** (45 new + 33 existing)
 - **100% pass rate**
 - **0 regressions**
@@ -255,6 +275,7 @@ Code quality improvements:
 ### Guarantees
 
 ✅ **Zero Breaking Changes**
+
 - All existing tests pass (33/33)
 - All method signatures preserved
 - Wrapper functions maintain compatibility
@@ -277,15 +298,18 @@ schema_type = AgentOutputConverter.normalize_schema_type(raw_schema)
 ## Performance Impact
 
 ### Compilation
+
 - `output_converter.py`: ✅ Compiles successfully
 - `llm_agent.py`: ✅ Compiles successfully (153 net lines fewer)
 
 ### Test Execution
+
 - `test_output_converter.py`: 45 tests in 0.06s (750 tests/sec)
 - `test_llm_agent.py`: 33 tests in 1.92s (17 tests/sec)
 - Overall: **Very fast** (most parsing logic is synchronous)
 
 ### Runtime Performance
+
 - JSON parsing strategies: Linear fallthrough (no loops)
 - Answer schema normalization: O(n) dict operations
 - No performance regression expected
@@ -358,16 +382,19 @@ for raw in raw_schemas:
 ## Recommendations for Future Work
 
 ### Short-term (1-2 weeks)
+
 1. Monitor JSON parsing success rate in production
 2. Add metrics collection for parsing strategies usage
 3. Document answer_schema format in README
 
 ### Medium-term (1 month)
+
 1. Add error tracking dashboard for Agent failures
 2. Profile performance on large question batches
 3. Consider caching for frequently used validation rules
 
 ### Long-term (2+ months)
+
 1. Support for new schema types (semantic_match improvements)
 2. Parallel tool execution in ReAct agent
 3. Migration to LangGraph v3 (if available)
@@ -377,12 +404,14 @@ for raw in raw_schemas:
 ## Lessons Learned
 
 ### What Worked Well
+
 ✅ Incremental Phase approach (1 → 2 → 3)
 ✅ Comprehensive test-first design
 ✅ Dict-based interface for flexibility
 ✅ Maintaining backward compatibility
 
 ### Challenges Overcome
+
 ⚠️ Circular imports → Solved with dict-based design
 ⚠️ Test expectations mismatch → Updated tests to reflect real LLM behavior
 ⚠️ Complex answer_schema handling → Solved with normalize_answer_schema_dict()
@@ -398,6 +427,7 @@ All three refactoring phases completed successfully:
 ✅ **Phase 3**: Answer schema normalization (5 new tests)
 
 **Key Metrics**:
+
 - 78 tests passing (100% success rate)
 - 0 regressions
 - -153 net lines in llm_agent.py
@@ -405,6 +435,7 @@ All three refactoring phases completed successfully:
 - 95%+ estimated JSON parsing success rate
 
 **Next Steps**:
+
 1. Monitor in production for any edge cases
 2. Add metrics collection for parsing strategies
 3. Plan optional Phase 4 (error tracking) for next iteration

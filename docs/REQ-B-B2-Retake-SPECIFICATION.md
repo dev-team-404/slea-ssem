@@ -340,24 +340,30 @@ INSERT test_questions (적응형 문항들)
 ### 시나리오: 사용자 "bwyoon"의 재응시
 
 **초기 상태**:
+
 - Round 1 완료: session_id = "session-r1-uuid-001", status = 'completed'
 - Test Result: score = 60, round = 1
 - 자기평가: survey_id = "survey-001", interests = ["AI", "RAG"]
 
 **사용자 액션**:
+
 1. 대시보드 "재응시" 버튼 클릭
 2. 모달 확인: "레벨 테스트를 재응시하시겠습니까?"
 3. 자기평가 폼 표시:
+
    ```
    Level: Advanced (이전과 동일)
    Career: 8 years (이전과 동일)
    Interests: ["AI", "RAG", "Robotics"] (수정: Robotics 추가)
    ```
+
 4. "테스트 시작" 클릭
 
 **Backend 처리**:
+
 1. (선택) PUT /profile/survey 호출 → 새 survey_id = "survey-002" 생성
 2. POST /questions/generate 호출
+
    ```json
    {
      "survey_id": "survey-002",
@@ -365,7 +371,9 @@ INSERT test_questions (적응형 문항들)
      "domain": "AI"
    }
    ```
+
 3. 새 TestSession 생성:
+
    ```
    id: "session-r1-uuid-002"
    user_id: 1
@@ -373,10 +381,12 @@ INSERT test_questions (적응형 문항들)
    round: 1
    status: 'in_progress'
    ```
+
 4. Real Agent로 새 문항 5개 생성
 5. Test Questions 저장
 
 **Response**:
+
 ```json
 {
   "session_id": "session-r1-uuid-002",
@@ -390,6 +400,7 @@ INSERT test_questions (적응형 문항들)
 ```
 
 **결과**:
+
 - 이전 session: "session-r1-uuid-001", status = 'completed' (유지)
 - 새 session: "session-r1-uuid-002", status = 'in_progress'
 - 새로운 자기평가: "survey-002" (이전과 별도)
@@ -434,4 +445,3 @@ INSERT test_questions (적응형 문항들)
 3. **Phase 4**: 최종 검증 및 커밋
    - Progress 파일 생성
    - Git commit
-

@@ -9,6 +9,7 @@
 ## 🔍 데이터 비교
 
 ### ✅ questions generate (정상)
+
 ```python
 answer_schema = {
     "type": "exact_match",           # ← 올바른 구조
@@ -18,6 +19,7 @@ answer_schema = {
 ```
 
 ### ❌ questions generate adaptive (문제)
+
 ```python
 answer_schema = {
     "correct_key": "B",              # ← 잘못된 필드명
@@ -44,6 +46,7 @@ answer_schema = {
 ### 원인 1: Tool 5 응답 형식 차이
 
 **questions generate 흐름**:
+
 ```
 Agent → Tool 1 (get_user_profile)
       → Tool 2 (search templates)
@@ -54,6 +57,7 @@ Agent → Tool 1 (get_user_profile)
 ```
 
 **questions generate adaptive 흐름**:
+
 ```
 Agent → Tool 1 (get_user_profile)
       → Tool 3 (get_difficulty_keywords)  ← Tool 2 스킵
@@ -68,6 +72,7 @@ Agent → Tool 1 (get_user_profile)
 ### 원인 2: Unicode 인코딩 문제
 
 **Adaptive mode choices 필드**:
+
 ```json
 "choices": [
   "A: \uc791\uc740 \ud06c\uae30...",  ← Unicode escape 포함
@@ -77,6 +82,7 @@ Agent → Tool 1 (get_user_profile)
 ```
 
 **정상 mode choices 필드**:
+
 ```json
 "choices": [
   "Data",
@@ -93,11 +99,13 @@ Agent → Tool 1 (get_user_profile)
 ## 🛠️ 근본 원인: LLM이 Tool 5를 호출하지 않음
 
 로그를 보면 Adaptive mode에서는:
+
 - Tool 1, 3, 4는 호출됨
 - **Tool 5 (save_generated_question) 호출 안됨**
 - LLM이 Final Answer에서 **직접 JSON 생성**
 
 원인:
+
 1. LLM이 Tool 5 호출 스킵
 2. 직접 생성한 JSON이 Tool 5 응답 형식과 다름
 3. Normalize 로직이 이 형식을 처리하지 못함
@@ -111,6 +119,7 @@ Agent → Tool 1 (get_user_profile)
 **파일**: `src/agent/pipeline/mode1_pipeline.py` (또는 mode2)
 
 문제: Adaptive mode가 Tool 5를 건너뛰는 이유 분석 필요
+
 - Adaptive mode 로직 확인
 - Tool 5 호출 강제
 
@@ -207,20 +216,24 @@ def fix_unicode_encoding(choices: list[str]) -> list[str]:
 ## 📝 구현 계획
 
 ### Phase 1: 근본 원인 파악 (지금)
+
 - [x] Adaptive mode에서 Tool 5 호출 여부 확인
 - [ ] Adaptive mode 로직 코드 위치 파악
 - [ ] Tool 5 호출하지 않는 이유 분석
 
 ### Phase 2: Tool 5 호출 강제 (우선순위 높음)
+
 - [ ] Adaptive mode 로직 수정
 - [ ] Tool 5 호출 강제 또는 응답 형식 맞춤
 
 ### Phase 3: 정규화 강화 (우선순위 높음)
+
 - [ ] `normalize_answer_schema_comprehensive()` 함수 구현
 - [ ] LLM format → Tool 5 format 변환 로직
 - [ ] answer_schema 검증 추가
 
 ### Phase 4: Unicode 처리 (우선순위 중간)
+
 - [ ] choices 필드 Unicode 디코딩
 - [ ] 테스트: choices 출력 정상 확인
 
@@ -231,11 +244,13 @@ def fix_unicode_encoding(choices: list[str]) -> list[str]:
 **파일**: `src/agent/llm_agent.py` (line 1014 주변)
 
 기존 코드:
+
 ```python
 normalized_schema_type = normalize_answer_schema(q.get("answer_schema"))
 ```
 
 개선된 코드:
+
 ```python
 # Handle both Tool 5 format and LLM format
 raw_schema = q.get("answer_schema")

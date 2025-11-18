@@ -31,6 +31,7 @@
 ```
 
 **Success Criteria**:
+
 - ✅ answer_schema contains "type" field
 - ✅ answer_schema contains "correct_answer" field (NOT "correct_key")
 - ✅ No Pydantic validation errors
@@ -62,6 +63,7 @@
 ```
 
 **Success Criteria**:
+
 - ✅ Scoring completes without errors
 - ✅ Score is NOT all 0 points
 - ✅ Scores reflect correct vs incorrect answers
@@ -84,6 +86,7 @@
 ```
 
 **Success Criteria**:
+
 - ✅ Standard and adaptive questions have IDENTICAL answer_schema format
 - ✅ Both can be scored using same service
 - ✅ No format differences between modes
@@ -113,6 +116,7 @@ LIMIT 5;
 ## Expected Data Format Changes
 
 ### Before Fix (Broken)
+
 ```json
 {
   "answer_schema": {
@@ -123,6 +127,7 @@ LIMIT 5;
 ```
 
 ### After Fix (Correct)
+
 ```json
 {
   "answer_schema": {
@@ -138,23 +143,29 @@ LIMIT 5;
 ## Troubleshooting
 
 ### Issue 1: "Pydantic validation error for type"
+
 **Cause**: answer_schema still has old format
 **Solution**: Verify code is at commit 99303af or later
+
 ```bash
 git log --oneline -1  # Should show "fix: Normalize answer_schema..."
 ```
 
 ### Issue 2: "Scoring returns 0 points for all questions"
+
 **Cause**: answer_schema "correct_answer" field not found
 **Solution**: Check database contains normalized schema
+
 ```sql
 SELECT answer_schema FROM questions LIMIT 1;
 -- Should contain "correct_answer" field
 ```
 
 ### Issue 3: "questions generate adaptive hangs"
+
 **Cause**: MOCK_QUESTIONS normalization not working
 **Solution**: Restart CLI and try again
+
 ```bash
 ./tools/dev.sh cli
 auth login ...

@@ -21,6 +21,7 @@ Successfully completed **Option A** of the MOCK_QUESTIONS refactoring: migrated 
 **Changed**: `generate_questions_adaptive()` method signature and implementation
 
 **Before**:
+
 ```python
 def generate_questions_adaptive(
     self,
@@ -32,6 +33,7 @@ def generate_questions_adaptive(
 ```
 
 **After**:
+
 ```python
 async def generate_questions_adaptive(
     self,
@@ -44,9 +46,11 @@ async def generate_questions_adaptive(
 ```
 
 **Key Changes**:
+
 - ✅ Changed from synchronous to async method
 - ✅ Added `question_count: int = 5` parameter (supports 1-20)
 - ✅ Replaced ~130 lines of MOCK_QUESTIONS selection logic with Real Agent call:
+
   ```python
   agent = await create_agent()
   agent_request = GenerateQuestionsRequest(
@@ -60,6 +64,7 @@ async def generate_questions_adaptive(
   )
   agent_response = await agent.generate_questions(agent_request)
   ```
+
 - ✅ Extracts domain from priority_ratio (weak categories)
 - ✅ Retrieves previous answers for adaptive context
 - ✅ Maintains backward-compatible response structure
@@ -71,6 +76,7 @@ async def generate_questions_adaptive(
 **Updated**: `GenerateAdaptiveQuestionsRequest` model and endpoint
 
 **Model Changes**:
+
 ```python
 class GenerateAdaptiveQuestionsRequest(BaseModel):
     previous_session_id: str = Field(..., description="Previous TestSession ID")
@@ -79,6 +85,7 @@ class GenerateAdaptiveQuestionsRequest(BaseModel):
 ```
 
 **Endpoint Changes**:
+
 ```python
 async def generate_adaptive_questions(
     request: GenerateAdaptiveQuestionsRequest,
@@ -94,6 +101,7 @@ async def generate_adaptive_questions(
 ```
 
 **Key Changes**:
+
 - ✅ Made endpoint async (was sync)
 - ✅ Added `count: int` field to request model with validation (1-20)
 - ✅ Passes `question_count` to service layer
@@ -104,6 +112,7 @@ async def generate_adaptive_questions(
 **Enhanced**: `generate_adaptive_questions()` function to support `--count` parameter
 
 **Help Text Updated**:
+
 ```
 Usage:
   questions generate adaptive [--round 2|3] [--count N]
@@ -129,6 +138,7 @@ Examples:
 ```
 
 **Argument Parsing**:
+
 ```python
 question_count = 5  # Default
 # ... in argument loop:
@@ -144,6 +154,7 @@ elif args[i] == "--count" and i + 1 < len(args):
 ```
 
 **Output Updated**:
+
 ```
 ✓ Round 2 adaptive questions generated
   Session: 6655245d-cc37-4f15-9b42-6baa62b38f58
@@ -152,6 +163,7 @@ elif args[i] == "--count" and i + 1 < len(args):
 ```
 
 **Key Changes**:
+
 - ✅ Help text now mentions "Round 2+" and "Real Agent LLM"
 - ✅ `--count` parameter parsing with validation (1-20)
 - ✅ User-friendly error messages for invalid counts
@@ -163,7 +175,9 @@ elif args[i] == "--count" and i + 1 < len(args):
 ## Verification
 
 ### Code Quality
+
 - ✅ **Syntax**: All three files compile without errors
+
   ```bash
   python -m py_compile src/backend/services/question_gen_service.py \
     src/backend/api/questions.py src/cli/actions/questions.py
@@ -174,6 +188,7 @@ elif args[i] == "--count" and i + 1 < len(args):
 - ✅ **Logging**: Added debug logging for adaptive flow
 
 ### Git Commit
+
 - ✅ **Commit Hash**: `30eb5c8`
 - ✅ **Message**: Detailed explanation of all changes
 - ✅ **Files Changed**: 3 files (93 insertions, 86 deletions)
@@ -184,23 +199,28 @@ elif args[i] == "--count" and i + 1 < len(args):
 ## Benefits Realized
 
 ### 1. Eliminates Legacy Format Issues
+
 - ❌ **Before**: Adaptive questions had legacy `{"correct_key": "B"}` format
 - ✅ **After**: All adaptive questions use standard `{"type": "exact_match", "correct_answer": "B"}` format
 
 ### 2. Consistent Data Source
+
 - ❌ **Before**: Standard mode used Real Agent, adaptive mode used MOCK_QUESTIONS
 - ✅ **After**: Both use Real Agent → single source of truth
 
 ### 3. Flexible Question Count
+
 - ❌ **Before**: Always generated exactly 5 questions, no way to customize
 - ✅ **After**: `--count` parameter supports 1-20 questions with validation
 
 ### 4. Cleaner Architecture
+
 - ✅ Removed ~130 lines of MOCK_QUESTIONS selection logic
 - ✅ Reduced code duplication (reuses existing GenerateQuestionsRequest)
 - ✅ Consistent with standard question generation flow
 
 ### 5. Better User Experience
+
 - ✅ CLI help text clarifies the flow
 - ✅ Examples show realistic usage patterns
 - ✅ Error handling with friendly messages
@@ -212,6 +232,7 @@ elif args[i] == "--count" and i + 1 < len(args):
 ### Method Signature Evolution
 
 **Service Layer**:
+
 ```python
 # OLD (sync, no count param)
 def generate_questions_adaptive(
@@ -232,6 +253,7 @@ async def generate_questions_adaptive(
 ```
 
 **API Request Model**:
+
 ```python
 # OLD (no count field)
 class GenerateAdaptiveQuestionsRequest(BaseModel):
@@ -295,6 +317,7 @@ Response: {
 4. **API Endpoint**: Still accepts `GenerateAdaptiveQuestionsRequest` (just with optional count field)
 
 **Example - Old Client (no count param)**:
+
 ```json
 {"previous_session_id": "...", "round": 2}
 → Uses default count=5
@@ -302,6 +325,7 @@ Response: {
 ```
 
 **Example - New Client (with count param)**:
+
 ```json
 {"previous_session_id": "...", "round": 2, "count": 3}
 → Uses count=3
@@ -313,11 +337,13 @@ Response: {
 ## Testing Status
 
 ### Code Compilation
+
 - ✅ All three files compile without syntax errors
 - ✅ No import errors
 - ✅ Type hints valid
 
 ### Existing Tests
+
 - ⚠️ Backend tests have pre-existing database schema issue
   - Error: "value too long for type character varying(36)"
   - Root Cause: UUID session_id doesn't fit in column defined as VARCHAR(36)
@@ -325,6 +351,7 @@ Response: {
   - Status: Needs separate database migration fix
 
 ### Manual Testing Recommended
+
 1. Test adaptive generation with default count: `questions generate adaptive`
 2. Test with custom count: `questions generate adaptive --count 3`
 3. Test with round parameter: `questions generate adaptive --round 3 --count 10`
@@ -345,6 +372,7 @@ src/cli/actions/questions.py                 |  35 ++++--
 ### Detailed Changes
 
 **question_gen_service.py**:
+
 - Line 575: Changed method from `def` to `async def`
 - Line 580: Added `question_count: int = 5` parameter
 - Line 582: Updated docstring
@@ -353,11 +381,13 @@ src/cli/actions/questions.py                 |  35 ++++--
 - Lines 715-743: Save questions from agent response instead of MOCK_QUESTIONS
 
 **api/questions.py**:
+
 - Line 88: Added `count: int` field to request model
 - Line 413: Changed endpoint from `def` to `async def`
 - Line 448: Added `question_count=request.count` parameter
 
 **cli/actions/questions.py**:
+
 - Lines 311-349: Updated help text with `--count` documentation
 - Line 1054: Added `question_count = 5` variable
 - Lines 1067-1077: Added `--count` parameter parsing with validation
@@ -371,17 +401,20 @@ src/cli/actions/questions.py                 |  35 ++++--
 ## Next Steps
 
 ### For Development
+
 1. Run full test suite to verify no regressions elsewhere
 2. Fix pre-existing database schema issue (VARCHAR(36) → appropriate UUID type)
 3. Manual end-to-end testing with LLM calls
 
 ### For Deployment
+
 1. Review and approve refactoring (commit `30eb5c8`)
 2. Merge to main branch
 3. Update database schema if needed
 4. Deploy and monitor adaptive question generation
 
 ### Optional Cleanup
+
 - MOCK_QUESTIONS definition (lines 42-238) still exists but is no longer used
 - Could be removed in future cleanup if desired (low priority)
 - Removal requires careful testing (pre-existing data might reference legacy format)

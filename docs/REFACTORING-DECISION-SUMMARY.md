@@ -93,6 +93,7 @@ After (리팩토링 후):
 ### 1️⃣ 안정성 (가장 중요)
 
 **현재 문제**:
+
 ```python
 # llm_agent.py: _parse_agent_output_generate()
 # 370줄 단일 함수에서 모든 파싱 처리
@@ -101,6 +102,7 @@ After (리팩토링 후):
 ```
 
 **리팩토링 후**:
+
 ```python
 # AgentOutputConverter class
 # - parse_final_answer_json(): JSON 파싱
@@ -112,6 +114,7 @@ After (리팩토링 후):
 ### 2️⃣ 유지보수성
 
 **현재 문제**:
+
 ```
 JSON parsing 이슈 발생 → 1-2시간 디버깅
                     → llm_agent.py 수정
@@ -120,6 +123,7 @@ JSON parsing 이슈 발생 → 1-2시간 디버깅
 ```
 
 **리팩토링 후**:
+
 ```
 JSON parsing 이슈 발생 → 10분 디버깅
                     → output_converter.py 수정
@@ -130,12 +134,14 @@ JSON parsing 이슈 발생 → 10분 디버깅
 ### 3️⃣ 재사용성
 
 **현재 문제**:
+
 ```
 Backend service (question_gen_service.py)에서
 같은 파싱 로직 필요 → 코드 복사 (DRY 위반)
 ```
 
 **리팩토링 후**:
+
 ```
 from src.agent.output_converter import AgentOutputConverter
 
@@ -291,17 +297,21 @@ A: 아니오 (현재 기반이 좋음)
 ## 참고 문서
 
 **상세 분석**:
+
 - `/home/bwyoon/para/project/slea-ssem/docs/AGENT-REFACTORING-ASSESSMENT.md` (615줄)
 
 **현재 문제 분석**:
+
 - `/home/bwyoon/para/project/slea-ssem/docs/BUG-ANALYSIS-LLM-JSON-PARSING.md`
 - `/home/bwyoon/para/project/slea-ssem/docs/ANSWER-SCHEMA-MISMATCH-ANALYSIS.md`
 
 **구현 가이드**:
+
 - `/home/bwyoon/para/project/slea-ssem/src/agent/llm_agent.py` (lines 47-174: 파싱 로직)
 - `/home/bwyoon/para/project/slea-ssem/src/agent/llm_agent.py` (lines 874-1243: 출력 파싱)
 
 **테스트 참고**:
+
 - `/home/bwyoon/para/project/slea-ssem/tests/agent/test_llm_agent.py` (1303줄)
 
 ---

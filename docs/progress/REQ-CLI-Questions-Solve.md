@@ -82,6 +82,7 @@ Your answer: T
 **파일**: `src/cli/actions/questions.py` (Line 1216-1346, 131 lines)
 
 **기능**:
+
 - Help 명령어 처리 (`help` 또는 `--help`)
 - 인증 확인 (token 검증)
 - `--session-id` 옵션 파싱
@@ -95,6 +96,7 @@ Your answer: T
   - 다음/이전 문제 이동
 
 **주요 로직**:
+
 ```python
 def solve(context: CLIContext, *args: str) -> None:
     # 1. Help 처리
@@ -410,6 +412,7 @@ def _autosave_answer_internal(
 | 16 | `test_solve_help_is_complete` | Help 텍스트 완전성 | ✅ PASS |
 
 **실행 결과**:
+
 ```bash
 ============================== 16 passed in 0.26s ==============================
 ```
@@ -456,7 +459,9 @@ python -m py_compile src/cli/actions/questions.py src/cli/config/command_layout.
 ## 📁 수정된 파일 요약
 
 ### 1. CLI 함수 (Main Implementation)
+
 **파일**: `src/cli/actions/questions.py`
+
 - Line 117-151: `_get_all_questions_in_session()` (Helper function)
 - Line 421-463: `_print_solve_help()` (Help function)
 - Line 1216-1346: `solve()` (Main interactive solver)
@@ -467,13 +472,17 @@ python -m py_compile src/cli/actions/questions.py src/cli/config/command_layout.
 **총 라인 수**: ~200 라인 (신규)
 
 ### 2. Command Registration
+
 **파일**: `src/cli/config/command_layout.py`
+
 - Line 201-205: Added `solve` command to questions sub_commands
 
 **변경사항**: 5 라인 (신규)
 
 ### 3. Test File
+
 **파일**: `tests/cli/test_questions_solve.py` (신규)
+
 - 16개 테스트 케이스
 - 373 라인
 
@@ -611,14 +620,17 @@ else:
 ### 답변 포맷팅 로직
 
 **Multiple Choice**:
+
 - 사용자 입력 "B" → Index 1 → choices[1] 값 반환
 - 사용자 입력 "2" → Index 2 → choices[2] 값 반환
 
 **True/False**:
+
 - 입력 "T", "True", "Yes", "Y", "1" → True
 - 입력 "F", "False", "No", "N", "0" → False
 
 **Short Answer**:
+
 - 어떤 입력이든 그대로 저장
 
 ### Navigation 로직
@@ -645,21 +657,25 @@ while current_idx < len(questions):
 ### Error 처리
 
 **Session 미발견**:
+
 ```
 ⚠ No session found in DB. Please run 'questions generate' first.
 ```
 
 **문제 미발견**:
+
 ```
 ⚠ No questions found in this session
 ```
 
 **인증 실패**:
+
 ```
 ✗ Not authenticated
 ```
 
 **유효하지 않은 답변 형식**:
+
 ```
 ⚠ Invalid answer format. Please try again.
 ```
@@ -698,14 +714,17 @@ while current_idx < len(questions):
 ### 아키텍처 결정
 
 **문제 유형별 Display Function**:
+
 - 각 유형마다 별도의 display 함수로 유지보수 용이
 - 향후 UI 개선 시 함수 하나만 수정하면 됨
 
 **Answer Formatting 분리**:
+
 - `_format_answer_for_solve()`: CLI 입력 → DB 스키마 변환
 - 다른 명령어에서도 재사용 가능한 구조
 
 **Auto-save Internal Function**:
+
 - `_autosave_answer_internal()`: 내부용 autosave 함수
 - 기존 `autosave_answer()` CLI 명령어와 분리
 - 순수하게 저장 기능만 담당

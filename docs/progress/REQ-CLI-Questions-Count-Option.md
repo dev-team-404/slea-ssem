@@ -32,6 +32,7 @@
 **파일**: `src/backend/api/questions.py` (Line 25-40)
 
 **변경사항**:
+
 ```python
 class GenerateQuestionsRequest(BaseModel):
     survey_id: str = Field(...)
@@ -51,16 +52,19 @@ class GenerateQuestionsRequest(BaseModel):
 #### 2.1 Help 텍스트 업데이트 (Line 242-269)
 
 **변경사항**:
+
 - Usage 라인에 `[--count N]` 추가
 - Options 섹션에 `--count INTEGER` 옵션 설명
 - Examples 섹션에 `--count` 사용 예시 추가
 
 **Before**:
+
 ```
 Usage: questions generate [--survey-id ID] [--domain DOMAIN] [--round 1|2]
 ```
 
 **After**:
+
 ```
 Usage: questions generate [--survey-id ID] [--domain DOMAIN] [--round 1|2] [--count N]
 
@@ -74,6 +78,7 @@ Options:
 #### 2.2 Argument Parsing 추가 (Line 821-855)
 
 **변경사항**:
+
 - `question_count = 5` 변수 초기화 (Line 825)
 - `--count` 옵션 파싱 로직 추가 (Line 841-850)
 - Validation: 범위 체크 (1-10)
@@ -95,6 +100,7 @@ elif args[i] == "--count" and i + 1 < len(args):
 #### 2.3 API 호출 수정 (Line 872, 882)
 
 **변경사항**:
+
 - API 호출 JSON 데이터에 `question_count` 추가 (Line 882)
 - 출력 메시지에 count 정보 포함 (Line 872)
 
@@ -116,6 +122,7 @@ status_code, response, error = context.client.make_request(
 #### 2.4 Logger 안정성 개선 (Line 906-907)
 
 **변경사항**:
+
 - None logger 처리를 위한 조건문 추가
 
 ```python
@@ -144,6 +151,7 @@ if context.logger:
 | 11 | `test_output_shows_count_parameter` | 출력 메시지에 count 표시 | ✅ PASS |
 
 **실행 결과**:
+
 ```
 ============================== 11 passed in 0.18s ==============================
 ```
@@ -182,11 +190,15 @@ if context.logger:
 ## 📁 수정된 파일 요약
 
 ### 1. Backend API Model
+
 **파일**: `src/backend/api/questions.py` (Line 25-40)
+
 - `question_count: int = Field(default=5, ge=1, le=10)` 추가
 
 ### 2. CLI 함수
+
 **파일**: `src/cli/actions/questions.py`
+
 - Line 242-269: Help 텍스트 수정
 - Line 825: `question_count = 5` 초기화
 - Line 841-850: `--count` 파싱 로직
@@ -194,7 +206,9 @@ if context.logger:
 - Line 906-907: Logger None 처리
 
 ### 3. 테스트 파일
+
 **파일**: `tests/cli/test_questions_generate_count_option.py` (신규)
+
 - 11개 테스트 케이스
 - 모두 PASS
 
@@ -203,6 +217,7 @@ if context.logger:
 ## 🚀 사용 방법
 
 ### 기본값 (5개) 사용
+
 ```bash
 > questions generate
 Generating Round 1 questions (AI, count=5)...
@@ -212,6 +227,7 @@ Generating Round 1 questions (AI, count=5)...
 ```
 
 ### 3개 문항 생성
+
 ```bash
 > questions generate --count 3
 Generating Round 1 questions (AI, count=3)...
@@ -221,6 +237,7 @@ Generating Round 1 questions (AI, count=3)...
 ```
 
 ### 최대 10개 문항 생성
+
 ```bash
 > questions generate --domain food --count 10
 Generating Round 1 questions (food, count=10)...
@@ -230,6 +247,7 @@ Generating Round 1 questions (food, count=10)...
 ```
 
 ### 범위 초과 (자동 조정)
+
 ```bash
 > questions generate --count 15
 ⚠ Invalid count: 15. Must be 1-10. Using default: 5
@@ -244,12 +262,14 @@ Generating Round 1 questions (AI, count=5)...
 ## 🔍 구현 검증
 
 ### 코드 컴파일 검증
+
 ```bash
 python -m py_compile src/cli/actions/questions.py src/backend/api/questions.py
 ✅ No syntax errors
 ```
 
 ### 테스트 실행 결과
+
 ```bash
 pytest tests/cli/test_questions_generate_count_option.py -v
 ============================== 11 passed in 0.18s ==============================
@@ -262,6 +282,7 @@ pytest tests/cli/test_questions_generate_count_option.py -v
 ### Validation 로직
 
 **범위 검증**:
+
 ```python
 if 1 <= count_val <= 10:
     question_count = count_val
@@ -270,6 +291,7 @@ else:
 ```
 
 **타입 검증**:
+
 ```python
 try:
     count_val = int(args[i + 1])
@@ -332,6 +354,7 @@ except ValueError:
 **테스트 라인 수**: 289 라인 (신규)
 
 ### Commit Message
+
 ```
 feat: Add --count option to questions generate CLI command
 

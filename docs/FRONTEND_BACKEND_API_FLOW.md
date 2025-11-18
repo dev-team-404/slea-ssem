@@ -381,17 +381,20 @@ POST /questions/score?session_id=abc123&auto_complete=false
 ```
 
 **`auto_completed` 필드**:
+
 - `true`: 모든 문제가 채점되어 session이 자동으로 완료됨
 - `false`: auto_complete=false를 명시했거나, 아직 채점되지 않은 문제가 있음 (드문 경우)
 
 ### 데이터 일관성 보장
 
 **이전 문제점**:
+
 - Frontend가 complete 호출을 깜빡하면 session status가 "in_progress" 상태로 유지
 - 사용자 점수가 최종 ranking에 포함되지 않음
 - 데이터 불일치 발생
 
 **현재 개선**:
+
 - POST /score 호출 직후 자동으로 session.status = "completed"
 - Frontend 조치 없이도 데이터 일관성 보장
 - 누락 위험 제거

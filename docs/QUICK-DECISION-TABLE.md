@@ -3,6 +3,7 @@
 ## 제안된 3가지 옵션 비교
 
 ### Option A: Backend Only Auto-Complete
+
 ```
 POST /questions/score
   ↓
@@ -24,6 +25,7 @@ Response: { score, status: "completed", auto_completed: true }
 ---
 
 ### Option B: CLI Only Auto-Complete
+
 ```
 CLI: questions score
   ↓
@@ -45,6 +47,7 @@ CLI: 자동으로 complete 호출
 ---
 
 ### Option C: Hybrid (권장) ✅
+
 ```
 Backend: 점수 계산 → 조건부 auto-complete (auto_complete=True 기본값)
   ↓
@@ -68,6 +71,7 @@ CLI: calculate_round_score(..., auto_complete=True)
 ### ✅ **Option C (Hybrid) 권장**
 
 **이유**:
+
 1. ✅ SRP 유지하면서 auto-complete 구현
 2. ✅ Backend API 직접 호출 시에도 자동 처리
 3. ✅ CLI 명시적 처리로 사용자 경험 개선
@@ -89,6 +93,7 @@ CLI: calculate_round_score(..., auto_complete=True)
 ## 현재 상태 vs 개선 후
 
 ### 📊 Before (현재)
+
 ```
 문제점:
   1. ❌ questions complete 수동 호출 필요
@@ -100,6 +105,7 @@ CLI: calculate_round_score(..., auto_complete=True)
 ```
 
 ### 📈 After (Option C)
+
 ```
 개선점:
   1. ✅ questions complete 자동 호출
@@ -129,12 +135,14 @@ CLI: calculate_round_score(..., auto_complete=True)
 ### ✅ GO: Option C 구현 권장
 
 **장점이 단점을 압도**:
+
 - 구현 복잡도: 낮음 (3.5시간)
 - 위험도: 낮음 (하위 호환, 조건부)
 - 효과: 높음 (완전 자동화)
 - 기술부채: 감소 (SRP 유지)
 
 **Action Items**:
+
 1. [ ] 이 proposal 리뷰 (팀)
 2. [ ] Phase 1-5 순차 구현
 3. [ ] 모니터링 설정
@@ -145,6 +153,7 @@ CLI: calculate_round_score(..., auto_complete=True)
 ## 참고: 각 옵션의 동작 예시
 
 ### Option A 예시
+
 ```python
 # API 호출 (어디서든)
 POST /questions/score?session_id=abc123
@@ -162,6 +171,7 @@ test_sessions: status = "completed"  # 자동 업데이트
 ```
 
 ### Option B 예시
+
 ```python
 # CLI 호출
 questions score
@@ -180,6 +190,7 @@ test_sessions: status = "completed"  # CLI가 호출해서 업데이트
 ```
 
 ### Option C 예시
+
 ```python
 # Backend (auto_complete=True 기본값)
 @router.post("/questions/score")

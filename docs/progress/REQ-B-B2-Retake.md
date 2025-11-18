@@ -25,6 +25,7 @@
 ### Backend (REQ-B-B2-Retake-1~3)
 
 **이미 구현되어 있음 - 검증만 수행**:
+
 - ✅ `generate_questions()` - 매번 새 UUID로 TestSession 생성
   - 위치: `src/backend/services/question_gen_service.py:250-434`
   - 동작: completed 상태 무관, 항상 새 세션 생성
@@ -36,6 +37,7 @@
 ### Frontend (REQ-B-B2-Retake-4)
 
 **요구사항 문서화**:
+
 - ✅ `docs/feature_requirement_mvp1.md` 업데이트 (REQ-F-B5-Retake-1~5)
 - 다른 담당자가 구현하므로 문서만 제공
 
@@ -61,6 +63,7 @@
 | 8 | `test_retake_error_agent_failure` | REQ-B-B2-Retake-1 | ✅ PASS |
 
 **실행 결과**:
+
 ```
 ============================== 8 passed in 7.73s ==============================
 ```
@@ -99,18 +102,21 @@
 **파일**: `docs/feature_requirement_mvp1.md`
 
 **변경사항**:
+
 - Line 741-778: `## REQ-B-B2-Retake: 재응시 문항 생성 (Backend)` 섹션 추가
 - Line 344-395: `## REQ-F-B5-Retake: 재응시 플로우 구현 (Frontend)` 섹션 추가
 
 ### 2. 테스트 파일 (신규)
 
 **파일**: `tests/backend/test_question_gen_service_retake.py`
+
 - 라인: 전체 530라인
 - 목적: REQ-B-B2-Retake-1~4 검증
 
 ### 3. 사양서 (신규)
 
 **파일**: `docs/REQ-B-B2-Retake-SPECIFICATION.md`
+
 - 목적: 상세 분석 및 설계 문서
 
 ---
@@ -137,6 +143,7 @@ self.session.commit()
 ### 테스트 검증 결과
 
 **모든 시나리오 검증 완료**:
+
 1. ✅ 같은 survey → 새 session_id
 2. ✅ 연속 재응시 → 각각 독립적 UUID
 3. ✅ 다른 survey → 새로운 survey_id와 session
@@ -149,9 +156,11 @@ self.session.commit()
 ## 📝 추가 문서
 
 ### Specification Document
+
 **파일**: `docs/REQ-B-B2-Retake-SPECIFICATION.md`
 
 포함 내용:
+
 - 문제점 분석 (왜 재응시가 실패했는지)
 - 해결 방향 (새 세션 생성 원칙)
 - 시스템 설계 (플로우 다이어그램)
@@ -168,6 +177,7 @@ self.session.commit()
 **파일**: `src/frontend/pages/retake.tsx` (신규 또는 수정)
 
 **구현할 항목** (REQ-F-B5-Retake-1~5):
+
 1. "재응시" 버튼 클릭 처리
 2. `GET /profile/history` - 이전 정보 로드
 3. 자기평가 폼 미리 채우기
@@ -176,6 +186,7 @@ self.session.commit()
 6. 오류 처리 및 재시도 로직
 
 **에러 처리**:
+
 - 네트워크 오류 → 재시도 버튼
 - Timeout → 사용자 친화적 메시지
 - API 에러 → 명확한 에러 메시지
@@ -225,6 +236,7 @@ self.session.commit()
 ### 재응시 플로우의 핵심
 
 **이전 문제**:
+
 ```
 Round 1 완료 → status = 'completed'
 재응시 요청 → generate_questions_adaptive() 호출
@@ -234,6 +246,7 @@ Round 1 완료 → status = 'completed'
 ```
 
 **해결책**:
+
 ```
 Round 1 완료 → status = 'completed' (유지)
 재응시 요청 → generate_questions() 호출 (동일 엔드포인트)
@@ -242,6 +255,7 @@ Round 1 완료 → status = 'completed' (유지)
 ```
 
 **Round 2 적응형**:
+
 ```
 Round 1 완료 → status = 'completed'
 Round 2 시작 → generate_questions_adaptive(previous_session_id=r1_uuid, round=2)
@@ -257,6 +271,7 @@ Round 2 시작 → generate_questions_adaptive(previous_session_id=r1_uuid, roun
 **검토 담당자**: Backend Lead
 
 **검토 항목**:
+
 - [x] 테스트 로직 타당성
 - [x] DB 무결성 보장
 - [x] 에러 처리 완성도
@@ -268,6 +283,7 @@ Round 2 시작 → generate_questions_adaptive(previous_session_id=r1_uuid, roun
 **Git Commit**: `f296fe3` - feat: Implement REQ-B-B2-Retake (Retake Question Generation)
 
 ### Commit Message
+
 ```
 feat: Implement REQ-B-B2-Retake (Retake Question Generation)
 
@@ -310,4 +326,3 @@ feat: Implement REQ-B-B2-Retake (Retake Question Generation)
 🤖 Generated with Claude Code
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
-

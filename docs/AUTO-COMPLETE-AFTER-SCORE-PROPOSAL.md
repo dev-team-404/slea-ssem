@@ -10,6 +10,7 @@
 ## 1. 제안 요약
 
 ### 현재 플로우
+
 ```
 questions score → (사용자가 별도로 호출) → questions complete
                 ↓
@@ -17,6 +18,7 @@ questions score → (사용자가 별도로 호출) → questions complete
 ```
 
 ### 제안된 플로우
+
 ```
 questions score → (자동) → questions complete
             ↓
@@ -24,6 +26,7 @@ questions score → (자동) → questions complete
 ```
 
 **목표**:
+
 - ✅ 사용자 UX 개선 (명시적 complete 호출 제거)
 - ✅ 데이터 일관성 보장 (자동)
 - ✅ 누락 위험 제거
@@ -36,6 +39,7 @@ questions score → (자동) → questions complete
 ### 2.1 현재 코드 구조
 
 **CLI에서의 흐름** (`src/cli/actions/questions.py:1471`):
+
 ```python
 def score_answer(context: CLIContext, *args: str) -> None:
     # 1. Batch score unscored answers
@@ -54,6 +58,7 @@ def score_answer(context: CLIContext, *args: str) -> None:
 ```
 
 **Backend 엔드포인트** (`src/backend/api/questions.py:640`):
+
 ```python
 @router.post("/answer/score")
 def score_answer(request: ScoringRequest, db: Session):
@@ -75,6 +80,7 @@ def complete_session(session_id: str, db: Session):
 #### Option A: Backend에서 자동 처리 (권장)
 
 **변경점**: `/questions/score` 엔드포인트 수정
+
 ```python
 @router.post("/questions/score")
 def calculate_round_score(session_id: str, db: Session):
@@ -101,12 +107,14 @@ def calculate_round_score(session_id: str, db: Session):
 ```
 
 **장점**:
+
 - ✅ Backend에서 한 번에 처리 (원자성)
 - ✅ 사용자/Frontend 관여 없음
 - ✅ 데이터 일관성 보장
 - ✅ 기존 score API 활용 가능
 
 **단점**:
+
 - ⚠️ API 책임이 늘어남 (점수 계산 + 상태 관리)
 
 ---
@@ -114,6 +122,7 @@ def calculate_round_score(session_id: str, db: Session):
 #### Option B: CLI에서 자동 처리
 
 **변경점**: CLI의 `score_answer()` 함수 수정
+
 ```python
 def score_answer(context: CLIContext, *args: str) -> None:
     # ... existing batch score logic ...
@@ -133,11 +142,13 @@ def score_answer(context: CLIContext, *args: str) -> None:
 ```
 
 **장점**:
+
 - ✅ Backend 변경 최소화
 - ✅ 기존 `/session/complete` API 활용
 - ✅ 책임 분리 명확
 
 **단점**:
+
 - ⚠️ CLI만 auto-complete (다른 클라이언트는 수동)
 - ⚠️ CLI를 우회한 API 호출은 여전히 누락 가능
 
@@ -146,6 +157,7 @@ def score_answer(context: CLIContext, *args: str) -> None:
 #### Option C: 하이브리드 (최적)
 
 **Backend**: 조건부 auto-complete
+
 ```python
 @router.post("/questions/score")
 def calculate_round_score(
@@ -165,6 +177,7 @@ def calculate_round_score(
 ```
 
 **CLI**: Auto-complete 호출
+
 ```python
 def score_answer(context: CLIContext, *args: str) -> None:
     # ... existing logic ...
@@ -174,12 +187,14 @@ def score_answer(context: CLIContext, *args: str) -> None:
 ```
 
 **장점**:
+
 - ✅ Backend에서도 자동 처리
 - ✅ API 호출자가 제어 가능 (필요시)
 - ✅ CLI에서도 명시적으로 처리
 - ✅ 모든 시나리오 커버
 
 **단점**:
+
 - ⚠️ 복잡도 약간 증가
 
 ---
@@ -189,6 +204,7 @@ def score_answer(context: CLIContext, *args: str) -> None:
 ### 3.1 Single Responsibility Principle (SRP)
 
 **현재 설계**:
+
 ```
 score_answer()     → Score individual answer (SRP ✅)
 calculate_round_score() → Calculate total score (SRP ✅)
@@ -196,6 +212,7 @@ complete_session()  → Mark session as completed (SRP ✅)
 ```
 
 **변경 후 (Option A)**:
+
 ```
 calculate_round_score() → Calculate score + Auto-complete (?SRP)
                     ↑
@@ -203,6 +220,7 @@ calculate_round_score() → Calculate score + Auto-complete (?SRP)
 ```
 
 **개선 (Option C)**:
+
 ```
 calculate_round_score()  → Calculate score (primary)
                         → Auto-complete (secondary, configurable)
@@ -221,6 +239,7 @@ calculate_round_score()  → Calculate score (primary)
 ### 3.3 API 호환성
 
 **Breaking Change 우려**:
+
 ```
 기존 API 사용자:
   POST /questions/score?session_id=xxx
@@ -319,6 +338,7 @@ def test_score_only_completes_if_all_scored():
 ### 5.1 데이터 무결성 위험 🟡
 
 **위험**: Partial scoring 시 조기 complete
+
 ```
 예: 3개 문항 중 2개만 채점됨
     → calculate_round_score() 호출
@@ -327,6 +347,7 @@ def test_score_only_completes_if_all_scored():
 ```
 
 **완화 방안**:
+
 - ✅ `all_answers_scored()` 엄격한 검사
 - ✅ 로그 추적 (auto_complete 여부)
 - ✅ 모니터링 (unexpected auto-complete)
@@ -334,6 +355,7 @@ def test_score_only_completes_if_all_scored():
 ### 5.2 API 호환성 위험 🟢
 
 **위험**: 기존 API 사용자 영향
+
 ```
 응답 형식 변경:
   Before: { "score": 85, "correct_count": 17, "total_count": 20 }
@@ -346,6 +368,7 @@ def test_score_only_completes_if_all_scored():
 ### 5.3 비즈니스 로직 위험 🟡
 
 **위험**: Complete가 자동 = 사용자 모름
+
 ```
 상황: 사용자가 실수로 채점
      → 자동 complete
@@ -364,6 +387,7 @@ def test_score_only_completes_if_all_scored():
 ### 선택: **Option C (하이브리드)**
 
 **이유**:
+
 1. ✅ SRP 유지 (auto-complete은 secondary responsibility)
 2. ✅ 데이터 일관성 보장
 3. ✅ API 유연성 (flag로 제어 가능)
@@ -386,6 +410,7 @@ def test_score_only_completes_if_all_scored():
 ## 7. Frontend 요구사항 변경
 
 ### 변경 전
+
 ```
 Flow:
   1. questions score (endpoint 호출)
@@ -396,6 +421,7 @@ Flow:
 ```
 
 ### 변경 후
+
 ```
 Flow:
   1. questions score (endpoint 호출 → 자동 complete 포함)
@@ -412,7 +438,9 @@ Flow:
 
 When you call the score endpoint:
 ```
+
 POST /questions/score?session_id={session_id}
+
 ```
 
 The following happens automatically:
@@ -434,6 +462,7 @@ Therefore:
 ## 8. 마이그레이션 가이드
 
 ### 기존 Frontend 코드 (계속 동작)
+
 ```javascript
 // Old approach (still works, but redundant)
 await api.post('/questions/score', { session_id })
@@ -441,6 +470,7 @@ await api.post(`/session/${session_id}/complete`)  // No-op now
 ```
 
 ### 새로운 Frontend 코드 (권장)
+
 ```javascript
 // New approach (cleaner)
 const response = await api.post('/questions/score', { session_id })
@@ -457,11 +487,13 @@ if (response.auto_completed) {
 ## 9. 체크리스트
 
 ### 구현 전
+
 - [ ] Backend 팀 리뷰
 - [ ] Frontend 팀 동의 (요구사항 변경)
 - [ ] Test 계획 수립
 
 ### 구현 중
+
 - [ ] all_answers_scored() 구현 + 테스트
 - [ ] /questions/score 수정 + 테스트
 - [ ] CLI score_answer() 수정
@@ -469,6 +501,7 @@ if (response.auto_completed) {
 - [ ] 문서 업데이트
 
 ### 구현 후
+
 - [ ] 모니터링 (auto_complete 성공률)
 - [ ] 운영팀 교육 (새로운 플로우)
 - [ ] Frontend 배포 (요구사항 제거)
@@ -479,12 +512,14 @@ if (response.auto_completed) {
 ## 결론
 
 ✅ **Option C 권장**:
+
 - **구현 난이도**: 낮음 (5시간)
 - **위험도**: 낮음 (하위 호환, 조건부 처리)
 - **효과**: 높음 (UX 개선, 데이터 일관성)
 - **의존성**: 없음 (독립적 개선)
 
 이 변경으로:
+
 1. ✅ 사용자가 complete를 호출하지 않아도 된다
 2. ✅ CLI 테스트 시 누락 위험 제거
 3. ✅ 데이터 일관성 자동 보장

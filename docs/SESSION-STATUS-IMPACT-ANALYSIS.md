@@ -8,6 +8,7 @@
 ## 1. 현재 상황 분석
 
 ### 발생한 상황
+
 ```
 Round 1:
   ✓ questions generate --count 3     (O)
@@ -23,6 +24,7 @@ Round 2:
 ```
 
 ### 데이터베이스 상태
+
 | Round | Session ID | Status | 영향 |
 |-------|-----------|--------|------|
 | 1 | session_1 | **in_progress** | ⚠️ 문제 발생 가능 |
@@ -35,11 +37,13 @@ Round 2:
 ### 2.1 Session Status가 미치는 영향
 
 **TestSession 모델** (`src/backend/models/test_session.py`):
+
 ```python
 status: Mapped[str] = Enum("in_progress", "completed", "paused")
 ```
 
 **핵심 특징**:
+
 - Round별로 독립적인 session 생성
 - Round 1, Round 2는 별도의 session_id를 가짐
 - 각 Round는 독립적으로 complete 가능
@@ -58,10 +62,12 @@ if test_session.status == "completed":
 ```
 
 **문제점**:
+
 - ✅ `in_progress` → 계속 답변 저장 가능 (정상)
 - ✅ `completed` → 추가 답변 저장 불가 (보호 작동)
 
 **Round 1의 경우**:
+
 ```
 status = "in_progress" (MISSED questions complete)
   ↓
@@ -86,10 +92,12 @@ status = "in_progress" (MISSED questions complete)
 ```
 
 **문제점**:
+
 - Ranking 계산 시 `status == "completed"` 세션만 포함
 - Round 1 (status = "in_progress") **제외됨**
 
 **결과**:
+
 ```
 시나리오: 사용자가 Round 1, Round 2 모두 완료
 
@@ -109,6 +117,7 @@ status = "in_progress" (MISSED questions complete)
 #### C. QuestionGenerationService
 
 **영향**: 없음 ✅
+
 - Round 2 생성 시 Round 1의 status는 확인하지 않음
 - 새로운 세션이 생성되므로 무관
 
@@ -179,15 +188,18 @@ GET /profile/ranking
 ### 영향받는 기능
 
 **🔴 직접 영향 (높음)**:
+
 1. ✗ 최종 점수 계산 → Round 1 점수 제외
 2. ✗ 사용자 랭킹 → 부정확
 3. ✗ 프로필 통계 (category별 점수) → 불완전
 
 **🟡 간접 영향 (중간)**:
+
 1. ✓ 추가 답변 저장 → 데이터 오염 가능
 2. ✓ 학습 기록 조회 → 부분적으로 정상 (개별 기록은 있음)
 
 **🟢 무영향 (낮음)**:
+
 1. ✓ Round 2 생성 → 정상
 2. ✓ 채점 → 정상 (이미 저장된 데이터 기반)
 3. ✓ 문항 조회 → 정상
@@ -199,6 +211,7 @@ GET /profile/ranking
 ### 현재 시스템 설계
 
 **긍정적 측면**:
+
 ```
 ✅ Round 1, 2는 독립적 session ID
 ✅ complete 호출 전에 ranking 조회 방지 가능
@@ -206,6 +219,7 @@ GET /profile/ranking
 ```
 
 **부정적 측면**:
+
 ```
 ❌ Backend 검증 부족 (Round 1 답변 후 status 자동 업데이트 없음)
 ❌ 데이터 일관성 검사 없음
@@ -219,12 +233,14 @@ GET /profile/ranking
 ### 단계별 개선안
 
 #### Phase 1: 즉시 (CLI 테스트)
+
 ```
 ✓ questions complete 호출 필수 (현재 상태)
 ✓ API 문서에 명시
 ```
 
 #### Phase 2: 단기 (1-2주)
+
 ```python
 # AutosaveService: 마지막 답변 저장 시 자동 complete 검토
 if is_last_answer(session_id):
@@ -233,6 +249,7 @@ if is_last_answer(session_id):
 ```
 
 #### Phase 3: 중기 (1개월)
+
 ```python
 # Session Status Validator (신규 서비스)
 class SessionStatusValidator:
@@ -247,6 +264,7 @@ class SessionStatusValidator:
 ```
 
 #### Phase 4: 장기 (2개월)
+
 ```
 - Monitoring Dashboard 추가
 - Metrics: completed_ratio, avg_time_to_complete, etc.
