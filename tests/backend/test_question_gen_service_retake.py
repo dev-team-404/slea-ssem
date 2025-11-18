@@ -338,7 +338,7 @@ class TestQuestionGenerationRetake:
 
         # Now perform Round 2 adaptive generation
         # This uses generate_questions_adaptive which queries the completed Round 1 session
-        result = service.generate_questions_adaptive(
+        result = await service.generate_questions_adaptive(
             user_id=authenticated_user.id,
             session_id=r1_session_id,  # previous_session_id
             round_num=2,

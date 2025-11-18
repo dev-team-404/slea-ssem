@@ -544,7 +544,7 @@ class QuestionGenerationService:
                     "question_id": q.id,
                     "category": q.category,
                     "difficulty": q.difficulty,
-                    "item_type": q.type,
+                    "item_type": q.item_type,
                 }
                 for q in prev_questions
             ]
