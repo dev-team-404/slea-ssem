@@ -3,6 +3,9 @@ import React, { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { submitProfileSurvey } from '../features/profile/profileSubmission'
 import LevelSelector from '../components/LevelSelector'
+import NumberInput from '../components/NumberInput'
+import RadioGroup, { type RadioOption } from '../components/RadioGroup'
+import TextAreaInput from '../components/TextAreaInput'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import './SelfAssessmentPage.css'
 
@@ -22,9 +25,29 @@ import './SelfAssessmentPage.css'
  *
  * Shared Components:
  * - LevelSelector: Reused with REQ-F-A2-Signup-4
+ * - NumberInput: Reusable number input field
+ * - RadioGroup: Reusable radio button group
+ * - TextAreaInput: Reusable textarea with character counter
  * - LEVEL_MAPPING: Centralized level conversion
  * - InfoBox: Consistent info display
  */
+
+// Radio options for Job Role field
+const JOB_ROLE_OPTIONS: RadioOption[] = [
+  { value: 'S', label: 'Software' },
+  { value: 'E', label: 'Engineering' },
+  { value: 'M', label: 'Marketing' },
+  { value: 'G', label: '기획' },
+  { value: 'F', label: 'Finance/인사' },
+]
+
+// Radio options for Interests field
+const INTERESTS_OPTIONS: RadioOption[] = [
+  { value: 'AI', label: 'AI' },
+  { value: 'ML', label: 'ML' },
+  { value: 'Backend', label: 'Backend' },
+  { value: 'Frontend', label: 'Frontend' },
+]
 
 const SelfAssessmentPage: React.FC = () => {
   const [level, setLevel] = useState<number | null>(null)
@@ -41,24 +64,23 @@ const SelfAssessmentPage: React.FC = () => {
     setErrorMessage(null)
   }, [])
 
-  const handleCareerChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setCareer(value === '' ? 0 : parseInt(value, 10))
+  const handleCareerChange = useCallback((value: number) => {
+    setCareer(value)
     setErrorMessage(null)
   }, [])
 
-  const handleJobRoleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setJobRole(e.target.value)
+  const handleJobRoleChange = useCallback((value: string) => {
+    setJobRole(value)
     setErrorMessage(null)
   }, [])
 
-  const handleDutyChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setDuty(e.target.value)
+  const handleDutyChange = useCallback((value: string) => {
+    setDuty(value)
     setErrorMessage(null)
   }, [])
 
-  const handleInterestsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInterests(e.target.value)
+  const handleInterestsChange = useCallback((value: string) => {
+    setInterests(value)
     setErrorMessage(null)
   }, [])
 
@@ -118,150 +140,48 @@ const SelfAssessmentPage: React.FC = () => {
           />
 
           {/* 2. 경력(연차) - 숫자 입력 */}
-          <div className="form-field">
-            <label htmlFor="career">경력(연차)</label>
-            <input
-              id="career"
-              type="number"
-              min="0"
-              max="50"
-              value={career}
-              onChange={handleCareerChange}
-              disabled={isSubmitting}
-              placeholder="0"
-            />
-          </div>
+          <NumberInput
+            id="career"
+            label="경력(연차)"
+            value={career}
+            onChange={handleCareerChange}
+            min={0}
+            max={50}
+            disabled={isSubmitting}
+            placeholder="0"
+          />
 
           {/* 3. 직군 - 라디오버튼 */}
-          <div className="form-field">
-            <fieldset>
-              <legend>직군</legend>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="jobRole"
-                    value="S"
-                    checked={jobRole === 'S'}
-                    onChange={handleJobRoleChange}
-                    disabled={isSubmitting}
-                  />
-                  Software
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="jobRole"
-                    value="E"
-                    checked={jobRole === 'E'}
-                    onChange={handleJobRoleChange}
-                    disabled={isSubmitting}
-                  />
-                  Engineering
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="jobRole"
-                    value="M"
-                    checked={jobRole === 'M'}
-                    onChange={handleJobRoleChange}
-                    disabled={isSubmitting}
-                  />
-                  Marketing
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="jobRole"
-                    value="G"
-                    checked={jobRole === 'G'}
-                    onChange={handleJobRoleChange}
-                    disabled={isSubmitting}
-                  />
-                  기획
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="jobRole"
-                    value="F"
-                    checked={jobRole === 'F'}
-                    onChange={handleJobRoleChange}
-                    disabled={isSubmitting}
-                  />
-                  Finance/인사
-                </label>
-              </div>
-            </fieldset>
-          </div>
+          <RadioGroup
+            name="jobRole"
+            legend="직군"
+            options={JOB_ROLE_OPTIONS}
+            value={jobRole}
+            onChange={handleJobRoleChange}
+            disabled={isSubmitting}
+          />
 
           {/* 4. 담당 업무 - 텍스트 입력 */}
-          <div className="form-field">
-            <label htmlFor="duty">담당 업무</label>
-            <textarea
-              id="duty"
-              value={duty}
-              onChange={handleDutyChange}
-              disabled={isSubmitting}
-              maxLength={500}
-              placeholder="담당하고 있는 주요 업무를 입력해주세요"
-              rows={3}
-            />
-          </div>
+          <TextAreaInput
+            id="duty"
+            label="담당 업무"
+            value={duty}
+            onChange={handleDutyChange}
+            disabled={isSubmitting}
+            maxLength={500}
+            placeholder="담당하고 있는 주요 업무를 입력해주세요"
+            rows={3}
+          />
 
           {/* 5. 관심분야 - 라디오버튼 */}
-          <div className="form-field">
-            <fieldset>
-              <legend>관심분야</legend>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    name="interests"
-                    value="AI"
-                    checked={interests === 'AI'}
-                    onChange={handleInterestsChange}
-                    disabled={isSubmitting}
-                  />
-                  AI
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="interests"
-                    value="ML"
-                    checked={interests === 'ML'}
-                    onChange={handleInterestsChange}
-                    disabled={isSubmitting}
-                  />
-                  ML
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="interests"
-                    value="Backend"
-                    checked={interests === 'Backend'}
-                    onChange={handleInterestsChange}
-                    disabled={isSubmitting}
-                  />
-                  Backend
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="interests"
-                    value="Frontend"
-                    checked={interests === 'Frontend'}
-                    onChange={handleInterestsChange}
-                    disabled={isSubmitting}
-                  />
-                  Frontend
-                </label>
-              </div>
-            </fieldset>
-          </div>
+          <RadioGroup
+            name="interests"
+            legend="관심분야"
+            options={INTERESTS_OPTIONS}
+            value={interests}
+            onChange={handleInterestsChange}
+            disabled={isSubmitting}
+          />
         </div>
 
         {errorMessage && <p className="error-message">{errorMessage}</p>}
