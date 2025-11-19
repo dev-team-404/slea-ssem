@@ -146,7 +146,7 @@ const ProfileReviewPage: React.FC = () => {
   }, [state?.surveyId, navigate])
 
   const handleEditClick = useCallback(() => {
-    navigate('/self-assessment')
+    navigate('/profile/edit')
   }, [navigate])
 
   if (isLoading) {
