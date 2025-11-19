@@ -9,6 +9,14 @@ import NumberInput from '../components/NumberInput'
 import RadioButtonGrid, { type RadioButtonOption } from '../components/RadioButtonGrid'
 import TextAreaInput from '../components/TextAreaInput'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
+import { safeBackendToLevel } from '../utils/levelMapping'
+import {
+  validateNickname as validateNicknameField,
+  validateCareer as validateCareerField,
+  validateLevel as validateLevelField,
+  shouldValidateNickname as shouldCheckNickname,
+} from '../utils/profileValidation'
+import { executeProfileUpdate, type UpdateHandlerContext } from '../utils/profileUpdateHandler'
 import './ProfileEditPage.css'
 
 /**
@@ -51,22 +59,6 @@ const INTERESTS_OPTIONS: RadioButtonOption[] = [
   { value: 'Backend', label: 'Backend' },
   { value: 'Frontend', label: 'Frontend' },
 ]
-
-// Level mapping: number → string for API
-const LEVEL_MAPPING: { [key: number]: string } = {
-  1: 'beginner',
-  2: 'intermediate',
-  3: 'intermediate',
-  4: 'advanced',
-  5: 'advanced',
-}
-
-// Reverse mapping: string → number for display
-const REVERSE_LEVEL_MAPPING: { [key: string]: number } = {
-  beginner: 1,
-  intermediate: 2,
-  advanced: 4,
-}
 
 const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate()
@@ -118,10 +110,8 @@ const ProfileEditPage: React.FC = () => {
         // Load profile survey data
         const surveyData = await profileService.getSurvey()
 
-        // Convert level string to number for LevelSelector
-        const levelNum = surveyData.level
-          ? REVERSE_LEVEL_MAPPING[surveyData.level.toLowerCase()] ?? null
-          : null
+        // Convert level string to number for LevelSelector using utility
+        const levelNum = safeBackendToLevel(surveyData.level)
 
         // Extract first interest from array (since we only support single selection)
         const interestsStr =
@@ -190,8 +180,8 @@ const ProfileEditPage: React.FC = () => {
   )
 
   const handleCheckNickname = useCallback(async () => {
-    // If nickname hasn't changed, skip validation
-    if (nickname === originalNickname) {
+    // If nickname hasn't changed, skip validation using utility
+    if (!shouldCheckNickname(nickname, originalNickname)) {
       setManualError('현재 사용 중인 닉네임입니다.')
       return
     }
@@ -202,25 +192,27 @@ const ProfileEditPage: React.FC = () => {
   const handleSave = useCallback(async () => {
     if (isSubmitting) return
 
-    // Validate required fields
-    if (!nickname.trim()) {
-      setErrorMessage('닉네임을 입력해주세요.')
+    // Validate required fields using utilities
+    const nicknameValidation = validateNicknameField(nickname)
+    if (!nicknameValidation.isValid) {
+      setErrorMessage(nicknameValidation.errorMessage || '닉네임이 유효하지 않습니다.')
       return
     }
 
-    if (level === null) {
-      setErrorMessage('기술 수준을 선택해주세요.')
+    const levelValidation = validateLevelField(level)
+    if (!levelValidation.isValid) {
+      setErrorMessage(levelValidation.errors.level || '기술 수준이 유효하지 않습니다.')
       return
     }
 
-    // Validate career range
-    if (career < 0 || career > 50) {
-      setErrorMessage('경력은 0~50 사이의 값을 입력해주세요.')
+    const careerValidation = validateCareerField(career)
+    if (!careerValidation.isValid) {
+      setErrorMessage(careerValidation.errorMessage || '경력이 유효하지 않습니다.')
       return
     }
 
     // Check if nickname changed and needs validation
-    const nicknameChanged = nickname !== originalNickname
+    const nicknameChanged = shouldCheckNickname(nickname, originalNickname)
     if (nicknameChanged && checkStatus !== 'available') {
       setErrorMessage('닉네임 중복 확인을 완료해주세요.')
       return
@@ -231,28 +223,33 @@ const ProfileEditPage: React.FC = () => {
     setSuccessMessage(null)
 
     try {
-      // Save nickname if changed
-      if (nicknameChanged) {
-        await profileService.registerNickname(nickname)
+      // Prepare update context for handler map
+      const updateContext: UpdateHandlerContext = {
+        current: {
+          nickname,
+          level,
+          career,
+          jobRole,
+          duty,
+          interests,
+        },
+        original: {
+          nickname: originalNickname,
+          level: originalLevel,
+          career: originalCareer,
+          jobRole: originalJobRole,
+          duty: originalDuty,
+          interests: originalInterests,
+        },
       }
 
-      // Check if survey data changed
-      const surveyChanged =
-        level !== originalLevel ||
-        career !== originalCareer ||
-        jobRole !== originalJobRole ||
-        duty !== originalDuty ||
-        interests !== originalInterests
+      // Execute update handlers using handler map pattern
+      const executedHandlers = await executeProfileUpdate(updateContext)
 
-      // Save survey data if changed
-      if (surveyChanged) {
-        await profileService.updateSurvey({
-          level: LEVEL_MAPPING[level],
-          career,
-          job_role: jobRole,
-          duty,
-          interests: interests ? [interests] : [],
-        })
+      if (executedHandlers.length === 0) {
+        setErrorMessage('변경된 항목이 없습니다.')
+        setIsSubmitting(false)
+        return
       }
 
       // Show success message
