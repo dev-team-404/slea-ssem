@@ -21,6 +21,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-A2-4 | 닉네임 중복 시 대안 3개 시각적 제안 | 4 | ✅ Done | 3 tests (100%), Commit: 8a43119, Progress: docs/progress/REQ-F-A2-4.md |
 | REQ-F-A2-6 | "사용 가능" 상태 표시 및 "다음" 버튼 활성화 | 4 | ✅ Done | Commit: 21243fd, Progress: docs/progress/REQ-F-A2-6.md |
 | REQ-F-A2-7 | "다음" 버튼 클릭 시 nickname 업데이트 및 리다이렉트 | 4 | ✅ Done | Commit: c3e06ea, Progress: docs/progress/REQ-F-A2-7.md |
+| REQ-F-A2-5 | 금칙어를 포함한 닉네임 거부 시 명확한 사유 안내 | 4 | ✅ Done | 29 tests (100%), Commit: 4e2db2c, Progress: docs/progress/REQ-F-A2-5.md |
 | REQ-F-A2-2 | 자기평가 입력 화면 (프로필 설정) | 0 | ⏳ Backlog | 5개 sub-tasks (REQ-F-B1 통합) |
 | REQ-F-A2-2-1 | 닉네임 설정 완료 후 자기평가 입력 페이지로 이동 | 4 | ✅ Done | 7 tests (100%), Commit: 8034886, Progress: docs/progress/REQ-F-A2-2-1.md |
 | REQ-F-A2-2-2 | 자기평가 정보(수준) 입력 | 4 | ✅ Done | 10 tests (100%), Commit: bd3c7ec, Progress: docs/progress/REQ-F-A2-2-2.md |
@@ -41,18 +42,19 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-F-A2-Profile-Access-3-6 | 닉네임 드롭다운 메뉴 (프로필 수정) | 4 | ✅ Done | 6 tests (100%), Commit: dba80be, Progress: docs/progress/REQ-F-A2-Profile-Access-3-6.md |
 | REQ-F-A2-Edit | 프로필 수정 화면 | 0 | ⏳ Backlog | 6개 sub-tasks |
 | REQ-F-A2-Edit-1 | 프로필 리뷰 화면에 "프로필 수정" 버튼 제공 | 4 | ✅ Done | Commit: d401eed, Progress: docs/progress/REQ-F-A2-Edit-1.md |
-| REQ-F-A3 | 개인정보 수집 및 이용 동의 | 0 | ⏳ Backlog | 5개 sub-tasks |
+| REQ-F-A3 | 개인정보 수집 및 이용 동의 | 4 | ✅ Done | 5개 sub-tasks, Commit: ab1e7d4, Progress: docs/progress/REQ-F-A3.md |
 | REQ-F-B1 | ⚠️ Deprecated - REQ-F-A2-2 참조 | N/A | ⚠️ Merged | REQ-F-A2-2로 통합됨 |
 | REQ-F-B2 | 문항 풀이 화면 | 0 | ⏳ Backlog | 7개 sub-tasks |
 | REQ-F-B2-1 | 문항 순차 표시 및 답변 제출 UI | 4 | ✅ Done | 9 tests (100%), Commit: f852dfe, Progress: docs/progress/REQ-F-B2-1.md |
 | REQ-F-B2-2 | 남은 시간(타이머) 표시 (20분 제한, 색상 변화) | 4 | ✅ Done | 5 tests (100%), Commit: dd7cbe3, Progress: docs/progress/REQ-F-B2-2.md |
-| REQ-F-B2-6 | 자동 저장 및 "저장됨" 표시 (실시간 저장) | 4 | ✅ Done | 5 tests (100%), Commit: 068b2ff, Progress: docs/progress/REQ-F-B2-6.md |
-| REQ-F-B3 | 해설 화면 | 0 | ⏳ Backlog | 2개 sub-tasks |
+| REQ-F-B2-6 | "다음" 버튼 클릭 시 저장 및 "저장됨" 표시 | 4 | ✅ Done | 14 tests (100%), Commit: 7cefeba, Progress: docs/progress/REQ-F-B2-6.md |
+| REQ-F-B3 | 해설 화면 (ExplanationPage) | 4 | ✅ Done | Question-by-question navigation, Commit: c34e4e0, Progress: docs/progress/REQ-F-B3-REQ-F-B4-7.md |
 | REQ-F-B3-Plus | 라운드 종료 및 다음 단계 네비게이션 | 0 | ⏳ Backlog | 4개 sub-tasks (백엔드 준비 완료) |
 | REQ-F-B4 | 최종 결과 페이지 | 0 | ⏳ Backlog | 6개 sub-tasks |
 | REQ-F-B4-1 | 등급/점수/순위/백분위 표시 | 4 | ✅ Done | Tests designed (16 cases), Commit: a22319f, Progress: docs/progress/REQ-F-B4-1.md |
 | REQ-F-B4-3 | 전사 상대 순위 및 분포 시각화 (막대 차트) | 4 | ✅ Done | 5 tests (100%), Commit: 6c22a41, Progress: docs/progress/REQ-F-B4-3.md |
 | REQ-F-B4-4 | 모집단 < 100일 경우 분포 신뢰도 낮음 경고 표시 | 4 | ✅ Done | 4 tests (100%), Commit: b6c17b0, Progress: docs/progress/REQ-F-B4-4.md |
+| REQ-F-B4-7 | "View Explanations" 버튼 (결과 페이지) | 4 | ✅ Done | Navigate to /test-explanations, Commit: c34e4e0, Progress: docs/progress/REQ-F-B3-REQ-F-B4-7.md |
 | REQ-F-B5 | 재응시 및 비교 화면 | 0 | ⏳ Backlog | 3개 sub-tasks |
 | REQ-F-B5-1 | 이전 응시 정보 비교 섹션 | 4 | ✅ Done | 9 tests (100%), Progress: docs/progress/REQ-F-B5-1.md |
 | REQ-F-B5-2 | 레벨 테스트 재응시 버튼 | 4 | ✅ Done | 5 tests (100%), Progress: docs/progress/REQ-F-B5-2.md |
