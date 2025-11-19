@@ -106,7 +106,7 @@ class LiteLLMProvider(LLMProvider):
         if not base_url:
             raise ValueError("LITELLM_BASE_URL 환경 변수가 설정되지 않았습니다.")
 
-        api_key = getenv("LITELLM_API_KEY", "sk-dummy-key")  # LiteLLM uses dummy key
+        api_key = getenv("LITELLM_API_KEY", "sk-dummy-key")
         model = getenv("LITELLM_MODEL", "gpt-4")
 
         return ChatOpenAI(
@@ -114,7 +114,7 @@ class LiteLLMProvider(LLMProvider):
             api_key=api_key,
             base_url=base_url,
             temperature=0.7,  # 창의성과 정확성의 균형 (0~1)
-            max_tokens=2048,  # LiteLLM 프록시 호환성 (보수적 설정)
+            max_tokens=8192,  # LiteLLM 프록시 호환성 (보수적 설정)
             timeout=30,  # API 타임아웃 (초)
         )
 
