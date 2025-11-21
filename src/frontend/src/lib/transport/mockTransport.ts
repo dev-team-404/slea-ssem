@@ -11,7 +11,9 @@ const API_PROFILE_SURVEY = '/api/profile/survey'
 const API_QUESTIONS_GENERATE = '/api/questions/generate'
 const API_QUESTIONS_AUTOSAVE = '/api/questions/autosave'
 const API_QUESTIONS_SCORE = '/api/questions/score'
-const API_SESSION_COMPLETE = '/api/session'
+const API_SESSION_COMPLETE = '/api/questions/session'
+const API_QUESTIONS_EXPLANATIONS = '/api/questions/explanations/session'
+const API_PROFILE_RANKING = '/api/profile/ranking'
 const API_RESULTS_PREVIOUS = '/api/results/previous'
 
 const ensureApiPath = (url: string): string => {
@@ -606,8 +608,8 @@ class MockTransport implements HttpTransport {
 
     // Handle session complete endpoint
     if (normalizedUrl.startsWith(API_SESSION_COMPLETE) && normalizedUrl.includes('/complete') && method === 'POST') {
-      // Extract session_id from URL: /api/session/{session_id}/complete
-      const sessionIdMatch = normalizedUrl.match(/\/api\/session\/([^/]+)\/complete/)
+      // Extract session_id from URL: /api/questions/session/{session_id}/complete
+      const sessionIdMatch = normalizedUrl.match(/\/api\/questions\/session\/([^/]+)\/complete/)
       const sessionId = sessionIdMatch ? sessionIdMatch[1] : 'mock_session_123'
 
       console.log('[Mock Transport] Completing session:', sessionId)
@@ -616,6 +618,240 @@ class MockTransport implements HttpTransport {
         session_id: sessionId,
         round: 1,
         message: 'Round 1 session completed successfully',
+      }
+      console.log('[Mock Transport] Response:', response)
+      return response as T
+    }
+
+    // Handle GET /api/questions/explanations/session/{session_id}
+    if (normalizedUrl.startsWith(API_QUESTIONS_EXPLANATIONS) && method === 'GET') {
+      const sessionIdMatch = normalizedUrl.match(/\/api\/questions\/explanations\/session\/([^/]+)/)
+      const sessionId = sessionIdMatch ? sessionIdMatch[1] : 'mock_session_123'
+
+      console.log('[Mock Transport] Fetching explanations for session:', sessionId)
+      const response = {
+        explanations: [
+          {
+            question_id: 'q1',
+            question_number: 1,
+            question_text: 'What is the primary goal of machine learning?',
+            user_answer: 'To replace human intelligence',
+            correct_answer: 'To enable computers to learn from data',
+            is_correct: false,
+            explanation_text:
+              '[틀린 이유]\n머신러닝의 주요 목표는 인간 지능을 대체하는 것이 아니라, 데이터로부터 학습하여 패턴을 발견하고 예측하는 것입니다.\n\n[정답의 원리]\n머신러닝은 데이터에서 패턴을 자동으로 학습하여 새로운 데이터에 대한 예측이나 결정을 내릴 수 있게 합니다. 이는 명시적으로 프로그래밍하지 않고도 컴퓨터가 작업을 수행할 수 있게 하는 핵심 기술입니다.\n\n[개념 구분]\n인간 지능 대체는 AGI(Artificial General Intelligence)의 목표이며, 현재 머신러닝은 특정 작업에 특화된 Narrow AI입니다.\n\n[복습 팁]\n머신러닝의 3가지 주요 유형(지도학습, 비지도학습, 강화학습)과 각각의 활용 사례를 정리해보세요.',
+            explanation_sections: [
+              {
+                title: '[틀린 이유]',
+                content:
+                  '머신러닝의 주요 목표는 인간 지능을 대체하는 것이 아니라, 데이터로부터 학습하여 패턴을 발견하고 예측하는 것입니다.',
+              },
+              {
+                title: '[정답의 원리]',
+                content:
+                  '머신러닝은 데이터에서 패턴을 자동으로 학습하여 새로운 데이터에 대한 예측이나 결정을 내릴 수 있게 합니다. 이는 명시적으로 프로그래밍하지 않고도 컴퓨터가 작업을 수행할 수 있게 하는 핵심 기술입니다.',
+              },
+              {
+                title: '[개념 구분]',
+                content:
+                  '인간 지능 대체는 AGI(Artificial General Intelligence)의 목표이며, 현재 머신러닝은 특정 작업에 특화된 Narrow AI입니다.',
+              },
+              {
+                title: '[복습 팁]',
+                content:
+                  '머신러닝의 3가지 주요 유형(지도학습, 비지도학습, 강화학습)과 각각의 활용 사례를 정리해보세요.',
+              },
+            ],
+            reference_links: [
+              {
+                title: 'Machine Learning Basics - Stanford CS229',
+                url: 'https://cs229.stanford.edu/',
+              },
+              {
+                title: 'Introduction to Machine Learning',
+                url: 'https://developers.google.com/machine-learning/crash-course',
+              },
+              {
+                title: 'Machine Learning Mastery',
+                url: 'https://machinelearningmastery.com/start-here/',
+              },
+            ],
+          },
+          {
+            question_id: 'q2',
+            question_number: 2,
+            question_text: 'Deep learning is a subset of machine learning.',
+            user_answer: 'True',
+            correct_answer: 'True',
+            is_correct: true,
+            explanation_text:
+              '[정답입니다]\n완벽합니다! 딥러닝은 머신러닝의 하위 분야로, 인공 신경망을 사용하여 복잡한 패턴을 학습합니다.\n\n[핵심 개념]\n딥러닝은 여러 층의 신경망(Deep Neural Networks)을 사용하여 데이터의 계층적 표현을 학습합니다. 이미지 인식, 자연어 처리 등에서 혁신적인 성능을 보여줍니다.\n\n[실무 활용]\nCNN(이미지), RNN/LSTM(시계열), Transformer(자연어) 등 다양한 아키텍처가 실무에서 활용되고 있습니다.',
+            explanation_sections: [
+              {
+                title: '[정답입니다]',
+                content:
+                  '완벽합니다! 딥러닝은 머신러닝의 하위 분야로, 인공 신경망을 사용하여 복잡한 패턴을 학습합니다.',
+              },
+              {
+                title: '[핵심 개념]',
+                content:
+                  '딥러닝은 여러 층의 신경망(Deep Neural Networks)을 사용하여 데이터의 계층적 표현을 학습합니다. 이미지 인식, 자연어 처리 등에서 혁신적인 성능을 보여줍니다.',
+              },
+              {
+                title: '[실무 활용]',
+                content:
+                  'CNN(이미지), RNN/LSTM(시계열), Transformer(자연어) 등 다양한 아키텍처가 실무에서 활용되고 있습니다.',
+              },
+            ],
+            reference_links: [
+              {
+                title: 'Deep Learning Specialization - Andrew Ng',
+                url: 'https://www.coursera.org/specializations/deep-learning',
+              },
+              {
+                title: 'Neural Networks and Deep Learning',
+                url: 'http://neuralnetworksanddeeplearning.com/',
+              },
+              {
+                title: 'Deep Learning Book',
+                url: 'https://www.deeplearningbook.org/',
+              },
+            ],
+          },
+          {
+            question_id: 'q3',
+            question_number: 3,
+            question_text: 'Explain the difference between supervised and unsupervised learning.',
+            user_answer: 'Supervised uses labeled data, unsupervised does not.',
+            correct_answer: 'Supervised learning uses labeled data, unsupervised learning uses unlabeled data.',
+            is_correct: true,
+            explanation_text:
+              '[정답입니다]\n정확합니다! 지도학습과 비지도학습의 핵심 차이를 잘 이해하고 계십니다.\n\n[핵심 개념]\n지도학습: 입력(X)과 정답(Y)이 함께 제공되어 예측 모델 학습 (예: 분류, 회귀)\n비지도학습: 정답 없이 데이터의 패턴과 구조를 발견 (예: 군집화, 차원축소)\n\n[실무 팁]\n실무에서는 준지도학습(Semi-supervised)도 자주 사용됩니다. 소량의 레이블 데이터와 대량의 비레이블 데이터를 함께 활용합니다.',
+            explanation_sections: [
+              {
+                title: '[정답입니다]',
+                content:
+                  '정확합니다! 지도학습과 비지도학습의 핵심 차이를 잘 이해하고 계십니다.',
+              },
+              {
+                title: '[핵심 개념]',
+                content:
+                  '지도학습: 입력(X)과 정답(Y)이 함께 제공되어 예측 모델 학습 (예: 분류, 회귀)\n비지도학습: 정답 없이 데이터의 패턴과 구조를 발견 (예: 군집화, 차원축소)',
+              },
+              {
+                title: '[실무 팁]',
+                content:
+                  '실무에서는 준지도학습(Semi-supervised)도 자주 사용됩니다. 소량의 레이블 데이터와 대량의 비레이블 데이터를 함께 활용합니다.',
+              },
+            ],
+            reference_links: [
+              {
+                title: 'Supervised vs Unsupervised Learning',
+                url: 'https://www.ibm.com/cloud/blog/supervised-vs-unsupervised-learning',
+              },
+              {
+                title: 'Machine Learning Types Explained',
+                url: 'https://towardsdatascience.com/supervised-vs-unsupervised-learning-14f68e32ea8d',
+              },
+              {
+                title: 'Semi-supervised Learning Overview',
+                url: 'https://en.wikipedia.org/wiki/Semi-supervised_learning',
+              },
+            ],
+          },
+          {
+            question_id: 'q4',
+            question_number: 4,
+            question_text: 'Which algorithm is commonly used for classification tasks?',
+            user_answer: 'K-means clustering',
+            correct_answer: 'Random Forest',
+            is_correct: false,
+            explanation_text:
+              '[틀린 이유]\nK-means는 비지도학습의 군집화 알고리즘으로, 분류(Classification) 작업이 아닌 클러스터링에 사용됩니다.\n\n[정답의 원리]\nRandom Forest는 여러 개의 결정 트리를 앙상블하여 분류 및 회귀 작업에 사용하는 강력한 지도학습 알고리즘입니다. 과적합을 방지하고 높은 정확도를 제공합니다.\n\n[개념 구분]\n분류(Classification): 지도학습, 정답 레이블 필요 (예: Random Forest, SVM, Logistic Regression)\n군집화(Clustering): 비지도학습, 정답 없이 유사한 데이터 그룹화 (예: K-means, DBSCAN)\n\n[복습 팁]\n분류 알고리즘(Random Forest, SVM, Neural Networks)과 군집화 알고리즘(K-means, Hierarchical Clustering)의 차이를 명확히 구분하세요.',
+            explanation_sections: [
+              {
+                title: '[틀린 이유]',
+                content:
+                  'K-means는 비지도학습의 군집화 알고리즘으로, 분류(Classification) 작업이 아닌 클러스터링에 사용됩니다.',
+              },
+              {
+                title: '[정답의 원리]',
+                content:
+                  'Random Forest는 여러 개의 결정 트리를 앙상블하여 분류 및 회귀 작업에 사용하는 강력한 지도학습 알고리즘입니다. 과적합을 방지하고 높은 정확도를 제공합니다.',
+              },
+              {
+                title: '[개념 구분]',
+                content:
+                  '분류(Classification): 지도학습, 정답 레이블 필요 (예: Random Forest, SVM, Logistic Regression)\n군집화(Clustering): 비지도학습, 정답 없이 유사한 데이터 그룹화 (예: K-means, DBSCAN)',
+              },
+              {
+                title: '[복습 팁]',
+                content:
+                  '분류 알고리즘(Random Forest, SVM, Neural Networks)과 군집화 알고리즘(K-means, Hierarchical Clustering)의 차이를 명확히 구분하세요.',
+              },
+            ],
+            reference_links: [
+              {
+                title: 'Random Forest Explained',
+                url: 'https://www.analyticsvidhya.com/blog/2021/06/understanding-random-forest/',
+              },
+              {
+                title: 'Classification vs Clustering',
+                url: 'https://www.geeksforgeeks.org/difference-between-classification-and-clustering/',
+              },
+              {
+                title: 'Scikit-learn Random Forest',
+                url: 'https://scikit-learn.org/stable/modules/ensemble.html#forest',
+              },
+            ],
+          },
+          {
+            question_id: 'q5',
+            question_number: 5,
+            question_text: 'What is overfitting and how can you prevent it?',
+            user_answer: 'When model performs well on training data but poorly on new data. Use regularization.',
+            correct_answer: 'Overfitting occurs when a model learns training data too well, including noise. Prevention: regularization, cross-validation, early stopping, dropout.',
+            is_correct: true,
+            explanation_text:
+              '[정답입니다]\n훌륭합니다! 과적합의 개념과 정규화를 통한 방지 방법을 정확히 이해하고 계십니다.\n\n[핵심 개념]\n과적합(Overfitting): 모델이 훈련 데이터에 과도하게 맞춰져 새로운 데이터에 대한 일반화 성능이 떨어지는 현상\n\n과적합 방지 기법:\n1. 정규화(Regularization): L1, L2 규제로 가중치 크기 제한\n2. 교차 검증(Cross-validation): 여러 검증 세트로 일반화 성능 평가\n3. 조기 종료(Early Stopping): 검증 손실이 증가할 때 학습 중단\n4. 드롭아웃(Dropout): 신경망 학습 시 일부 뉴런 무작위 비활성화\n5. 데이터 증강(Data Augmentation): 훈련 데이터 다양성 증가\n\n[실무 팁]\nHoldout 검증 세트를 항상 유지하여 과적합을 조기에 감지하고, 학습 곡선(Learning Curve)을 그려서 과적합/과소적합 여부를 시각적으로 확인하세요.',
+            explanation_sections: [
+              {
+                title: '[정답입니다]',
+                content:
+                  '훌륭합니다! 과적합의 개념과 정규화를 통한 방지 방법을 정확히 이해하고 계십니다.',
+              },
+              {
+                title: '[핵심 개념]',
+                content:
+                  '과적합(Overfitting): 모델이 훈련 데이터에 과도하게 맞춰져 새로운 데이터에 대한 일반화 성능이 떨어지는 현상',
+              },
+              {
+                title: '[과적합 방지 기법]',
+                content:
+                  '1. 정규화(Regularization): L1, L2 규제로 가중치 크기 제한\n2. 교차 검증(Cross-validation): 여러 검증 세트로 일반화 성능 평가\n3. 조기 종료(Early Stopping): 검증 손실이 증가할 때 학습 중단\n4. 드롭아웃(Dropout): 신경망 학습 시 일부 뉴런 무작위 비활성화\n5. 데이터 증강(Data Augmentation): 훈련 데이터 다양성 증가',
+              },
+              {
+                title: '[실무 팁]',
+                content:
+                  'Holdout 검증 세트를 항상 유지하여 과적합을 조기에 감지하고, 학습 곡선(Learning Curve)을 그려서 과적합/과소적합 여부를 시각적으로 확인하세요.',
+              },
+            ],
+            reference_links: [
+              {
+                title: 'Overfitting and Underfitting',
+                url: 'https://www.tensorflow.org/tutorials/keras/overfit_and_underfit',
+              },
+              {
+                title: 'Regularization Techniques',
+                url: 'https://towardsdatascience.com/regularization-in-machine-learning-76441ddcf99a',
+              },
+              {
+                title: 'Practical Guide to Preventing Overfitting',
+                url: 'https://machinelearningmastery.com/introduction-to-regularization-to-reduce-overfitting/',
+              },
+            ],
+          },
+        ],
       }
       console.log('[Mock Transport] Response:', response)
       return response as T
@@ -633,6 +869,29 @@ class MockTransport implements HttpTransport {
       const response = mockData[API_PROFILE_CONSENT]
       console.log('[Mock Transport] Response:', response)
       return response as T
+    }
+
+    // Handle GET /profile/ranking endpoint
+    if (normalizedUrl === API_PROFILE_RANKING && method === 'GET') {
+      if (hasMockOverride(normalizedUrl)) {
+        const override = mockData[normalizedUrl]
+        console.log('[Mock Transport] Response (override):', override)
+        return override as T
+      }
+
+      // Use the most recent session's result or generate a new one
+      const mostRecentAttempt = sessionSequenceCounter || 1
+      let result = Array.from(sessionResultsCache.values()).pop()
+
+      if (!result) {
+        result = getResultForAttempt(mostRecentAttempt)
+        const sessionId = buildSessionId(mostRecentAttempt)
+        sessionResultsCache.set(sessionId, result)
+        recordCompletedResult(mostRecentAttempt, result)
+      }
+
+      console.log('[Mock Transport] Response (ranking):', result)
+      return deepClone(result) as T
     }
 
       // Handle GET /api/results/{sessionId} endpoint

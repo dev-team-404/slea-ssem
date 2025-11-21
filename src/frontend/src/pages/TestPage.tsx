@@ -173,14 +173,14 @@ const TestPage: React.FC = () => {
     try {
       const currentQuestion = questions[currentIndex]
 
-      // Build user_answer based on question type
-      let userAnswer: { selected_key?: string; answer?: string; text?: string }
+      // Build user_answer based on question type (strongly typed)
+      let userAnswer: import('../services').UserAnswer
       if (currentQuestion.item_type === 'multiple_choice') {
-        userAnswer = { selected_key: answer }  // Backend expects "selected_key"
+        userAnswer = { selected_key: answer } satisfies import('../services').MultipleChoiceAnswer
       } else if (currentQuestion.item_type === 'true_false') {
-        userAnswer = { answer: answer }  // Backend expects "answer"
+        userAnswer = { answer: answer } satisfies import('../services').TrueFalseAnswer
       } else {
-        userAnswer = { text: answer }  // Backend expects "text"
+        userAnswer = { text: answer } satisfies import('../services').ShortAnswer
       }
 
       // Submit answer to backend

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ArrowLeftIcon, ArrowRightIcon, HomeIcon } from '@heroicons/react/24/outline'
 import { transport } from '../lib/transport'
+import type { UserAnswer } from '../types/answer'
+import { formatUserAnswer } from '../types/answer'
 import './ExplanationPage.css'
 
 /**
@@ -31,8 +33,8 @@ interface QuestionExplanation {
   question_id: string
   question_number: number
   question_text: string
-  user_answer: string
-  correct_answer: string
+  user_answer: string | UserAnswer  // Supports both serialized string and structured answer
+  correct_answer: string | UserAnswer
   is_correct: boolean
   explanation_text: string
   explanation_sections: ExplanationSection[]
@@ -53,15 +55,6 @@ const ExplanationPage: React.FC = () => {
   const [explanations, setExplanations] = useState<QuestionExplanation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Helper function to convert answer to string
-  const formatAnswer = (answer: any): string => {
-    if (typeof answer === 'string') return answer
-    if (typeof answer === 'object' && answer !== null) {
-      return answer.selected_key || answer.answer || answer.text || JSON.stringify(answer)
-    }
-    return String(answer)
-  }
 
   // Fetch explanations on mount
   useEffect(() => {
@@ -174,7 +167,7 @@ const ExplanationPage: React.FC = () => {
         <div className="answer-comparison">
           <div className={`answer-row ${currentExplanation.is_correct ? 'correct' : 'incorrect'}`}>
             <span className="answer-label">내 답변:</span>
-            <span className="answer-value">{formatAnswer(currentExplanation.user_answer)}</span>
+            <span className="answer-value">{formatUserAnswer(currentExplanation.user_answer)}</span>
             <span className={`answer-badge ${currentExplanation.is_correct ? 'correct' : 'incorrect'}`}>
               {currentExplanation.is_correct ? '정답' : '오답'}
             </span>
@@ -182,7 +175,7 @@ const ExplanationPage: React.FC = () => {
           {!currentExplanation.is_correct && (
             <div className="answer-row correct">
               <span className="answer-label">정답:</span>
-              <span className="answer-value">{formatAnswer(currentExplanation.correct_answer)}</span>
+              <span className="answer-value">{formatUserAnswer(currentExplanation.correct_answer)}</span>
             </div>
           )}
         </div>

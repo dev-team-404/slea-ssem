@@ -2,7 +2,7 @@
 // REQ: REQ-F-B2-6
 
 import { useEffect, useState } from 'react'
-import { questionService } from '../services'
+import { questionService, type UserAnswer } from '../services'
 import type { QuestionData } from '../components/test/Question'
 
 export type SaveStatusType = 'idle' | 'saving' | 'saved' | 'error'
@@ -58,13 +58,12 @@ export function useAutosave({
     const timer = setTimeout(async () => {
       setSaveStatus('saving')
       try {
-        // Build user_answer based on question type
-        let userAnswer: { selected?: string; text?: string }
-        if (
-          currentQuestion.item_type === 'multiple_choice' ||
-          currentQuestion.item_type === 'true_false'
-        ) {
-          userAnswer = { selected: answer }
+        // Build user_answer based on question type (strongly typed)
+        let userAnswer: UserAnswer
+        if (currentQuestion.item_type === 'multiple_choice') {
+          userAnswer = { selected_key: answer }
+        } else if (currentQuestion.item_type === 'true_false') {
+          userAnswer = { answer: answer }
         } else {
           userAnswer = { text: answer }
         }
@@ -73,7 +72,7 @@ export function useAutosave({
           await questionService.autosave({
           session_id: sessionId,
           question_id: currentQuestion.id,
-            user_answer: JSON.stringify(userAnswer),
+            user_answer: userAnswer,
             response_time_ms: responseTime,
         })
 

@@ -2,6 +2,15 @@
 // REQ: REQ-F-B2-1, REQ-F-B2-6
 
 import { transport } from '../lib/transport'
+import type {
+  UserAnswer,
+  MultipleChoiceAnswer,
+  TrueFalseAnswer,
+  ShortAnswer,
+} from '../types/answer'
+
+// Re-export answer types for convenience
+export type { UserAnswer, MultipleChoiceAnswer, TrueFalseAnswer, ShortAnswer }
 
 /**
  * Question type
@@ -43,7 +52,7 @@ export interface GenerateQuestionsResponse {
 export interface AutosaveRequest {
   session_id: string
   question_id: string
-  user_answer: Record<string, any>  // Changed from string to object (matches backend)
+  user_answer: UserAnswer  // Strongly typed answer (matches backend contract)
   response_time_ms?: number
 }
 
