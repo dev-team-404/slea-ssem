@@ -167,11 +167,10 @@ const HomePage: React.FC = () => {
           <div className="home-content">
             <p className="home-label">TODAY'S LEARNING TEST</p>
             <h1 className="home-title">
-              오늘 당신의 AI 역량을<br/>
-              정확하게 측정해보세요.
+              오늘 당신의 AI 역량은?<br/>
             </h1>
             <p className="home-description">
-              개인 맞춤형 테스트로 당신의 실력을 객관적으로 측정해보세요.
+              슬아샘과 함께 개인 맞춤형 테스트로 당신의 실력을 객관적으로 측정해보세요.
             </p>
 
             {errorMessage && (
