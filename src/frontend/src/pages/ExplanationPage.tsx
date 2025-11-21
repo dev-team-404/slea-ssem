@@ -207,21 +207,21 @@ const ExplanationPage: React.FC = () => {
       {/* Navigation Buttons - REQ: REQ-F-B3-2 */}
       <div className="navigation-buttons">
         {!isFirstQuestion && (
-          <button type="button" className="nav-button prev-button" onClick={handlePrevious}>
+          <button type="button" className="explanation-nav-button explanation-prev-button" onClick={handlePrevious}>
             <ArrowLeftIcon className="button-icon" />
             이전 문항
           </button>
         )}
 
         {!isLastQuestion && (
-          <button type="button" className="nav-button next-button" onClick={handleNext}>
+          <button type="button" className="explanation-nav-button explanation-next-button" onClick={handleNext}>
             다음 문항
             <ArrowRightIcon className="button-icon" />
           </button>
         )}
 
         {isLastQuestion && (
-          <button type="button" className="nav-button results-button" onClick={handleViewResults}>
+          <button type="button" className="explanation-nav-button explanation-results-button" onClick={handleViewResults}>
             <HomeIcon className="button-icon" />
             결과 보기
           </button>
