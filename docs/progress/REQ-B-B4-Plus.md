@@ -18,7 +18,7 @@ Implementation of automatic badge assignment system for grade-based recognition.
 
 | REQ ID | Requirement | Priority | Status |
 |--------|------------|----------|--------|
-| **REQ-B-B4-Plus-1** | **Rank-Service가 최종 등급을 산출한 후, 등급에 따라 자동으로 배지를 부여해야 한다.** 배지 종류: <br> - Beginner: "시작자 배지" <br> - Intermediate: "중급자 배지" <br> - Intermediate-Advanced: "중상급자 배지" <br> - Advanced: "고급자 배지" <br> - Elite: "엘리트 배지" | **M** | ✅ Implemented |
+| **REQ-B-B4-Plus-1** | **Rank-Service가 최종 등급을 산출한 후, 등급에 따라 자동으로 배지를 부여해야 한다.** 배지 종류: <br> - Beginner: "시작자 배지" <br> - Intermediate: "중급자 배지" <br> - Inter-Advanced: "중상급자 배지" <br> - Advanced: "고급자 배지" <br> - Elite: "엘리트 배지" | **M** | ✅ Implemented |
 | **REQ-B-B4-Plus-2** | **엘리트 등급 사용자에게는 추가로 "Agent Specialist 배지"(또는 해당 분야 전문가 배지)를 부여해야 한다.** (예: Agent Architecture 분야 상위 5% → "Agent Specialist 배지") | **M** | ✅ Implemented |
 | **REQ-B-B4-Plus-3** | 부여된 배지는 user_badges 테이블에 저장되고, profile 조회 API에 포함되어야 한다. | **M** | ✅ Implemented |
 
@@ -82,7 +82,7 @@ class UserBadge(Base):
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
     "Intermediate": "중급자 배지",
-    "Intermediate-Advanced": "중상급자 배지",
+    "Inter-Advanced": "중상급자 배지",
     "Advanced": "고급자 배지",
     "Elite": "엘리트 배지",
 }
@@ -129,7 +129,7 @@ def test_badge_assignment_for_all_grades(
     Expected: Each gets correct grade badge
     - 20 → Beginner → "시작자 배지"
     - 45 → Intermediate → "중급자 배지"
-    - 65 → Intermediate-Advanced → "중상급자 배지"
+    - 65 → Inter-Advanced → "중상급자 배지"
     - 80 → Advanced → "고급자 배지"
     - 95 → Elite → "엘리트 배지"
     """
@@ -318,7 +318,7 @@ class UserBadge(Base):
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
     "Intermediate": "중급자 배지",
-    "Intermediate-Advanced": "중상급자 배지",
+    "Inter-Advanced": "중상급자 배지",
     "Advanced": "고급자 배지",
     "Elite": "엘리트 배지",
 }

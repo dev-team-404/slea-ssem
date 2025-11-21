@@ -51,7 +51,7 @@
 @dataclass
 class GradeResult:
     user_id: int
-    grade: str  # Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite
+    grade: str  # Beginner, Intermediate, Inter-Advanced, Advanced, Elite
     score: float  # 0-100
     rank: int  # 1-indexed
     total_cohort_size: int
@@ -165,7 +165,7 @@ TestResultsPage
 - **Grade Color Coding** (REQ-F-B4-1):
   - `.grade-beginner`: Gray gradient
   - `.grade-intermediate`: Blue gradient
-  - `.grade-intermediate-advanced`: Indigo gradient
+  - `.grade-Inter-Advanced`: Indigo gradient
   - `.grade-advanced`: Purple gradient
   - `.grade-elite`: Gold gradient with border (emphasized)
 - **Progress Bar**: Smooth animation, gradient fill

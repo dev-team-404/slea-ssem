@@ -9,7 +9,7 @@
  * Level mapping:
  * 1 - Beginner: 입문 - 기초 개념 학습 중
  * 2 - Intermediate: 초급 - 기본 업무 수행 가능
- * 3 - Intermediate-Advanced: 중급 - 독립적으로 업무 수행
+ * 3 - Inter-Advanced: 중급 - 독립적으로 업무 수행
  * 4 - Advanced: 고급 - 복잡한 문제 해결 가능
  * 5 - Elite: 전문가 - 다른 사람을 지도 가능
  */

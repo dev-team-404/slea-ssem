@@ -56,14 +56,14 @@ describe('GradeBadge - REQ-F-B4-2 (등급 배지 + 특수 배지)', () => {
     expect(screen.queryByText('Agent Specialist')).not.toBeInTheDocument()
   })
 
-  // Test 5: Intermediate-Advanced 등급일 때 특수 배지 미표시
-  test('does not display special badge for Intermediate-Advanced grade', () => {
+  // Test 5: Inter-Advanced 등급일 때 특수 배지 미표시
+  test('does not display special badge for Inter-Advanced grade', () => {
     // REQ: REQ-F-B4-2 - Non-Elite 등급은 특수 배지 없음
-    render(<GradeBadge grade="Intermediate-Advanced" />)
+    render(<GradeBadge grade="Inter-Advanced" />)
 
     // 기본 등급 배지 확인
     expect(screen.getByText('중상급자')).toBeInTheDocument()
-    expect(screen.getByText('Intermediate-Advanced')).toBeInTheDocument()
+    expect(screen.getByText('Inter-Advanced')).toBeInTheDocument()
 
     // 특수 배지 미표시 확인
     expect(screen.queryByText('Agent Specialist')).not.toBeInTheDocument()

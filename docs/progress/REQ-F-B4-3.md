@@ -98,7 +98,7 @@ export interface GradeResult {
 grade_distribution: [
   { grade: 'Beginner', count: 102, percentage: 20.2 },
   { grade: 'Intermediate', count: 156, percentage: 30.8 },
-  { grade: 'Intermediate-Advanced', count: 98, percentage: 19.4 },
+  { grade: 'Inter-Advanced', count: 98, percentage: 19.4 },
   { grade: 'Advanced', count: 95, percentage: 18.8 },
   { grade: 'Elite', count: 55, percentage: 10.8 },
 ]

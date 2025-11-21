@@ -675,7 +675,7 @@
 
 6. 사용자가 2차 문제를 완료하면 **최종 평가**가 실행되어야 한다:
    - 종합 점수 산출(1차, 2차 점수 가중치 계산)
-   - **5등급 체계** 산출: Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite
+   - **5등급 체계** 산출: Beginner, Intermediate, Inter-Advanced, Advanced, Elite
    - 전사 상대 순위 계산(예: 145/506)
    - 상위 백분위 계산(예: 상위 28%)
 
@@ -784,7 +784,7 @@
 - ✅ 기존 사용자의 프로필 정보 업데이트 (관심분야 추가)
 - ✅ 새로운 test_sessions 레코드 생성 (기존 세션과 분리)
 - ✅ 적응형 난이도 조정: 1차 점수 기반 2차 난이도 상향
-- ✅ 최종 등급 변동: "intermediate" → "intermediate-advanced"
+- ✅ 최종 등급 변동: "intermediate" → "Inter-Advanced"
 - ✅ 순위 변동 반영: 상위 28% → 상위 22%
 - ✅ 이전 응시 기록과 비교 데이터 제시
 

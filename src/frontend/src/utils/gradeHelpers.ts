@@ -10,7 +10,7 @@ export const getGradeKorean = (grade: string): string => {
   const gradeMap: Record<string, string> = {
     Beginner: '시작자',
     Intermediate: '중급자',
-    'Intermediate-Advanced': '중상급자',
+    'Inter-Advanced': '중상급자',
     Advanced: '고급자',
     Elite: '엘리트',
   }
@@ -24,7 +24,7 @@ export const getGradeClass = (grade: string): string => {
   const classMap: Record<string, string> = {
     Beginner: 'grade-beginner',
     Intermediate: 'grade-intermediate',
-    'Intermediate-Advanced': 'grade-intermediate-advanced',
+    'Inter-Advanced': 'grade-Inter-Advanced',
     Advanced: 'grade-advanced',
     Elite: 'grade-elite',
   }

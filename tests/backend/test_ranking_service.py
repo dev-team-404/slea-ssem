@@ -80,7 +80,7 @@ class TestGradeCalculation:
         Round 1: 60/100
         Round 2: 85/100
         Expected: aggregate score ~75 (weighted towards round 2)
-        Expected Grade: Intermediate-Advanced or Advanced
+        Expected Grade: Inter-Advanced or Advanced
         """
         from src.backend.services.ranking_service import RankingService
 
@@ -96,7 +96,7 @@ class TestGradeCalculation:
         assert result is not None
         # Weighted: (60*1 + 85*2) / 3 = 76.67
         assert result.score >= 70 and result.score <= 85
-        assert result.grade in ["Intermediate-Advanced", "Advanced"]
+        assert result.grade in ["Inter-Advanced", "Advanced"]
 
     def test_all_five_grade_tiers(
         self, db_session: Session, create_multiple_users, create_survey_for_user, create_test_session_with_result
@@ -105,14 +105,14 @@ class TestGradeCalculation:
         REQ-B-B4-2: All 5 grade tiers are correctly assigned.
 
         Test scores: [20, 45, 65, 80, 95]
-        Expected grades: [Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite]
+        Expected grades: [Beginner, Intermediate, Inter-Advanced, Advanced, Elite]
         """
         from src.backend.services.ranking_service import RankingService
 
         # Create 5 users
         users = create_multiple_users(5)
         scores = [20, 45, 65, 80, 95]
-        expected_grades = ["Beginner", "Intermediate", "Intermediate-Advanced", "Advanced", "Elite"]
+        expected_grades = ["Beginner", "Intermediate", "Inter-Advanced", "Advanced", "Elite"]
 
         service = RankingService(db_session)
 
@@ -337,7 +337,7 @@ class TestBadgeAssignment:
 
         Beginner → "시작자 배지"
         Intermediate → "중급자 배지"
-        Intermediate-Advanced → "중상급자 배지"
+        Inter-Advanced → "중상급자 배지"
         Advanced → "고급자 배지"
         Elite → "엘리트 배지"
         """

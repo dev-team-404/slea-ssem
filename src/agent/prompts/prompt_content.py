@@ -12,7 +12,6 @@ This separation prevents:
 ❌ Coupling between content and LangChain implementation
 """
 
-
 # ============================================================================
 # ReAct Format Rules
 # ============================================================================
@@ -133,7 +132,7 @@ USER_PROFICIENCY_LEVELS = """4. User Proficiency Level (self_level) - IMPORTANT 
      * Focus: Application of concepts, basic problem-solving
      * Difficulty: 2-4, practical scenarios, simple comparisons
      * Example: "How would you use X in scenario Y?", "Compare X and Y"
-   - Intermediate-Advanced (중급): Can work independently on complex tasks
+   - Inter-Advanced (중급): Can work independently on complex tasks
      * Focus: Complex applications, analysis, design decisions
      * Difficulty: 5-6, complex scenarios, multi-step reasoning
      * Example: "Why is X better than Y for this scenario?", "Design a solution for X"

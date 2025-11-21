@@ -140,7 +140,7 @@ npm test -- --run src/pages/__tests__/TestResultsPage.test.tsx
 
 ### Test Coverage
 - ✅ Elite grade shows special badge
-- ✅ Non-Elite grades (Beginner, Intermediate, Intermediate-Advanced, Advanced) do NOT show special badge
+- ✅ Non-Elite grades (Beginner, Intermediate, Inter-Advanced, Advanced) do NOT show special badge
 - ✅ CSS classes applied correctly
 - ✅ Icon rendered correctly
 - ✅ No regression in existing TestResultsPage functionality

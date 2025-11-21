@@ -39,7 +39,7 @@ const mockResultData = {
   grade_distribution: [
     { grade: 'Beginner', count: 50, percentage: 10 },
     { grade: 'Intermediate', count: 100, percentage: 20 },
-    { grade: 'Intermediate-Advanced', count: 150, percentage: 30 },
+    { grade: 'Inter-Advanced', count: 150, percentage: 30 },
     { grade: 'Advanced', count: 120, percentage: 24 },
     { grade: 'Elite', count: 80, percentage: 16 },
   ],

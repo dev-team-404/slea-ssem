@@ -17,7 +17,7 @@ from src.backend.models import TestResult, TestSession, User, UserBadge
 GRADE_CUTOFFS = {
     "Beginner": 0,
     "Intermediate": 40,
-    "Intermediate-Advanced": 60,
+    "Inter-Advanced": 60,
     "Advanced": 75,
     "Elite": 90,
 }
@@ -26,7 +26,7 @@ GRADE_CUTOFFS = {
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
     "Intermediate": "중급자 배지",
-    "Intermediate-Advanced": "중상급자 배지",
+    "Inter-Advanced": "중상급자 배지",
     "Advanced": "고급자 배지",
     "Elite": "엘리트 배지",
 }
@@ -193,15 +193,15 @@ class RankingService:
             composite_score: Score (0-100)
 
         Returns:
-            Grade string: Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite
+            Grade string: Beginner, Intermediate, Inter-Advanced, Advanced, Elite
 
         """
         if composite_score >= GRADE_CUTOFFS["Elite"]:
             return "Elite"
         elif composite_score >= GRADE_CUTOFFS["Advanced"]:
             return "Advanced"
-        elif composite_score >= GRADE_CUTOFFS["Intermediate-Advanced"]:
-            return "Intermediate-Advanced"
+        elif composite_score >= GRADE_CUTOFFS["Inter-Advanced"]:
+            return "Inter-Advanced"
         elif composite_score >= GRADE_CUTOFFS["Intermediate"]:
             return "Intermediate"
         else:
