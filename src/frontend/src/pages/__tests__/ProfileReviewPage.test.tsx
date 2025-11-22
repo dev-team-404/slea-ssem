@@ -134,7 +134,7 @@ describe('ProfileReviewPage', () => {
     expect(localStorage.getItem('lastSurveyId')).toBe('survey_123')
   })
 
-  test('navigates back to /self-assessment when "수정하기" button is clicked', async () => {
+  test('navigates to /profile/edit when "수정하기" button is clicked', async () => {
     // REQ: REQ-F-A2-2-4
     const user = userEvent.setup()
     renderWithRouter(<ProfileReviewPage />)
@@ -146,7 +146,9 @@ describe('ProfileReviewPage', () => {
     const editButton = screen.getByRole('button', { name: /수정하기/i })
     await user.click(editButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/self-assessment')
+    expect(mockNavigate).toHaveBeenCalledWith('/profile/edit', {
+      state: { returnTo: '/profile-review' },
+    })
   })
 
   test('shows loading state while fetching nickname', () => {

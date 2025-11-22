@@ -1,36 +1,45 @@
 /**
  * Level Mapping Utilities
  *
- * Converts between frontend (1-5 scale) and backend (beginner/intermediate/advanced) level values
+ * ✅ Updated to match backend 1:1 mapping
+ * Backend uses: 'beginner', 'intermediate', 'inter-advanced', 'advanced', 'elite'
+ *
+ * Converts between frontend (1-5 scale) and backend level strings
  */
 
-export type BackendLevel = 'beginner' | 'intermediate' | 'advanced'
+export type BackendLevel = 'beginner' | 'intermediate' | 'inter-advanced' | 'advanced' | 'elite'
 export type FrontendLevel = 1 | 2 | 3 | 4 | 5
 
 /**
- * Frontend to Backend level mapping
+ * Frontend to Backend level mapping (1:1)
  * 1 → beginner
- * 2-3 → intermediate
- * 4-5 → advanced
+ * 2 → intermediate
+ * 3 → inter-advanced
+ * 4 → advanced
+ * 5 → elite
  */
 const LEVEL_TO_BACKEND: Record<number, BackendLevel> = {
   1: 'beginner',
   2: 'intermediate',
-  3: 'intermediate',
+  3: 'inter-advanced',
   4: 'advanced',
-  5: 'advanced',
+  5: 'elite',
 }
 
 /**
- * Backend to Frontend level mapping (reverse)
+ * Backend to Frontend level mapping (1:1 reverse)
  * beginner → 1
- * intermediate → 2 (default middle value)
- * advanced → 4 (default middle value)
+ * intermediate → 2
+ * inter-advanced → 3
+ * advanced → 4
+ * elite → 5
  */
 const BACKEND_TO_LEVEL: Record<BackendLevel, number> = {
   beginner: 1,
   intermediate: 2,
+  'inter-advanced': 3,
   advanced: 4,
+  elite: 5,
 }
 
 /**

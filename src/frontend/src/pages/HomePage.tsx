@@ -8,20 +8,8 @@ import { useUserProfile } from '../hooks/useUserProfile'
 import { profileService } from '../services/profileService'
 import { homeService, type LastTestResult } from '../services/homeService'
 import { PageLayout } from '../components'
+import { getLevelClass, getLevelKorean, getLevelGradeString } from '../utils/gradeHelpers'
 import './HomePage.css'
-
-// Map numeric grade (1-5) to string grade for CSS classes
-const getGradeClass = (grade: number | null): string => {
-  if (!grade) return 'grade-default'
-  const gradeMap: Record<number, string> = {
-    1: 'grade-beginner',
-    2: 'grade-intermediate',
-    3: 'grade-intermediate',
-    4: 'grade-advanced',
-    5: 'grade-elite',
-  }
-  return gradeMap[grade] || 'grade-default'
-}
 
 type SurveyProgress = {
   surveyId: string | null
@@ -200,12 +188,12 @@ const HomePage: React.FC = () => {
               {isLoadingResult ? (
                 <p className="info-card-value">...</p>
               ) : lastTestResult?.hasResult ? (
-                <div className={`home-grade-badge ${getGradeClass(lastTestResult.grade)}`}>
+                <div className={`home-grade-badge ${getLevelClass(lastTestResult.grade)}`}>
                   <TrophyIcon className="home-grade-icon" />
                   <div className="home-grade-info">
                     <p className="home-grade-label">등급</p>
-                    <p className="home-grade-value">Level {lastTestResult.grade}</p>
-                    <p className="home-grade-english">{homeService.getBadgeLabel(lastTestResult.grade)}</p>
+                    <p className="home-grade-value">{getLevelKorean(lastTestResult.grade)}</p>
+                    <p className="home-grade-english">{getLevelGradeString(lastTestResult.grade)}</p>
                   </div>
                 </div>
               ) : (

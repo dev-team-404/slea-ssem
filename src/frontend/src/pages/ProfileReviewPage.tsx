@@ -5,6 +5,7 @@ import { PencilIcon, PlayIcon } from '@heroicons/react/24/outline'
 import { PageLayout } from '../components'
 import { profileService } from '../services'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
+import { getLevelKorean } from '../utils/gradeHelpers'
 import './ProfileReviewPage.css'
 
 /**
@@ -24,28 +25,6 @@ import './ProfileReviewPage.css'
 type LocationState = {
   level?: number
   surveyId?: string
-}
-
-type NicknameResponse = {
-  user_id: string
-  nickname: string | null
-  registered_at: string | null
-  updated_at: string | null
-}
-
-/**
- * Convert level number to Korean text
- * @param level - Level number (1-5)
- * @returns Korean text representation
- */
-const getLevelText = (level: number | undefined): string => {
-  if (!level) return '정보 없음'
-  if (level === 1) return '입문'
-  if (level === 2) return '초급'
-  if (level === 3) return '중급'
-  if (level === 4) return '고급'
-  if (level === 5) return '전문가'
-  return '정보 없음'
 }
 
 const ProfileReviewPage: React.FC = () => {
@@ -183,7 +162,7 @@ const ProfileReviewPage: React.FC = () => {
           <div className="profile-item">
             <span className="profile-label">기술 수준</span>
             <span className="profile-value">
-              {getLevelText(state?.level ?? cachedLevel ?? undefined)}
+              {getLevelKorean(state?.level ?? cachedLevel ?? undefined)}
             </span>
           </div>
         </div>
