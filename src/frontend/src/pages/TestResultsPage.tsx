@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowPathIcon, HomeIcon } from '@heroicons/react/24/outline'
 import { PageLayout } from '../components'
 import { useTestResults } from '../hooks/useTestResults'
+import { usePersistedTestResultsState, type TestResultsLocationState } from '../hooks/usePersistedTestResultsState'
 import { GradeBadge, MetricCard, ActionButtons, GradeDistributionChart, ComparisonSection } from '../components/TestResults'
 import { resultService, type PreviousResult } from '../services/resultService'
 import './TestResultsPage.css'
@@ -23,67 +24,11 @@ import './TestResultsPage.css'
  * Route: /test-results
  */
 
-type LocationState = {
-  sessionId: string
-  surveyId?: string
-  round?: number  // REQ-F-B5-Retake-4: Track round for Round 2 flow
-  previousSessionId?: string  // REQ-F-B5-Retake-4: For Round 2 results
-}
-
 const TestResultsPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const state = location.state as LocationState | null
-
-  // REQ-F-B5-Retake-4: Persist state to sessionStorage to prevent loss on navigation
-  // Save state to sessionStorage when available
-  React.useEffect(() => {
-    if (state?.sessionId) {
-      // Save latest sessionId for key lookup
-      sessionStorage.setItem('latest_test_session_id', state.sessionId)
-      // Save full state with sessionId-based key
-      sessionStorage.setItem(`test_results_state_${state.sessionId}`, JSON.stringify(state))
-      console.log('[TestResults] Saved state for session:', state.sessionId)
-      console.log('[TestResults] Full saved state:', state)
-      console.log('[TestResults] State has surveyId?', !!state.surveyId, 'Value:', state.surveyId)
-    }
-  }, [state])
-
-  const { persistedState, latestSessionId } = React.useMemo(() => {
-    if (state) {
-      return { persistedState: state, latestSessionId: state.sessionId }
-    }
-
-    const sessionIdFromStorage = sessionStorage.getItem('latest_test_session_id') || undefined
-    if (!sessionIdFromStorage) {
-      console.warn('[TestResults] No latest session ID found')
-      return { persistedState: null, latestSessionId: undefined }
-    }
-
-    const stored = sessionStorage.getItem(`test_results_state_${sessionIdFromStorage}`)
-    if (stored) {
-      try {
-        const restoredState = JSON.parse(stored) as LocationState
-        console.log('[TestResults] Restored state from sessionStorage:', restoredState)
-        return { persistedState: restoredState, latestSessionId: sessionIdFromStorage }
-      } catch {
-        console.error('[TestResults] Failed to parse stored state')
-        return { persistedState: null, latestSessionId: sessionIdFromStorage }
-      }
-    }
-
-    return { persistedState: null, latestSessionId: sessionIdFromStorage }
-  }, [state])
-
-  const round = persistedState?.round || 1
-
-  // Get effective sessionId from location.state or sessionStorage
-  const effectiveSessionId = React.useMemo(() => {
-    if (persistedState?.sessionId) return persistedState.sessionId
-
-    console.log('[TestResults] Using sessionId from sessionStorage:', latestSessionId)
-    return latestSessionId
-  }, [persistedState, latestSessionId])
+  const state = location.state as TestResultsLocationState | null
+  const { persistedState, round, effectiveSessionId } = usePersistedTestResultsState(state)
 
   // Custom hook for data fetching with retry logic
   const { resultData, isLoading, error, retry } = useTestResults(effectiveSessionId)
