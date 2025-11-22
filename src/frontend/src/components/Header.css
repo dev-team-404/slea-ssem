@@ -180,7 +180,9 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
+  width: max-content;
   min-width: 280px;
+  max-width: calc(100vw - 2rem);
   background: #ffffff;
   border: none;
   border-radius: 16px;
@@ -243,6 +245,7 @@
 .dropdown-body {
   padding: 1rem 0;
   background: #ffffff;
+  width: max-content;
 }
 
 @keyframes dropdown-fade-in {
@@ -258,7 +261,7 @@
 
 /* REQ-F-A2-Profile-Access-4: Dropdown menu item */
 .dropdown-item {
-  width: 100%;
+  width: auto;
   border: none;
   background: transparent;
   padding: 0.75rem 1.5rem;
@@ -313,11 +316,18 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: #32325d;
+  white-space: nowrap;
 }
 
 .dropdown-item-desc {
   font-size: 0.85rem;
   color: #8898aa;
+  white-space: nowrap;
+}
+
+.profile-name-text,
+.profile-subtext {
+  white-space: nowrap;
 }
 /* Profile icon circle */
 .profile-icon {
