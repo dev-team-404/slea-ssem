@@ -80,8 +80,18 @@ const TestResultsPage: React.FC = () => {
     return persistedState?.round || 1
   }
 
+  // Get effective sessionId from location.state or sessionStorage
+  const effectiveSessionId = React.useMemo(() => {
+    if (state?.sessionId) return state.sessionId
+
+    // Fallback to sessionStorage when navigating without state (e.g., from ExplanationPage)
+    const latestSessionId = sessionStorage.getItem('latest_test_session_id')
+    console.log('[TestResults] Using sessionId from sessionStorage:', latestSessionId)
+    return latestSessionId || undefined
+  }, [state])
+
   // Custom hook for data fetching with retry logic
-  const { resultData, isLoading, error, retry } = useTestResults(state?.sessionId)
+  const { resultData, isLoading, error, retry } = useTestResults(effectiveSessionId)
 
   // REQ-F-B5-1: Fetch previous result for comparison
   const [previousResult, setPreviousResult] = useState<PreviousResult | null>(null)
