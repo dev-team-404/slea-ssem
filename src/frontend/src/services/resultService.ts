@@ -6,7 +6,7 @@ import { transport } from '../lib/transport'
 /**
  * Grade type (5-tier system)
  */
-export type Grade = 'Beginner' | 'Intermediate' | 'Intermediate-Advanced' | 'Advanced' | 'Elite'
+export type Grade = 'Beginner' | 'Intermediate' | 'Inter-Advanced' | 'Advanced' | 'Elite'
 
 /**
  * Percentile confidence level

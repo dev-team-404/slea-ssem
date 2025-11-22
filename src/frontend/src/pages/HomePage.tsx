@@ -8,20 +8,8 @@ import { useUserProfile } from '../hooks/useUserProfile'
 import { profileService } from '../services/profileService'
 import { homeService, type LastTestResult } from '../services/homeService'
 import { PageLayout } from '../components'
+import { getLevelClass, getLevelKorean, getLevelGradeString } from '../utils/gradeHelpers'
 import './HomePage.css'
-
-// Map numeric grade (1-5) to string grade for CSS classes
-const getGradeClass = (grade: number | null): string => {
-  if (!grade) return 'grade-default'
-  const gradeMap: Record<number, string> = {
-    1: 'grade-beginner',
-    2: 'grade-intermediate',
-    3: 'grade-intermediate',
-    4: 'grade-advanced',
-    5: 'grade-elite',
-  }
-  return gradeMap[grade] || 'grade-default'
-}
 
 type SurveyProgress = {
   surveyId: string | null
@@ -180,8 +168,8 @@ const HomePage: React.FC = () => {
               </div>
             )}
 
-            <div className="button-group">
-              <button className="start-button" onClick={handleStart}>
+            <div className="level-button-group">
+              <button className="level-start-button" onClick={handleStart}>
                 <PlayIcon className="button-icon" />
                 레벨테스트 시작하기
               </button>
@@ -191,25 +179,23 @@ const HomePage: React.FC = () => {
           {/* REQ: REQ-F-A1-Home-1, REQ-F-A1-Home-2, REQ-F-A1-Home-3, REQ-F-A1-Home-4 */}
           <div className="info-card">
             <div style={{ marginBottom: '1.5rem' }}>
-              <p className="info-card-title">나의 현재 레벨</p>
+              <div className="level-card-header">
+                <p className="info-card-title">나의 현재 레벨</p>
+                {lastTestResult?.hasResult && lastTestResult.completedAt && (
+                  <span className="date-badge">{lastTestResult.completedAt} 기준</span>
+                )}
+              </div>
               {isLoadingResult ? (
                 <p className="info-card-value">...</p>
               ) : lastTestResult?.hasResult ? (
-                <>
-                  <div className={`home-grade-badge ${getGradeClass(lastTestResult.grade)}`}>
-                    <TrophyIcon className="home-grade-icon" />
-                    <div className="home-grade-info">
-                      <p className="home-grade-label">등급</p>
-                      <p className="home-grade-value">Level {lastTestResult.grade}</p>
-                      <p className="home-grade-english">{homeService.getBadgeLabel(lastTestResult.grade)}</p>
-                    </div>
+                <div className={`home-grade-badge ${getLevelClass(lastTestResult.grade)}`}>
+                  <TrophyIcon className="home-grade-icon" />
+                  <div className="home-grade-info">
+                    <p className="home-grade-label">등급</p>
+                    <p className="home-grade-value">{getLevelKorean(lastTestResult.grade)}</p>
+                    <p className="home-grade-english">{getLevelGradeString(lastTestResult.grade)}</p>
                   </div>
-                  {lastTestResult.completedAt && (
-                    <p className="home-description" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                      마지막 테스트: {lastTestResult.completedAt}
-                    </p>
-                  )}
-                </>
+                </div>
               ) : (
                 <>
                   <p className="info-card-value">-</p>

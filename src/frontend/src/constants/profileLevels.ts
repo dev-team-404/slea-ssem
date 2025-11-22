@@ -9,7 +9,7 @@
  * Level mapping:
  * 1 - Beginner: 입문 - 기초 개념 학습 중
  * 2 - Intermediate: 초급 - 기본 업무 수행 가능
- * 3 - Intermediate-Advanced: 중급 - 독립적으로 업무 수행
+ * 3 - Inter-Advanced: 중급 - 독립적으로 업무 수행
  * 4 - Advanced: 고급 - 복잡한 문제 해결 가능
  * 5 - Elite: 전문가 - 다른 사람을 지도 가능
  */
@@ -31,11 +31,12 @@ export const LEVEL_OPTIONS: LevelOption[] = [
 /**
  * Level number to backend string mapping
  *
+ * ✅ Updated to match backend 1:1 mapping
+ * Backend accepts: 'beginner', 'intermediate', 'inter-advanced', 'advanced', 'elite'
+ * Frontend levels 1-5 are mapped 1:1 to backend levels.
+ *
  * Used for API requests to convert frontend number values
  * to backend enum strings.
- *
- * Backend only accepts: 'beginner', 'intermediate', 'advanced'
- * Frontend levels 1-5 are mapped to these 3 backend levels.
  *
  * Reused in:
  * - SignupPage (REQ-F-A2-Signup-6)
@@ -46,7 +47,7 @@ export const LEVEL_OPTIONS: LevelOption[] = [
 export const LEVEL_MAPPING: Record<number, string> = {
   1: 'beginner',
   2: 'intermediate',
-  3: 'intermediate',
+  3: 'inter-advanced',
   4: 'advanced',
-  5: 'advanced',
+  5: 'elite',
 }

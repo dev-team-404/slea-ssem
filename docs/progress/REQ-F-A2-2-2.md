@@ -31,7 +31,7 @@
 // Level mapping
 1 → "Beginner"
 2 → "Intermediate"
-3 → "Intermediate-Advanced"
+3 → "Inter-Advanced"
 4 → "Advanced"
 5 → "Elite"
 

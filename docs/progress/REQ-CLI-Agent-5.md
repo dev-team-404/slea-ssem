@@ -173,7 +173,7 @@ agent tools t3 --difficulty INT [--category TEXT] [--help]
 📊 Tool 3: Get Difficulty Keywords
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Difficulty: 7/10 (Intermediate-Advanced)
+Difficulty: 7/10 (Inter-Advanced)
 Cache Hit: Yes (TTL: 59m 45s remaining)
 
 Keywords (24 total):

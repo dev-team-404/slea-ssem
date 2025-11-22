@@ -8,7 +8,7 @@ describe('GradeDistributionChart', () => {
   const mockDistribution: GradeDistribution[] = [
     { grade: 'Beginner', count: 102, percentage: 20.2 },
     { grade: 'Intermediate', count: 156, percentage: 30.8 },
-    { grade: 'Intermediate-Advanced', count: 98, percentage: 19.4 },
+    { grade: 'Inter-Advanced', count: 98, percentage: 19.4 },
     { grade: 'Advanced', count: 95, percentage: 18.8 },
     { grade: 'Elite', count: 55, percentage: 10.8 },
   ]
@@ -146,7 +146,7 @@ describe('GradeDistributionChart', () => {
         const largeDistribution: GradeDistribution[] = [
           { grade: 'Beginner', count: 250, percentage: 25.0 },
           { grade: 'Intermediate', count: 300, percentage: 30.0 },
-          { grade: 'Intermediate-Advanced', count: 200, percentage: 20.0 },
+          { grade: 'Inter-Advanced', count: 200, percentage: 20.0 },
           { grade: 'Advanced', count: 150, percentage: 15.0 },
           { grade: 'Elite', count: 100, percentage: 10.0 },
         ]

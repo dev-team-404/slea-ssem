@@ -49,15 +49,15 @@ class TestSaveAttempt:
         assert attempt.user_id == user_fixture.id
         assert attempt.survey_id == user_profile_survey_fixture.id
         assert attempt.status == "completed"
-        # Grade will be calculated by RankingService; 65% = Intermediate or Intermediate-Advanced
-        assert attempt.final_grade in ["Intermediate", "Intermediate-Advanced"]
+        # Grade will be calculated by RankingService; 65% = Intermediate or Inter-Advanced
+        assert attempt.final_grade in ["Intermediate", "Inter-Advanced"]
         assert attempt.final_score is not None
         assert attempt.finished_at is not None
 
         # AC1: Retrievable from DB
         retrieved = db_session.query(Attempt).filter(Attempt.id == attempt.id).first()
         assert retrieved is not None
-        assert retrieved.final_grade in ["Intermediate", "Intermediate-Advanced"]
+        assert retrieved.final_grade in ["Intermediate", "Inter-Advanced"]
 
     def test_save_multi_round_attempt(
         self, db_session: Session, user_fixture, user_profile_survey_fixture, create_test_session_with_result
@@ -85,7 +85,7 @@ class TestSaveAttempt:
         attempt = history_service.save_attempt(user_fixture.id, user_profile_survey_fixture.id, session2.id)
 
         # Verify attempt grade
-        assert attempt.final_grade in ["Intermediate-Advanced", "Advanced"]
+        assert attempt.final_grade in ["Inter-Advanced", "Advanced"]
         assert attempt.final_score is not None
 
         # Verify attempt rounds exist

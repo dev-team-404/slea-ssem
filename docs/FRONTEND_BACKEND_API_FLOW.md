@@ -237,7 +237,7 @@ TestResult(round=1) = {
 Generate Round 2 questions:
 - Increase difficulty in ML (already strong)
 - FOCUS: AI category (weakness area)
-- Difficulty Level: Intermediate-Advanced (based on 60% score)"
+- Difficulty Level: Inter-Advanced (based on 60% score)"
 ```
 
 **Agent의 동작**:
@@ -379,7 +379,7 @@ SLEA-SSEM의 Frontend-Backend API 통신 플로우를 정리했습니다.
       "percentage": 23.7
     },
     {
-      "grade": "Intermediate-Advanced",
+      "grade": "Inter-Advanced",
       "count": 180,
       "percentage": 35.6
     },

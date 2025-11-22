@@ -165,7 +165,7 @@ type PreviousResultSummary = {
 const RESULT_SEQUENCE: GradeResultMock[] = [
   {
     user_id: 1,
-    grade: 'Elite',
+    grade: 'Beginner',
     score: 58,
     rank: 420,
     total_cohort_size: 506,
@@ -175,7 +175,7 @@ const RESULT_SEQUENCE: GradeResultMock[] = [
     grade_distribution: [
       { grade: 'Beginner', count: 198, percentage: 39.1 },
       { grade: 'Intermediate', count: 152, percentage: 30.0 },
-      { grade: 'Intermediate-Advanced', count: 76, percentage: 15.0 },
+      { grade: 'Inter-Advanced', count: 76, percentage: 15.0 },
       { grade: 'Advanced', count: 52, percentage: 10.3 },
       { grade: 'Elite', count: 28, percentage: 5.6 },
     ],
@@ -192,7 +192,7 @@ const RESULT_SEQUENCE: GradeResultMock[] = [
     grade_distribution: [
       { grade: 'Beginner', count: 80, percentage: 15.8 },
       { grade: 'Intermediate', count: 146, percentage: 28.8 },
-      { grade: 'Intermediate-Advanced', count: 138, percentage: 27.3 },
+      { grade: 'Inter-Advanced', count: 138, percentage: 27.3 },
       { grade: 'Advanced', count: 94, percentage: 18.6 },
       { grade: 'Elite', count: 48, percentage: 9.5 },
     ],

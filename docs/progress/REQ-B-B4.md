@@ -19,7 +19,7 @@ Implementation of grade and ranking calculation system for adaptive learning pla
 | REQ ID | Requirement | Status |
 |--------|-------------|--------|
 | **REQ-B-B4-1** | Aggregate all test attempt scores → final grade | ✅ |
-| **REQ-B-B4-2** | 5-grade system: Beginner, Intermediate, Intermediate-Advanced, Advanced, Elite | ✅ |
+| **REQ-B-B4-2** | 5-grade system: Beginner, Intermediate, Inter-Advanced, Advanced, Elite | ✅ |
 | **REQ-B-B4-3** | Grade calculation: composite score + difficulty adjustment + Bayesian smoothing | ✅ |
 | **REQ-B-B4-4** | Relative rank (RANK() OVER) + percentile for 90-day cohort | ✅ |
 | **REQ-B-B4-5** | percentile_confidence="medium" when population < 100, else "high" | ✅ |
@@ -64,7 +64,7 @@ class UserBadge(Base):
 GRADE_CUTOFFS = {
     "Beginner": 0,
     "Intermediate": 40,
-    "Intermediate-Advanced": 60,
+    "Inter-Advanced": 60,
     "Advanced": 75,
     "Elite": 90,
 }
@@ -76,7 +76,7 @@ GRADE_CUTOFFS = {
 GRADE_BADGES = {
     "Beginner": "시작자 배지",
     "Intermediate": "중급자 배지",
-    "Intermediate-Advanced": "중상급자 배지",
+    "Inter-Advanced": "중상급자 배지",
     "Advanced": "고급자 배지",
     "Elite": "엘리트 배지",
 }

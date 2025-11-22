@@ -234,7 +234,7 @@ class HistoryService:
         grade_order: dict[str, int] = {
             "Beginner": 1,
             "Intermediate": 2,
-            "Intermediate-Advanced": 3,
+            "Inter-Advanced": 3,
             "Advanced": 4,
             "Elite": 5,
         }
