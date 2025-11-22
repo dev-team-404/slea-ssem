@@ -205,8 +205,16 @@ const TestResultsPage: React.FC = () => {
 
           if (currentRound === 1) {
             // Round 1 → Round 2 adaptive
+            console.log('[Retake] Persisted state:', persistedState)
+            console.log('[Retake] surveyId:', persistedState?.surveyId)
+            console.log('[Retake] sessionId:', persistedState?.sessionId)
+
             if (!persistedState?.surveyId || !persistedState?.sessionId) {
-              console.error('[Retake] Missing surveyId or sessionId')
+              console.error('[Retake] Missing surveyId or sessionId', {
+                persistedState,
+                hasSurveyId: !!persistedState?.surveyId,
+                hasSessionId: !!persistedState?.sessionId
+              })
               navigate('/home')
               return
             }
