@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ nickname, isLoading = false }) =
                       <UserCircleIcon />
                     </div>
                     <div className="nickname-content">
-                      <span className="nickname-label">프로필 관리</span>
+                      {/* <span className="nickname-label">프로필 관리</span> */}
                       <span className="nickname-text" title={nickname}>
                         {nickname}
                       </span>
