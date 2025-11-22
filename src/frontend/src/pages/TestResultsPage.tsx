@@ -6,7 +6,6 @@ import { PageLayout } from '../components'
 import { useTestResults } from '../hooks/useTestResults'
 import { GradeBadge, MetricCard, ActionButtons, GradeDistributionChart, ComparisonSection } from '../components/TestResults'
 import { resultService, type PreviousResult } from '../services/resultService'
-import { profileService } from '../services/profileService'
 import './TestResultsPage.css'
 
 /**
@@ -27,6 +26,8 @@ import './TestResultsPage.css'
 type LocationState = {
   sessionId: string
   surveyId?: string
+  round?: number  // REQ-F-B5-Retake-4: Track round for Round 2 flow
+  previousSessionId?: string  // REQ-F-B5-Retake-4: For Round 2 results
 }
 
 const TestResultsPage: React.FC = () => {
@@ -152,37 +153,25 @@ const TestResultsPage: React.FC = () => {
 
       {/* Action Buttons */}
       <ActionButtons
+        round={state?.round || 1}
         onGoHome={() => navigate('/home')}
         onRetake={async () => {
-          // REQ-F-B5-Retake-1: Load profile history and navigate to career info with pre-filled data
-          try {
-            // Call GET /profile/history to load previous assessment data
-            const profileHistory = await profileService.getProfileHistory()
-
-            console.log('[Retake] Loaded profile history:', profileHistory)
-
-            // Navigate to CareerInfoPage with pre-filled data
-            navigate('/career-info', {
+          // REQ-F-B5-Retake-4: Round 1 완료 시 Round 2 adaptive 시작
+          if (state?.round === 1) {
+            // Round 1 → Round 2 adaptive
+            console.log('[Retake] Round 1 completed, starting Round 2')
+            navigate('/test', {
               state: {
-                retakeMode: true,
-                profileData: {
-                  surveyId: profileHistory.survey.survey_id,
-                  level: profileHistory.survey.level,
-                  career: profileHistory.survey.career,
-                  jobRole: profileHistory.survey.job_role,
-                  duty: profileHistory.survey.duty,
-                  interests: profileHistory.survey.interests,
-                },
+                surveyId: state.surveyId,
+                round: 2,
+                previousSessionId: state.sessionId,  // Pass Round 1 session_id for adaptive
               },
             })
-          } catch (err) {
-            console.error('[Retake] Failed to load profile history:', err)
-            // Fallback: navigate to career-info without pre-filled data
-            navigate('/career-info', {
-              state: {
-                retakeMode: true,
-              },
-            })
+          } else {
+            // Round 2 완료 후 재응시는 없음 (버튼도 숨겨져 있어야 함)
+            // 혹시 호출되면 fallback으로 home으로 이동
+            console.warn('[Retake] Unexpected retake after Round 2')
+            navigate('/home')
           }
         }}
         onViewExplanations={() => {
