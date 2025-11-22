@@ -39,6 +39,15 @@ export interface GenerateQuestionsRequest {
 }
 
 /**
+ * Generate adaptive questions request - REQ: REQ-F-B5-Retake-4
+ * Used for Round 2 adaptive question generation based on Round 1 performance
+ */
+export interface GenerateAdaptiveQuestionsRequest {
+  previous_session_id: string
+  round: number
+}
+
+/**
  * Generate questions response
  */
 export interface GenerateQuestionsResponse {
@@ -104,6 +113,20 @@ export const questionService = {
     request: GenerateQuestionsRequest
   ): Promise<GenerateQuestionsResponse> {
     return transport.post<GenerateQuestionsResponse>('/api/questions/generate', request)
+  },
+
+  /**
+   * Generate adaptive questions for Round 2 based on Round 1 performance
+   *
+   * REQ: REQ-F-B5-Retake-4
+   *
+   * @param request - Adaptive question generation request with previous_session_id
+   * @returns Session ID and generated adaptive questions
+   */
+  async generateAdaptiveQuestions(
+    request: GenerateAdaptiveQuestionsRequest
+  ): Promise<GenerateQuestionsResponse> {
+    return transport.post<GenerateQuestionsResponse>('/api/questions/generate-adaptive', request)
   },
 
   /**

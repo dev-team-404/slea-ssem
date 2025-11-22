@@ -10,6 +10,7 @@ const API_PROFILE_CONSENT = '/api/profile/consent'
 const API_PROFILE_SURVEY = '/api/profile/survey'
 const API_PROFILE_HISTORY = '/api/profile/history'
 const API_QUESTIONS_GENERATE = '/api/questions/generate'
+const API_QUESTIONS_GENERATE_ADAPTIVE = '/api/questions/generate-adaptive'
 const API_QUESTIONS_AUTOSAVE = '/api/questions/autosave'
 const API_QUESTIONS_SCORE = '/api/questions/score'
 const API_SESSION_COMPLETE = '/api/questions/session'
@@ -601,6 +602,29 @@ class MockTransport implements HttpTransport {
         }
         console.log('[Mock Transport] Response:', response)
         return response as T
+    }
+
+    // REQ: REQ-F-B5-Retake-4 - Handle adaptive questions generate endpoint
+    if (normalizedUrl === API_QUESTIONS_GENERATE_ADAPTIVE && method === 'POST') {
+      console.log('[Mock Transport] Generating adaptive questions (Round 2) for:', requestData)
+      const template = mockData[API_QUESTIONS_GENERATE]
+      if (!template) {
+        throw new Error('Mock questions response not configured')
+      }
+
+      // Generate new session ID for Round 2
+      const attemptIndex = beginAttempt()
+      const sessionId = buildSessionId(attemptIndex)
+      registerSessionAttempt(sessionId, attemptIndex)
+
+      // Return adaptive questions (using same template for simplicity)
+      const response = {
+        ...template,
+        session_id: sessionId,
+        questions: cloneQuestions(template.questions || []),
+      }
+      console.log('[Mock Transport] Adaptive Response (Round 2):', response)
+      return response as T
     }
 
     // Handle questions autosave endpoint
