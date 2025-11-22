@@ -49,46 +49,41 @@ const TestResultsPage: React.FC = () => {
     }
   }, [state])
 
-  // Get state from location.state or sessionStorage
-  const getPersistedState = (): LocationState | null => {
-    if (state) return state
-
-    // Get latest sessionId to construct correct key
-    const latestSessionId = sessionStorage.getItem('latest_test_session_id')
-    if (!latestSessionId) {
-      console.warn('[TestResults] No latest session ID found')
-      return null
+  const { persistedState, latestSessionId } = React.useMemo(() => {
+    if (state) {
+      return { persistedState: state, latestSessionId: state.sessionId }
     }
 
-    const stored = sessionStorage.getItem(`test_results_state_${latestSessionId}`)
+    const sessionIdFromStorage = sessionStorage.getItem('latest_test_session_id') || undefined
+    if (!sessionIdFromStorage) {
+      console.warn('[TestResults] No latest session ID found')
+      return { persistedState: null, latestSessionId: undefined }
+    }
+
+    const stored = sessionStorage.getItem(`test_results_state_${sessionIdFromStorage}`)
     if (stored) {
       try {
         const restoredState = JSON.parse(stored) as LocationState
         console.log('[TestResults] Restored state from sessionStorage:', restoredState)
-        return restoredState
+        return { persistedState: restoredState, latestSessionId: sessionIdFromStorage }
       } catch {
         console.error('[TestResults] Failed to parse stored state')
-        return null
+        return { persistedState: null, latestSessionId: sessionIdFromStorage }
       }
     }
-    return null
-  }
 
-  // Get round from persisted state
-  const getRound = (): number => {
-    const persistedState = getPersistedState()
-    return persistedState?.round || 1
-  }
+    return { persistedState: null, latestSessionId: sessionIdFromStorage }
+  }, [state])
+
+  const round = persistedState?.round || 1
 
   // Get effective sessionId from location.state or sessionStorage
   const effectiveSessionId = React.useMemo(() => {
-    if (state?.sessionId) return state.sessionId
+    if (persistedState?.sessionId) return persistedState.sessionId
 
-    // Fallback to sessionStorage when navigating without state (e.g., from ExplanationPage)
-    const latestSessionId = sessionStorage.getItem('latest_test_session_id')
     console.log('[TestResults] Using sessionId from sessionStorage:', latestSessionId)
-    return latestSessionId || undefined
-  }, [state])
+    return latestSessionId
+  }, [persistedState, latestSessionId])
 
   // Custom hook for data fetching with retry logic
   const { resultData, isLoading, error, retry } = useTestResults(effectiveSessionId)
@@ -208,12 +203,11 @@ const TestResultsPage: React.FC = () => {
 
       {/* Action Buttons */}
       <ActionButtons
-        round={getRound()}
+        round={round}
         onGoHome={() => navigate('/home')}
         onRetake={async () => {
           // REQ-F-B5-Retake-4: Round 1 완료 시 Round 2 adaptive 시작
-          const persistedState = getPersistedState()
-          const currentRound = getRound()
+          const currentRound = round
 
           if (currentRound === 1) {
             // Round 1 → Round 2 adaptive
@@ -248,7 +242,6 @@ const TestResultsPage: React.FC = () => {
         }}
         onViewExplanations={() => {
           // REQ: REQ-F-B4-7 - Navigate to explanation page
-          const persistedState = getPersistedState()
           if (persistedState?.sessionId) {
             navigate(`/test-explanations/${persistedState.sessionId}`)
           }
