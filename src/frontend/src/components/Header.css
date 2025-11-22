@@ -175,32 +175,74 @@
   background: rgba(255, 255, 255, 0.28);
 }
 
-/* REQ-F-A2-Profile-Access-3: Dropdown menu */
+/* REQ-F-A2-Profile-Access-3: Dropdown menu (inspired by status.css) */
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  min-width: 220px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(102, 126, 234, 0.25);
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgba(17, 24, 39, 0.25);
-  padding: 0.75rem;
+  min-width: 280px;
+  background: #ffffff;
+  border: none;
+  border-radius: 16px;
+  box-shadow:
+    0 15px 35px rgba(50, 50, 93, 0.2),
+    0 5px 15px rgba(0, 0, 0, 0.12);
   z-index: 1000;
   animation: dropdown-fade-in 0.25s ease;
-  backdrop-filter: blur(16px);
   overflow: hidden;
 }
 
-.dropdown-menu::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--gradient-accent);
-  pointer-events: none;
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(87deg, #5e72e4 0%, #825ee4 100%);
+}
+
+.dropdown-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dropdown-avatar svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #ffffff;
+}
+
+.dropdown-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profile-name-text {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.profile-subtext {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e9ecef;
+  margin: 0;
+}
+
+.dropdown-body {
+  padding: 1rem 0;
+  background: #ffffff;
 }
 
 @keyframes dropdown-fade-in {
@@ -216,69 +258,66 @@
 
 /* REQ-F-A2-Profile-Access-4: Dropdown menu item */
 .dropdown-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
   width: 100%;
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.7);
   border: none;
-  color: var(--text-dark, #1f2937);
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: left;
+  background: transparent;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
   cursor: pointer;
-  border-radius: 10px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-  z-index: 0;
-}
-
-.dropdown-item::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255, 153, 0, 0.12), rgba(102, 126, 234, 0.18));
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: -1;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .dropdown-item:hover {
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
-}
-
-.dropdown-item:hover::after {
-  opacity: 1;
-}
-
-.dropdown-item:active {
-  transform: translateY(0);
-  box-shadow: none;
+  background: #f6f9fc;
 }
 
 .dropdown-item:focus-visible {
   outline: 2px solid var(--color-secondary);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
-.dropdown-item .menu-icon {
-  width: 1.1rem;
-  height: 1.1rem;
+.menu-icon-pill {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.15), rgba(102, 126, 234, 0.15));
   color: var(--color-accent);
-  padding: 0.4rem;
-  border-radius: 10px;
-  background: rgba(102, 126, 234, 0.15);
-  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.25);
-  transition: background 0.2s ease, color 0.2s ease;
+  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.2);
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.dropdown-item:hover .menu-icon {
-  background: rgba(255, 153, 0, 0.2);
-  color: var(--color-primary);
+.dropdown-item:hover .menu-icon-pill {
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.2), rgba(102, 126, 234, 0.25));
+  transform: translateY(-1px);
+}
+
+.menu-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: inherit;
+}
+
+.dropdown-item-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.dropdown-item-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #32325d;
+}
+
+.dropdown-item-desc {
+  font-size: 0.85rem;
+  color: #8898aa;
 }
 /* Profile icon circle */
 .profile-icon {

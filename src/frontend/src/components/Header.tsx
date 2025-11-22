@@ -128,22 +128,38 @@ export const Header: React.FC<HeaderProps> = ({ nickname, isLoading = false }) =
                     <div className={`dropdown-chevron${isDropdownOpen ? ' open' : ''}`} aria-hidden="true">
                       <ChevronDownIcon />
                     </div>
-                  </button>
-
-                  {/* REQ-F-A2-Profile-Access-3: Dropdown menu */}
-                  {isDropdownOpen && (
-                    <div className="dropdown-menu" role="menu">
-                      <button
-                        type="button"
-                        className="dropdown-item"
-                        onClick={handleEditProfileClick}
-                        role="menuitem"
-                      >
-                        <PencilSquareIcon className="menu-icon" />
-                        프로필 수정
-                      </button>
-                    </div>
-                  )}
+                    </button>
+                    {/* REQ-F-A2-Profile-Access-3: Dropdown menu */}
+                    {isDropdownOpen && (
+                      <div className="dropdown-menu" role="menu">
+                        <div className="dropdown-header" role="presentation">
+                          <div className="dropdown-avatar">
+                            <UserCircleIcon />
+                          </div>
+                          <div className="dropdown-profile-info">
+                            <span className="profile-name-text">{nickname}</span>
+                            <span className="profile-subtext">S.LSI Learning Member</span>
+                          </div>
+                        </div>
+                        <div className="dropdown-divider" role="separator" />
+                        <div className="dropdown-body">
+                          <button
+                            type="button"
+                            className="dropdown-item"
+                            onClick={handleEditProfileClick}
+                            role="menuitem"
+                          >
+                            <span className="menu-icon-pill">
+                              <PencilSquareIcon className="menu-icon" />
+                            </span>
+                            <span className="dropdown-item-text">
+                              <span className="dropdown-item-title">프로필 수정</span>
+                              <span className="dropdown-item-desc">학습 정보와 관심 분야를 업데이트</span>
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                 </div>
               )}
             </>
