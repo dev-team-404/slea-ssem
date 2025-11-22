@@ -101,7 +101,9 @@ const ExplanationPage: React.FC = () => {
   }
 
   const handleViewResults = () => {
-    navigate('/test-results', { state: { sessionId } })
+    // Navigate without state - TestResultsPage will restore from sessionStorage
+    // This prevents overwriting sessionStorage with incomplete state
+    navigate('/test-results')
   }
 
   // Loading state

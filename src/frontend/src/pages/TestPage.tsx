@@ -27,6 +27,7 @@ import './TestPage.css'
 type LocationState = {
   surveyId: string
   round: number
+  previousSessionId?: string  // REQ-F-B5-Retake-4: For Round 2 adaptive questions
 }
 
 const TestPage: React.FC = () => {
@@ -47,6 +48,22 @@ const TestPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState
+
+  // REQ-F-B5-Retake-4: Persist surveyId to sessionStorage
+  useEffect(() => {
+    if (state?.surveyId) {
+      sessionStorage.setItem('current_test_survey_id', state.surveyId)
+      console.log('[TestPage] Saved surveyId to sessionStorage:', state.surveyId)
+    } else {
+      console.warn('[TestPage] No surveyId in state to save')
+    }
+  }, [state?.surveyId])
+
+  // Get surveyId from state or sessionStorage
+  const getSurveyId = (): string | undefined => {
+    if (state?.surveyId) return state.surveyId
+    return sessionStorage.getItem('current_test_survey_id') || undefined
+  }
 
   // Get current question
   const currentQuestion = questions[currentIndex] || null
@@ -73,11 +90,22 @@ const TestPage: React.FC = () => {
       setLoadingError(null)
 
       try {
-        const response = await questionService.generateQuestions({
-          survey_id: state.surveyId,
-          round: state.round || 1,
-          domain: 'AI',
-        })
+        // REQ-F-B5-Retake-4: Use adaptive endpoint for Round 2
+        let response
+        if (state.round === 2 && state.previousSessionId) {
+          // Round 2: Generate adaptive questions based on Round 1 performance
+          response = await questionService.generateAdaptiveQuestions({
+            previous_session_id: state.previousSessionId,
+            round: 2,
+          })
+        } else {
+          // Round 1: Generate normal questions
+          response = await questionService.generateQuestions({
+            survey_id: state.surveyId,
+            round: state.round || 1,
+            domain: 'AI',
+          })
+        }
 
         // Only update state if not cancelled
         if (!cancelled) {
@@ -104,7 +132,7 @@ const TestPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [state?.surveyId, state?.round, sessionId, questions.length])
+  }, [state?.surveyId, state?.round, state?.previousSessionId, sessionId, questions.length])
 
   // Reset state when moving to next question
   useEffect(() => {
@@ -132,7 +160,7 @@ const TestPage: React.FC = () => {
   }, [sessionId, questions])
 
   // Handle session completion
-  // REQ: REQ-F-B3-Plus-1, REQ-F-B3-Plus-3
+  // REQ: REQ-F-B3-Plus-1, REQ-F-B3-Plus-3, REQ-F-B5-Retake-4
   const handleCompleteSession = useCallback(async () => {
     if (!sessionId) return
 
@@ -146,8 +174,33 @@ const TestPage: React.FC = () => {
       // Reset state before navigation
       setIsCompleting(false)
 
-      // Navigate to results
-      navigate('/test-results', { state: { sessionId, surveyId: state.surveyId } })
+      // Navigate to results with round info for Round 2 flow
+      const surveyId = getSurveyId()
+      console.log('[TestPage] Navigating to results with:', {
+        sessionId,
+        surveyId,
+        round: state.round || 1,
+        previousSessionId: state.previousSessionId,
+        fromState: state.surveyId,
+        fromStorage: sessionStorage.getItem('current_test_survey_id')
+      })
+
+      // Validate surveyId is defined before navigating
+      if (!surveyId) {
+        console.error('[TestPage] surveyId is undefined, cannot navigate to results')
+        setCompleteError('자기평가 정보가 없습니다. 홈으로 돌아가주세요.')
+        setIsCompleting(false)
+        return
+      }
+
+      navigate('/test-results', {
+        state: {
+          sessionId,
+          surveyId,
+          round: state.round || 1,
+          previousSessionId: state.previousSessionId  // Pass for Round 2 results
+        }
+      })
     } catch (completeErr) {
       const message =
         completeErr instanceof Error
@@ -158,7 +211,7 @@ const TestPage: React.FC = () => {
       setCompleteError(message)
       setIsCompleting(false)
     }
-  }, [sessionId, navigate, state.surveyId])
+  }, [sessionId, navigate, state.surveyId, state.round, state.previousSessionId])
 
   // Handle next button click
   const handleNextClick = useCallback(async () => {
@@ -210,13 +263,29 @@ const TestPage: React.FC = () => {
           // REQ-F-B3-Plus-1: Calculate score WITHOUT auto-complete
           await questionService.calculateScore(sessionId, false)
 
-          // REQ-F-B3-Plus-1: Complete session separately
+          // REQ-F-B3-Plus-1, REQ-F-B5-Retake-4: Complete session and navigate to results
           await handleCompleteSession()
         } catch (scoreError) {
           // Even if score calculation fails, still navigate to results
           // (results page will handle the error)
           console.error('Score calculation failed:', scoreError)
-          navigate('/test-results', { state: { sessionId, surveyId: state.surveyId } })
+
+          const fallbackSurveyId = getSurveyId()
+          if (!fallbackSurveyId) {
+            console.error('[TestPage] surveyId is undefined in error fallback')
+            setSubmitError('자기평가 정보가 없습니다. 다시 시도해주세요.')
+            setIsSubmitting(false)
+            return
+          }
+
+          navigate('/test-results', {
+            state: {
+              sessionId,
+              surveyId: fallbackSurveyId,
+              round: state.round || 1,
+              previousSessionId: state.previousSessionId
+            }
+          })
         }
       }
     } catch (err) {
