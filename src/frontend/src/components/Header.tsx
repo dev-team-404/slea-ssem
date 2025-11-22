@@ -1,7 +1,12 @@
 // REQ: REQ-F-A2-Signup-1, REQ-F-A2-Profile-Access-1, REQ-F-A2-Profile-Access-2, REQ-F-A2-Profile-Access-3
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlusIcon, UserCircleIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import {
+  UserPlusIcon,
+  UserCircleIcon,
+  PencilSquareIcon,
+  ChevronDownIcon,
+} from '@heroicons/react/24/outline'
 import './Header.css'
 
 interface HeaderProps {
@@ -114,7 +119,15 @@ export const Header: React.FC<HeaderProps> = ({ nickname, isLoading = false }) =
                     <div className="profile-icon">
                       <UserCircleIcon />
                     </div>
-                    <span className="nickname-text">{nickname}</span>
+                    <div className="nickname-content">
+                      <span className="nickname-label">프로필 관리</span>
+                      <span className="nickname-text" title={nickname}>
+                        {nickname}
+                      </span>
+                    </div>
+                    <div className={`dropdown-chevron${isDropdownOpen ? ' open' : ''}`} aria-hidden="true">
+                      <ChevronDownIcon />
+                    </div>
                   </button>
 
                   {/* REQ-F-A2-Profile-Access-3: Dropdown menu */}
