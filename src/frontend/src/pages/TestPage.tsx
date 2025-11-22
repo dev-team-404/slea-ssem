@@ -53,6 +53,9 @@ const TestPage: React.FC = () => {
   useEffect(() => {
     if (state?.surveyId) {
       sessionStorage.setItem('current_test_survey_id', state.surveyId)
+      console.log('[TestPage] Saved surveyId to sessionStorage:', state.surveyId)
+    } else {
+      console.warn('[TestPage] No surveyId in state to save')
     }
   }, [state?.surveyId])
 
@@ -172,10 +175,28 @@ const TestPage: React.FC = () => {
       setIsCompleting(false)
 
       // Navigate to results with round info for Round 2 flow
+      const surveyId = getSurveyId()
+      console.log('[TestPage] Navigating to results with:', {
+        sessionId,
+        surveyId,
+        round: state.round || 1,
+        previousSessionId: state.previousSessionId,
+        fromState: state.surveyId,
+        fromStorage: sessionStorage.getItem('current_test_survey_id')
+      })
+
+      // Validate surveyId is defined before navigating
+      if (!surveyId) {
+        console.error('[TestPage] surveyId is undefined, cannot navigate to results')
+        setCompleteError('자기평가 정보가 없습니다. 홈으로 돌아가주세요.')
+        setIsCompleting(false)
+        return
+      }
+
       navigate('/test-results', {
         state: {
           sessionId,
-          surveyId: getSurveyId(),
+          surveyId,
           round: state.round || 1,
           previousSessionId: state.previousSessionId  // Pass for Round 2 results
         }
@@ -248,10 +269,19 @@ const TestPage: React.FC = () => {
           // Even if score calculation fails, still navigate to results
           // (results page will handle the error)
           console.error('Score calculation failed:', scoreError)
+
+          const fallbackSurveyId = getSurveyId()
+          if (!fallbackSurveyId) {
+            console.error('[TestPage] surveyId is undefined in error fallback')
+            setSubmitError('자기평가 정보가 없습니다. 다시 시도해주세요.')
+            setIsSubmitting(false)
+            return
+          }
+
           navigate('/test-results', {
             state: {
               sessionId,
-              surveyId: getSurveyId(),
+              surveyId: fallbackSurveyId,
               round: state.round || 1,
               previousSessionId: state.previousSessionId
             }

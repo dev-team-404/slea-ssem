@@ -44,6 +44,8 @@ const TestResultsPage: React.FC = () => {
       // Save full state with sessionId-based key
       sessionStorage.setItem(`test_results_state_${state.sessionId}`, JSON.stringify(state))
       console.log('[TestResults] Saved state for session:', state.sessionId)
+      console.log('[TestResults] Full saved state:', state)
+      console.log('[TestResults] State has surveyId?', !!state.surveyId, 'Value:', state.surveyId)
     }
   }, [state])
 
