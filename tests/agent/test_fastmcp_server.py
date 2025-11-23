@@ -68,7 +68,7 @@ class TestTool1GetUserProfile:
     def test_tool1_has_required_fields(self):
         """AC1: Tool 1 returns required fields."""
         tool1 = TOOLS[0]
-        result = tool1.invoke({"user_id": "test_user"})
+        result = tool1.invoke({"user_id": "123e4567-e89b-12d3-a456-426614174000"})
 
         required_fields = [
             "user_id",
@@ -156,6 +156,8 @@ class TestTool4ValidateQuality:
             {
                 "stem": "What is AI?",
                 "question_type": "multiple_choice",
+                "choices": ["A. Machine", "B. Human", "C. Robot", "D. Computer"],
+                "correct_answer": "A. Machine",
             }
         )
         assert isinstance(result, dict)
@@ -184,9 +186,12 @@ class TestTool5SaveQuestion:
             {
                 "item_type": "multiple_choice",
                 "stem": "Question?",
+                "choices": ["A", "B", "C", "D"],
+                "correct_key": "A",
                 "difficulty": 5,
                 "categories": ["technical"],
                 "round_id": "sess_001_1",
+                "session_id": "123e4567-e89b-12d3-a456-426614174000",
             }
         )
         assert isinstance(result, dict)
@@ -262,7 +267,7 @@ class TestAcceptanceCriteria:
         """AC1: Tool 1 FastMCP wrapper with retry logic."""
         tool1 = TOOLS[0]
         assert tool1.name == "get_user_profile"
-        result = tool1.invoke({"user_id": "user_123"})
+        result = tool1.invoke({"user_id": "123e4567-e89b-12d3-a456-426614174000"})
         assert result is not None
         assert isinstance(result, dict)
 
@@ -299,6 +304,8 @@ class TestAcceptanceCriteria:
             {
                 "stem": "Question?",
                 "question_type": "multiple_choice",
+                "choices": ["A", "B", "C", "D"],
+                "correct_answer": "A",
             }
         )
         assert "score" in result
@@ -311,9 +318,12 @@ class TestAcceptanceCriteria:
             {
                 "item_type": "multiple_choice",
                 "stem": "Question?",
+                "choices": ["A", "B", "C", "D"],
+                "correct_key": "A",
                 "difficulty": 5,
                 "categories": ["technical"],
                 "round_id": "sess_001_1",
+                "session_id": "123e4567-e89b-12d3-a456-426614174000",
             }
         )
         assert isinstance(result, dict)

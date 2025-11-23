@@ -1,0 +1,425 @@
+● 좋습니다. 충분한 코드를 읽었으니 이제 종합적으로 분석하겠습니다. Langchain 공식 예제와 비교하면서 ReAct 구조,
+  Prompt, JSON parsing, 퀴즈 생성 품질을 중심으로 검토하겠습니다.
+
+  📊 종합 코드 리뷰 결과
+
+  ✅ 매우 잘 구현된 부분들
+
+  1. Prompt Architecture (SOLID 원칙 적용) ⭐⭐⭐⭐⭐
+
+  # src/agent/prompts/ 구조 - 탁월한 설계
+  prompt_content.py    # 순수 텍스트 (no escaping!)
+  prompt_builder.py    # Builder + Factory patterns
+  react_prompt.py      # Simple API
+
+  장점:
+  - ✅ Content와 template logic 완벽 분리 → JSON escaping 문제 완전 해결
+  - ✅ SystemMessage(content=...) 사용 → from_template() 회피
+  - ✅ 유지보수성 최고 (content만 수정 가능)
+  - ✅ Langchain 공식 권장 패턴 준수
+
+  2. ReAct Format Enforcement (견고함) ⭐⭐⭐⭐⭐
+
+  # src/agent/prompts/prompt_content.py:19-37
+  REACT_FORMAT_RULES = """========== CRITICAL: MANDATORY ReAct Format Rules ==========
+
+  ✓ EVERY "Action:" MUST have a corresponding "Action Input:"
+  ✓ EVERY "Action Input:" MUST have a corresponding "Observation:"
+  ✓ NEVER output just "Action:" without "Action Input:"
+
+  장점:
+  - ✅ 명시적 format rules (Langchain 공식보다 더 구체적)
+  - ✅ _is_complete_react_response() 메서드로 완성도 검증 (llm_agent.py:385-418)
+  - ✅ Temperature 0.3 설정 (consistency 향상)
+
+  3. JSON Parsing Robustness ⭐⭐⭐⭐⭐
+
+  # src/agent/output_converter.py:67-190
+  # 5-stage cleanup strategies
+  1. No cleanup (raw parsing)
+  2. Fix Python literals (True/False → true/false)
+  3. Fix trailing commas
+  4. Fix escapes
+  5. Remove control characters
+
+  장점:
+  - ✅ Multi-layer fallback strategy
+  - ✅ 마크다운 코드블록 제거
+  - ✅ Escaped 문자 처리
+  - ✅ answer_schema 정규화 (7가지 입력 형식 지원)
+
+  4. Error Handling Framework ⭐⭐⭐⭐
+
+  # src/agent/error_handler.py
+  - Retry with exponential backoff
+  - Tool-specific strategies (Tool 1-6 각각)
+  - Circuit breaker pattern
+  - Graceful degradation
+
+  장점:
+  - ✅ 각 Tool별 맞춤형 전략
+  - ✅ Queue-based retry (Tool 5)
+  - ✅ LLM timeout fallback (Tool 6)
+
+  ---
+  ⚠️ 개선 가능한 부분들
+
+  1. Prompt - Tool Selection 명확성 부족 (중요도: 높음)
+
+  현재 문제:
+  # src/agent/prompts/prompt_content.py:67-80
+  TOOL_SELECTION_STRATEGY = """1. Tool Selection Strategy:
+     - For question generation (Mode 1):
+       * Always call get_user_profile first
+       * Call search_question_templates if interests are available
+       * Always call get_difficulty_keywords
+       * Call validate_question_quality for each generated question
+       * Call save_generated_question if validation passes
+
+  문제점:
+  - ❌ "Call validate_question_quality for each generated question" → 모호함
+  - ❌ Agent가 여러 질문을 한 번에 생성 후 검증할지, 하나씩 생성할지 불명확
+  - ❌ Langchain 공식 예제는 구체적 실행 순서 명시
+
+  개선안:
+  TOOL_SELECTION_STRATEGY = """Tool Calling Sequence (STRICT ORDER):
+
+  Mode 1 (Question Generation) - Follow this EXACT sequence:
+  Step 1: Call get_user_profile(user_id) → Get proficiency level
+  Step 2: Call get_difficulty_keywords(difficulty, domain) → Get topic keywords
+  Step 3: [Optional] Call search_question_templates() if user has specific interests
+  Step 4: Generate ONE question at a time using the context from Steps 1-3
+  Step 5: Call validate_question_quality(stem, type, choices, correct_answer) → MUST validate BEFORE saving
+  Step 6: IF validation passes (final_score >= 0.70):
+             Call save_generated_question(...)
+          ELSE:
+             Regenerate the question (max 2 retries)
+  Step 7: Repeat Steps 4-6 until {question_count} questions are successfully saved
+
+  CRITICAL RULES:
+  ✓ NEVER save a question without validating first
+  ✓ NEVER batch-validate multiple questions (validate ONE at a time)
+  ✓ ALWAYS check validation.final_score >= 0.70 before calling save_generated_question
+  ✓ If a question fails validation twice, skip it and generate a new one
+  """
+
+  이유:
+  - Langchain 공식은 "step-by-step explicit instructions"을 권장
+  - Agent가 Tool 순서를 잘못 이해하면 validation 없이 저장 가능성
+
+  2. Prompt - Final Answer Format 불명확 (중요도: 높음)
+
+  현재 문제:
+  # src/agent/prompts/prompt_content.py:87-118
+  RESPONSE_FORMAT_RULES = """3. Response Format - CRITICAL:
+     - IMPORTANT: When returning Final Answer for Mode 1:
+       * Use JSON array format with proper array brackets [...]
+       * Return Tool 5 response directly in Final Answer
+
+  문제점:
+  - ❌ "Return Tool 5 response directly" → Agent가 Tool 5 결과를 그대로 복사할 수도 있음
+  - ❌ JSON structure 예제 부족 (Langchain은 항상 구체적 예제 제공)
+  - ❌ answer_schema가 string이어야 한다는 규칙이 있지만, 실제 Tool 5는 dict를 반환 (line 310)
+
+  개선안:
+  RESPONSE_FORMAT_RULES = """Final Answer Format (Mode 1 - Question Generation):
+
+  Return a JSON array with ALL generated questions in this EXACT format:
+
+  Final Answer: [
+    {
+      "question_id": "uuid-string",
+      "type": "multiple_choice" | "true_false" | "short_answer",
+      "stem": "Question text here",
+      "choices": ["A", "B", "C", "D"] or null for short_answer,
+      "answer_schema": {
+        "type": "exact_match" | "keyword_match",
+        "correct_answer": "B" (for MC/TF) or null,
+        "keywords": ["keyword1", "keyword2"] (for SA) or null
+      },
+      "difficulty": 5,
+      "category": "AI",
+      "validation_score": 0.85
+    },
+    ...
+  ]
+
+  CRITICAL FORMATTING RULES:
+  ✓ answer_schema is an OBJECT (dict), NOT a string
+  ✓ choices must be an array for MC/TF, null for short_answer
+  ✓ Do NOT include "saved_at", "round_id" in Final Answer (internal metadata)
+  ✓ Only include successfully validated and saved questions
+  ✓ Ensure valid JSON syntax (no trailing commas, proper escaping)
+
+  WRONG EXAMPLES:
+  ❌ "answer_schema": "exact_match"  (string instead of object)
+  ❌ "choices": "A,B,C,D"            (string instead of array)
+  ❌ [..., }]                        (trailing comma before closing bracket)
+
+  이유:
+  - Output parser가 명확한 구조를 기대함
+  - answer_schema normalization 로직이 복잡해지는 이유가 여기에 있음
+
+  3. Agent - Tool Result Extraction 복잡도 (중요도: 중간)
+
+  현재 문제:
+  # src/agent/llm_agent.py:420-547 (128줄)
+  def _extract_tool_results(self, result: dict, tool_name: str):
+      # Format 1: intermediate_steps (test mock용)
+      # Format 2: LangGraph messages (실제 운영)
+      # 복잡한 message 순회 및 tool_call_id 매칭
+
+  문제점:
+  - ❌ 128줄짜리 메서드 (너무 긴 메서드, SRP 위반)
+  - ❌ Format 1/2 모두 지원 → 테스트 호환성을 위한 legacy 코드
+  - ❌ 로깅이 많아 실제 로직 파악 어려움
+
+  개선안:
+  def _extract_tool_results(self, result: dict, tool_name: str):
+      """Extract tool results from agent output."""
+      # Delegate to format-specific handlers
+      if "intermediate_steps" in result:
+          return self._extract_from_intermediate_steps(result, tool_name)
+      elif "messages" in result:
+          return self._extract_from_messages(result, tool_name)
+      else:
+          logger.warning("No tool results found in agent output")
+          return []
+
+  def _extract_from_intermediate_steps(self, result: dict, tool_name: str):
+      """Extract from intermediate_steps (test mock format)."""
+      # 기존 Format 1 로직 (간결화)
+      ...
+
+  def _extract_from_messages(self, result: dict, tool_name: str):
+      """Extract from LangGraph messages (production format)."""
+      # 기존 Format 2 로직 (간결화)
+      # Step 1: Build tool_messages_by_id map
+      # Step 2: Scan AIMessages for matching tool_calls
+      ...
+
+  이유:
+  - 메서드 분리로 가독성 향상
+  - 각 format별 로직을 독립적으로 테스트 가능
+  - Langchain 공식: "Small, focused methods"
+
+  4. LLM Config - Temperature 전략 검증 필요 (중요도: 중간)
+
+  현재 설정:
+  # src/agent/config.py:72-73
+  temperature=0.3,  # 결정적 도구 호출 (0.7 → 0.3으로 감소)
+  max_output_tokens=8192,
+
+  검토 필요 사항:
+  - ✅ Temperature 0.3은 ReAct consistency에 좋음 (공식 권장 0.0-0.3)
+  - ⚠️ 그러나 question generation에는 창의성이 필요할 수도 있음
+  - ⚠️ Langchain 예제는 tool calling (0.0-0.3), generation (0.7-0.9)를 분리
+
+  제안:
+  # config.py에 mode별 temperature 추가
+  def create_llm(mode: str = "default"):
+      """
+      Create LLM with mode-specific temperature.
+      
+      Args:
+          mode: "tool_calling" (0.3) | "generation" (0.7)
+      """
+      provider = LLMFactory.get_provider()
+      llm = provider.create()
+
+      if mode == "generation":
+          # For creative question generation
+          llm.temperature = 0.7
+      elif mode == "tool_calling":
+          # For deterministic tool selection
+          llm.temperature = 0.3
+
+      return llm
+
+  또는 더 간단하게:
+  # Agent에서 두 개의 LLM 인스턴스 사용
+  self.llm_tool_calling = create_llm()  # temperature 0.3
+  self.llm_generation = create_llm()    # temperature 0.7 (question generation용)
+
+  이유:
+  - Tool calling에는 낮은 temperature 필요 (consistency)
+  - Question generation에는 높은 temperature 필요 (diversity)
+  - 현재는 모든 작업에 0.3 사용 → 문항 다양성 저하 가능성
+
+  5. Validation Tool - LLM Prompt 개선 (중요도: 낮음)
+
+  현재:
+  # src/agent/tools/validate_question_tool.py:176-192
+  prompt = f"""Evaluate the quality of this question on a scale of 0.0 to 1.0.
+
+  Question Stem: {stem}
+  ...
+  Respond with ONLY a number between 0.0 and 1.0, like: 0.85
+
+  Do not include any explanation, just the score."""
+
+  문제점:
+  - ❌ "ONLY a number" → LLM이 설명을 추가할 가능성 (parsing 실패)
+  - ❌ Criteria가 너무 포괄적 (5개 항목을 하나의 점수로 압축)
+
+  개선안 (Option 1 - Structured Output):
+  from langchain_core.pydantic_v1 import BaseModel, Field
+
+  class ValidationScore(BaseModel):
+      """Structured validation score output."""
+      clarity: float = Field(..., ge=0.0, le=1.0, description="Question clarity")
+      appropriateness: float = Field(..., ge=0.0, le=1.0)
+      correctness: float = Field(..., ge=0.0, le=1.0)
+      bias_free: float = Field(..., ge=0.0, le=1.0)
+      format_valid: float = Field(..., ge=0.0, le=1.0)
+
+  def _call_llm_validation(stem, question_type, choices, correct_answer):
+      llm = create_llm().with_structured_output(ValidationScore)
+      result = llm.invoke(prompt)
+      # Calculate weighted average
+      score = (result.clarity * 0.3 + result.appropriateness * 0.2 +
+               result.correctness * 0.3 + result.bias_free * 0.1 +
+               result.format_valid * 0.1)
+      return score
+
+  개선안 (Option 2 - More Robust Parsing):
+  prompt = f"""Score this question (0.0-1.0 scale).
+
+  <question>
+  Stem: {stem}
+  Type: {question_type}
+  Choices: {choices_str}
+  Correct: {correct_answer}
+  </question>
+
+  Criteria:
+  1. Clarity (30%): Unambiguous and easy to understand?
+  2. Correctness (30%): Objectively verifiable answer?
+  3. Appropriateness (20%): Suitable difficulty level?
+  4. Bias (10%): Free from offensive language?
+  5. Format (10%): Valid structure?
+
+  Output format (STRICT):
+  SCORE: 0.85
+  REASON: <1-sentence justification>
+
+  Example:
+  SCORE: 0.92
+  REASON: Clear question with objective answer and appropriate difficulty.
+  """
+
+  # Parsing
+  match = re.search(r"SCORE:\s*(0\.\d+|1\.0)", response.content)
+  if match:
+      score = float(match.group(1))
+  else:
+      logger.warning("Could not parse SCORE, using default")
+      score = DEFAULT_LLM_SCORE
+
+  이유:
+  - Structured output은 parsing error 방지 (Langchain 권장)
+  - Multi-criteria scoring은 투명성 향상
+
+  6. fastmcp_server.py - Mock Tool 구현 (중요도: 낮음)
+
+  현재 문제:
+  # src/agent/fastmcp_server.py
+  # Tool 1-6 모두 hard-coded mock data 반환
+  @tool
+  def get_user_profile(user_id: str):
+      # ...
+      profile = {
+          "user_id": user_id,
+          "self_level": "intermediate",  # ← Hard-coded
+          "years_experience": 5,
+          ...
+      }
+
+  문제점:
+  - ❌ 실제 DB/API 연결 없음 → 프로덕션 배포 불가
+  - ❌ Tool 문서화에 "REQ: REQ-A-FastMCP"라고 되어 있지만 실제는 mock
+
+  제안:
+  # 실제 tool 구현으로 교체 (이미 tools/ 디렉토리에 있음)
+  from src.agent.tools.user_profile_tool import get_user_profile as get_profile_impl
+  from src.agent.tools.save_question_tool import save_generated_question as save_impl
+  # ...
+
+  TOOLS = [
+      get_profile_impl,      # Real implementation
+      search_templates_impl,
+      get_keywords_impl,
+      validate_impl,
+      save_impl,
+      score_impl,
+  ]
+
+  확인 필요:
+  - src/agent/tools/ 디렉토리에 실제 구현체가 있는지 확인
+  - 만약 있다면 fastmcp_server.py의 mock을 제거하고 실제 tool로 교체
+
+  ---
+  🎯 우선순위별 개선 작업
+
+  High Priority (배포 전 필수)
+
+  1. Prompt - Tool Selection Strategy 명확화 (30분)
+    - 구체적 step-by-step 순서 추가
+    - Validation 필수 조건 강조
+  2. Prompt - Final Answer Format 예제 추가 (20분)
+    - JSON structure 명확화
+    - answer_schema object 구조 명시
+  3. fastmcp_server.py Mock 제거 (1시간)
+    - 실제 tool 구현으로 교체
+    - 통합 테스트 수행
+
+  Medium Priority (품질 향상)
+
+  4. _extract_tool_results() 리팩토링 (1시간)
+    - Format별 메서드 분리
+    - 로깅 간소화
+  5. Temperature 전략 검토 (30분)
+    - Question generation용 LLM 분리 고려
+    - A/B 테스트로 품질 비교
+
+  Low Priority (선택사항)
+
+  6. Validation LLM Prompt 개선 (1시간)
+    - Structured output 적용
+    - Multi-criteria scoring
+
+  ---
+  📝 Langchain 공식 예제와의 비교
+
+  | 항목               | 현재 구현                             | Langchain 공식                  | 평가
+      |
+  |------------------|-----------------------------------|-------------------------------|-------------------|
+  | ReAct Agent      | create_react_agent (LangGraph v2) | ✅ 동일                          | ⭐⭐⭐⭐⭐
+    |
+  | Prompt Structure | SOLID 패턴 (content 분리)             | 권장하지만 예제 없음                   | ⭐⭐⭐⭐⭐
+  (더 좋음)      |
+  | Tool Selection   | 명시적 strategy (개선 필요)              | Step-by-step examples         | ⭐⭐⭐ (개선
+  필요)       |
+  | Error Handling   | Circuit breaker, retry 등          | 기본 예제만 제공                     | ⭐⭐⭐⭐⭐ (더
+  좋음)      |
+  | JSON Parsing     | Multi-layer fallback              | 기본 json.loads()               | ⭐⭐⭐⭐⭐ (더 좋음)
+      |
+  | Temperature      | 0.3 (고정)                          | 0.0-0.3 (tool), 0.7-0.9 (gen) | ⭐⭐⭐ (mode별 분리
+  권장) |
+
+  ---
+  ✅ 최종 평가
+
+  전체적으로 매우 우수한 구현입니다. 특히:
+  - ✅ SOLID 원칙 적용 (Prompt 구조)
+  - ✅ Robust JSON parsing
+  - ✅ 포괄적 error handling
+  - ✅ 최신 Langchain API 사용
+
+  핵심 개선사항:
+  1. Prompt에 구체적 tool calling sequence 추가
+  2. Final Answer format 명확화
+  3. Mock tool을 실제 구현으로 교체
+  4. (Optional) Temperature 전략 검토
+
+  이 개선사항들을 적용하면 프로덕션 배포 준비가 완료됩니다.
