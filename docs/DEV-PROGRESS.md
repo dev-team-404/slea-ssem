@@ -141,6 +141,15 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-CLI-EXPORT-1 | Export results as JSON | 0 | ⏳ Backlog | 결과 내보내기 |
 | REQ-CLI-EXPORT-2 | Export results as CSV | 0 | ⏳ Backlog | 결과 내보내기 |
 
+### SOLID Refactoring (Claude Code)
+
+| REQ ID | Feature | Phase | Status | Notes |
+|--------|---------|-------|--------|-------|
+| REQ-REFACTOR-SOLID-1 | AnswerSchemaTransformer Pattern | 4 | ✅ Done | 39 tests (100%), Commit: [pending], Progress: docs/progress/REQ-REFACTOR-SOLID-1.md |
+| REQ-REFACTOR-SOLID-2 | AnswerSchema Value Object | 0 | ⏳ Backlog | Immutable domain model, validation logic |
+| REQ-REFACTOR-SOLID-3 | Format Documentation | 0 | ⏳ Backlog | ANSWER_SCHEMA_FORMATS.md with examples |
+| REQ-REFACTOR-SOLID-4 | Comprehensive Test Suite | 0 | ⏳ Backlog | Additional integration tests |
+
 ---
 
 ## 🔍 Phase Legend
