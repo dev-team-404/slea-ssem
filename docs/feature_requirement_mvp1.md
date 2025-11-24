@@ -4513,7 +4513,83 @@ Total Coverage: ≥95%
 
 ---
 
+## REQ-B-B3-Explain-2: Session Explanations Batch Retrieval API
+
+**Note**: 세션 ID로 모든 질문의 해설을 한 번에 조회하는 REST API 엔드포인트 추가. CLI와 프런트엔드에서 동일한 로직을 사용하도록 SRP 원칙 적용.
+
+| REQ ID | 요구사항 | 우선순위 |
+|--------|---------|---------|
+| **REQ-B-B3-Explain-2-1** | `GET /questions/explanations/session/{session_id}` 엔드포인트를 구현하여, 세션의 모든 답변과 해설을 한 번에 조회해야 한다. | **M** |
+| **REQ-B-B3-Explain-2-2** | 엔드포인트는 다음 데이터를 반환해야 한다: <br> - session_id, status, round, answered_count, total_questions <br> - 모든 답변 정보 (question_id, user_answer, is_correct, score) <br> - 각 답변에 대한 생성된 해설 (explanation_text, explanation_sections, reference_links, user_answer_summary) | **M** |
+| **REQ-B-B3-Explain-2-3** | 해설이 없는 경우 null을 반환하거나, 자동으로 해설을 생성해야 한다. | **M** |
+| **REQ-B-B3-Explain-2-4** | JWT 인증이 필수이며, 자신의 세션만 조회 가능해야 한다. | **M** |
+| **REQ-B-B3-Explain-2-5** | CLI의 `questions explanation generate --session-id` 명령어를 이 REST API를 사용하도록 변경해야 한다. | **M** |
+| **REQ-B-B3-Explain-2-6** | 성능 요구사항: 세션의 모든 해설 조회 및 생성이 최대 10초 내에 완료되어야 한다. | **M** |
+
+**API Specification**:
+
+**Request**:
+```
+GET /questions/explanations/session/{session_id}
+Headers:
+  Authorization: Bearer <JWT_TOKEN>
+```
+
+**Response (200 OK)**:
+```json
+{
+  "session_id": "uuid",
+  "status": "completed",
+  "round": 1,
+  "answered_count": 5,
+  "total_questions": 5,
+  "explanations": [
+    {
+      "question_id": "q-001",
+      "user_answer": {"choice": "A"},
+      "is_correct": true,
+      "score": 100,
+      "explanation": {
+        "id": "expl-uuid",
+        "explanation_text": "...",
+        "explanation_sections": [...],
+        "reference_links": [...],
+        "user_answer_summary": {...},
+        "is_correct": true,
+        "created_at": "2025-11-24T10:40:00Z",
+        "is_fallback": false
+      }
+    },
+    // ... 4개 더
+  ]
+}
+```
+
+**Error Responses**:
+- 404: Session not found
+- 401: Unauthorized (다른 사용자의 세션 접근)
+- 422: Invalid session_id format
+
+**수용 기준**:
+
+- "세션 ID로 모든 답변과 해설을 한 번에 조회할 수 있다."
+- "JWT 인증이 완벽하게 작동한다."
+- "자신의 세션만 조회 가능하다."
+- "해설이 없으면 자동으로 생성된다."
+- "10초 내에 모든 데이터를 반환한다."
+- "CLI가 REST API를 사용하도록 변경되었다."
+- "CLI 명령어가 동일하게 작동한다."
+
+**Priority**: M
+**Dependencies**:
+- REQ-B-B2-Plus-3 (Resume API - 답변 조회)
+- REQ-B-B3-Explain-1 (Explanation 생성)
+**Status**: ⏳ Backlog
+
+---
+
 **Version History**:
 
 - v1.0 (2025-11-06): Initial Feature Requirement with Frontend/Backend split
 - v1.1 (2025-11-24): Added SOLID Refactor Requirements (REQ-REFACTOR-SOLID-1~4)
+- v1.2 (2025-11-24): Added REQ-B-B3-Explain-2 (Session Explanations Batch Retrieval API)

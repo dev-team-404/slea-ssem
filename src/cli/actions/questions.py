@@ -1703,68 +1703,67 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
                 question_id = args[i]
             i += 1
 
-    # Mode 1: Batch explanation for all questions in session
+    # Mode 1: Batch explanation for all questions in session (use REST API)
     if session_id:
-        context.console.print(f"[dim]Generating explanations for all questions in session {session_id}...[/dim]")
+        context.console.print(f"[dim]Retrieving explanations for all questions in session {session_id}...[/dim]")
 
-        # Get all questions for this session from DB
-        db_session = None
+        # Call REST API endpoint (REQ-B-B3-Explain-2)
+        status_code, response, error = context.client.make_request(
+            "GET",
+            f"/questions/explanations/session/{session_id}",
+        )
+
+        if error or status_code not in (200, 201):
+            if status_code == 401:
+                context.console.print("[bold red]✗ Unauthorized: Check your session[/bold red]")
+            elif status_code == 404:
+                context.console.print(f"[bold red]✗ Session {session_id} not found[/bold red]")
+            else:
+                context.console.print(f"[bold red]✗ Failed to retrieve explanations: {error}[/bold red]")
+            return
+
         try:
-            db_session = SessionLocal()
-            questions = db_session.query(Question).filter_by(session_id=session_id).all()
-            db_session.close()
+            # Extract session info from response
+            total_questions = response.get("total_questions", 0)
+            answered_count = response.get("answered_count", 0)
+            explanations = response.get("explanations", [])
 
-            if not questions:
-                context.console.print(f"[bold yellow]⚠️  No questions found in session {session_id}[/bold yellow]")
+            if not explanations:
+                context.console.print(f"[bold yellow]⚠️  No answers found in session {session_id}[/bold yellow]")
                 return
 
-            context.console.print(f"[cyan]Found {len(questions)} question(s)[/cyan]")
+            context.console.print(f"[cyan]Found {answered_count}/{total_questions} answer(s) with explanations[/cyan]")
             context.console.print()
 
             success_count = 0
             failed_count = 0
 
-            # Generate explanation for each question
-            for idx, question in enumerate(questions, 1):
+            # Display each explanation
+            for idx, explanation_item in enumerate(explanations, 1):
                 context.console.print(
                     "[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]"
                 )
-                context.console.print(f"[bold cyan]Question {idx}/{len(questions)}: {question.id[:12]}...[/bold cyan]")
+                question_id = explanation_item.get("question_id", "unknown")
+                context.console.print(
+                    f"[bold cyan]Question {idx}/{len(explanations)}: {question_id[:12]}...[/bold cyan]"
+                )
                 context.console.print(
                     "[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]"
                 )
                 context.console.print()
 
-                # Get answer information from DB
-                user_answer, is_correct = _get_answer_info(question.id)
+                explanation = explanation_item.get("explanation")
 
-                if user_answer is None or is_correct is None:
-                    context.console.print("[yellow]  ⚠️  No answer found for this question, skipping[/yellow]")
+                if explanation is None:
+                    context.console.print("[yellow]  ⚠️  No explanation available for this question[/yellow]")
                     failed_count += 1
                     context.console.print()
                     continue
 
-                # API 호출
-                status_code, response, error = context.client.make_request(
-                    "POST",
-                    "/questions/explanations",
-                    json_data={
-                        "question_id": question.id,
-                        "user_answer": user_answer,
-                        "is_correct": is_correct,
-                    },
-                )
-
-                if error or status_code not in (200, 201):
-                    context.console.print(f"[red]  ✗ Failed to generate explanation: {error}[/red]")
-                    failed_count += 1
-                    context.console.print()
-                    continue
-
-                context.console.print("[bold green]✓ Explanation generated[/bold green]")
+                context.console.print("[bold green]✓ Explanation retrieved[/bold green]")
                 context.console.print()
 
-                _display_explanation(context, response, question.id)
+                _display_explanation(context, explanation, question_id)
                 success_count += 1
                 context.console.print()
 
@@ -1776,18 +1775,15 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
             context.console.print(
                 "[bold cyan]═══════════════════════════════════════════════════════════════[/bold cyan]"
             )
-            context.console.print(f"[green]✓ Generated: {success_count}/{len(questions)}[/green]")
+            context.console.print(f"[green]✓ Retrieved: {success_count}/{len(explanations)}[/green]")
             if failed_count > 0:
                 context.console.print(f"[yellow]⚠️  Failed: {failed_count}[/yellow]")
             context.console.print()
 
         except Exception as e:
-            context.console.print("[bold red]✗ Batch generation failed[/bold red]")
+            context.console.print("[bold red]✗ Batch retrieval failed[/bold red]")
             context.console.print(f"[red]  Error: {str(e)}[/red]")
-            context.logger.error(f"Batch explanation generation failed: {e}", exc_info=True)
-        finally:
-            if db_session:
-                db_session.close()
+            context.logger.error(f"Batch explanation retrieval failed: {e}", exc_info=True)
 
     # Mode 2: Single question explanation
     else:
