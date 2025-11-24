@@ -20,7 +20,7 @@
 }
 
 .page-title {
-  font-size: 2rem;
+  font-size: var(--font-size-3xl); /* 32px - Page titles */
   font-weight: bold;
   margin-bottom: 0.5rem;
   color: var(--text-primary);
@@ -28,7 +28,7 @@
 }
 
 .page-description {
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Body text */
   color: var(--text-secondary);
   margin-bottom: 2rem;
   text-align: center;
@@ -55,7 +55,7 @@
 }
 
 .section-title {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg); /* 20px - Small headings */
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
@@ -70,7 +70,7 @@
 
 .form-label {
   display: block;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Form labels */
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
@@ -85,7 +85,7 @@
 .nickname-input {
   flex: 1;
   padding: 0.75rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Input text */
   border: 2px solid var(--border-default);
   border-radius: 4px;
   transition: border-color 0.3s;
@@ -103,7 +103,7 @@
 
 .check-button {
   padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Button text */
   font-weight: 600;
   color: var(--text-white);
   background-color: var(--color-secondary);
@@ -128,7 +128,7 @@
   margin-top: 0.5rem;
   padding: 0.75rem;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Status messages */
   font-weight: 500;
   text-align: left;
 }
@@ -154,7 +154,7 @@
 }
 
 .suggestions-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Suggestions title */
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
@@ -172,7 +172,7 @@
 
 .suggestion-button {
   padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Suggestion buttons */
   color: var(--color-secondary);
   background-color: var(--bg-card);
   border: 1px solid var(--color-secondary);
@@ -249,14 +249,14 @@
 }
 
 .level-label {
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Level labels */
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .level-option .level-description {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm); /* 14px - Level descriptions */
   color: var(--text-secondary);
   text-align: left;
 }
@@ -271,7 +271,7 @@
   margin-bottom: 1rem;
   padding: 0.75rem;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Error messages */
   font-weight: 500;
   background-color: var(--color-error);
   color: var(--color-error-text);
@@ -282,7 +282,7 @@
 .submit-button {
   width: 100%;
   padding: 0.9rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Button text */
   font-weight: 600;
   color: var(--text-white);
   background-color: var(--color-primary);
@@ -310,11 +310,11 @@
   }
 
   .page-title {
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl); /* 24px - Mobile page titles */
   }
 
   .section-title {
-    font-size: 1.1rem;
+    font-size: var(--font-size-md); /* 18px - Mobile section titles */
   }
 
   .input-group {

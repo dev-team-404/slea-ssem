@@ -6,9 +6,8 @@ import { useNicknameCheck } from '../hooks/useNicknameCheck'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { PageLayout } from '../components'
 import LevelSelector from '../components/LevelSelector'
-import NumberInput from '../components/NumberInput'
+import CareerInfoSection from '../components/CareerInfoSection'
 import RadioButtonGrid, { type RadioButtonOption } from '../components/RadioButtonGrid'
-import TextAreaInput from '../components/TextAreaInput'
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import { safeBackendToLevel } from '../utils/levelMapping'
 import {
@@ -43,15 +42,6 @@ import './ProfileEditPage.css'
  * - Header nickname → dropdown → "프로필 수정"
  * - ProfileReviewPage → "수정" button
  */
-
-// Radio button grid options for Job Role field
-const JOB_ROLE_OPTIONS: RadioButtonOption[] = [
-  { value: 'S', label: 'S' },
-  { value: 'E', label: 'E' },
-  { value: 'M', label: 'M' },
-  { value: 'G', label: 'G' },
-  { value: 'F', label: 'F' },
-]
 
 // Radio button grid options for Interests field
 const INTERESTS_OPTIONS: RadioButtonOption[] = [
@@ -347,50 +337,28 @@ const ProfileEditPage: React.FC = () => {
               </p>
             )}
           </div>
+        </div>
 
-          {/* 2. 수준 (1-5 슬라이더) */}
-          <LevelSelector
-            value={level}
-            onChange={handleLevelChange}
+        {/* 경력 정보 섹션 */}
+        <div className="form-section">
+          <h2 className="section-title">경력 정보</h2>
+          <CareerInfoSection
+            career={career}
+            jobRole={jobRole}
+            duty={duty}
+            onCareerChange={handleCareerChange}
+            onJobRoleChange={handleJobRoleChange}
+            onDutyChange={handleDutyChange}
             disabled={isSubmitting}
-            showTitle={true}
+            showTitle={false}
           />
+        </div>
 
-          {/* 3. 경력(연차) - 숫자 입력 */}
-          <NumberInput
-            id="career"
-            label="경력(연차)"
-            value={career}
-            onChange={handleCareerChange}
-            min={0}
-            max={50}
-            disabled={isSubmitting}
-            placeholder="0"
-          />
+        {/* 관심분야 및 기술 수준 섹션 */}
+        <div className="form-section">
+          <h2 className="section-title">관심분야 및 기술 수준</h2>
 
-          {/* 4. 직군 - 라디오버튼 그리드 (3열) */}
-          <RadioButtonGrid
-            name="jobRole"
-            legend="직군"
-            options={JOB_ROLE_OPTIONS}
-            value={jobRole}
-            onChange={handleJobRoleChange}
-            disabled={isSubmitting}
-          />
-
-          {/* 5. 담당 업무 - 텍스트 입력 */}
-          <TextAreaInput
-            id="duty"
-            label="담당 업무"
-            value={duty}
-            onChange={handleDutyChange}
-            disabled={isSubmitting}
-            maxLength={500}
-            placeholder="담당하고 있는 주요 업무를 입력해주세요"
-            rows={3}
-          />
-
-          {/* 6. 관심분야 - 라디오버튼 그리드 (3열) */}
+          {/* 관심분야 */}
           <RadioButtonGrid
             name="interests"
             legend="관심분야"
@@ -398,6 +366,14 @@ const ProfileEditPage: React.FC = () => {
             value={interests}
             onChange={handleInterestsChange}
             disabled={isSubmitting}
+          />
+
+          {/* 기술 수준 */}
+          <LevelSelector
+            value={level}
+            onChange={handleLevelChange}
+            disabled={isSubmitting}
+            showTitle={false}
           />
         </div>
 

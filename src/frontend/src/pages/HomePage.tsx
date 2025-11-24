@@ -191,7 +191,6 @@ const HomePage: React.FC = () => {
                 <div className={`home-grade-badge ${getLevelClass(lastTestResult.grade)}`}>
                   <TrophyIcon className="home-grade-icon" />
                   <div className="home-grade-info">
-                    <p className="home-grade-label">등급</p>
                     <p className="home-grade-value">{getLevelKorean(lastTestResult.grade)}</p>
                     <p className="home-grade-english">{getLevelGradeString(lastTestResult.grade)}</p>
                   </div>

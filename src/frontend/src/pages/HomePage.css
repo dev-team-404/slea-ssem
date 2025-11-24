@@ -11,6 +11,23 @@
   max-width: 1200px;
   width: 100%;
   text-align: left;
+  padding-left: 1rem !important; /* Override Container padding - Mobile: same as header */
+  padding-right: 1rem !important;
+}
+
+/* Responsive padding matching header exactly */
+@media (min-width: 640px) {
+  .home-container {
+    padding-left: 1.5rem !important; /* Tablet: sm:px-6 */
+    padding-right: 1.5rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-container {
+    padding-left: 2rem !important; /* Desktop: lg:px-8 */
+    padding-right: 2rem !important;
+  }
 }
 
 .home-sections {
@@ -56,7 +73,7 @@
 }
 
 .info-card-title {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm); /* 14px - Secondary text */
   color: var(--text-secondary);
   margin: 0;
   font-weight: 500;
@@ -66,7 +83,7 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs); /* 12px - Small labels */
   font-weight: 600;
   color: #0d47a1;
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
@@ -76,7 +93,7 @@
 }
 
 .info-card-value {
-  font-size: 2rem;
+  font-size: var(--font-size-3xl); /* 32px - Page titles */
   font-weight: bold;
   color: var(--color-primary);
 }
@@ -87,20 +104,20 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 1rem;
-  font-size: 2.5rem;
+  font-size: var(--font-size-4xl); /* 40px - Hero titles */
   font-weight: bold;
 }
 
 .home-description {
   color: var(--text-primary);
   margin-bottom: 1rem;
-  font-size: 1.2rem;
+  font-size: var(--font-size-md); /* 18px - Emphasized body text */
 }
 
 .home-subtitle {
   color: var(--text-secondary);
   margin-bottom: 2.5rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Body text */
 }
 
 .level-start-button {
@@ -111,7 +128,7 @@
   color: var(--text-white);
   border: none;
   padding: 0.9rem 1.5rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm); /* 14px - Button text */
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -159,7 +176,7 @@
 .home-label {
   color: var(--color-primary);
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm); /* 14px - Labels */
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -177,7 +194,7 @@
   border: none;
   color: var(--text-secondary);
   text-decoration: underline;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm); /* 14px - Secondary button text */
   padding: 0.625rem 1rem;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -215,21 +232,21 @@
 }
 
 .home-grade-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs); /* 12px - Small labels */
   font-weight: 500;
   color: rgba(0, 0, 0, 0.6);
   margin-bottom: 0.25rem;
 }
 
 .home-grade-value {
-  font-size: 1.5rem;
+  font-size: var(--font-size-xl); /* 24px - Section headings */
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
 }
 
 .home-grade-english {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm); /* 14px - Secondary text */
   color: rgba(0, 0, 0, 0.5);
   margin-top: 0.25rem;
   font-style: italic;

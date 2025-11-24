@@ -19,7 +19,7 @@
 }
 
 .page-title {
-  font-size: 1.75rem;
+  font-size: var(--font-size-2xl); /* 28px - Subsection titles */
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
@@ -27,14 +27,14 @@
 }
 
 .page-description {
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Body text */
   color: var(--text-secondary);
   margin-bottom: 2rem;
   text-align: center;
 }
 
 .loading-message {
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Body text */
   color: var(--text-secondary);
   text-align: center;
   padding: 2rem;
@@ -55,7 +55,7 @@
 }
 
 .nickname-label {
-  font-size: 0.95rem;
+  font-size: var(--font-size-sm); /* 14px - Labels */
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -68,7 +68,7 @@
 .nickname-input {
   flex: 1;
   padding: 0.75rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Input text */
   border: 2px solid var(--border-default);
   border-radius: 4px;
   background-color: var(--bg-card);
@@ -89,7 +89,7 @@
 
 .check-button {
   padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
+  font-size: var(--font-size-sm); /* 14px - Button text */
   font-weight: 600;
   color: white;
   background-color: var(--color-accent);
@@ -111,7 +111,7 @@
 }
 
 .status-message {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Status messages */
   margin-top: 0.25rem;
 }
 
@@ -130,14 +130,14 @@
 
 .error-message {
   color: var(--color-error);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Error messages */
   margin-bottom: 1rem;
   text-align: center;
 }
 
 .success-message {
   color: var(--color-success);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - Success messages */
   margin-bottom: 1rem;
   text-align: center;
   font-weight: 600;
@@ -151,7 +151,7 @@
 
 .save-button {
   padding: 0.75rem 2rem;
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px - Button text */
   font-weight: 600;
   color: white;
   background-color: var(--color-accent);
@@ -175,7 +175,7 @@
   margin: 0;
   padding-left: 1.25rem;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm); /* 14px - List text */
   line-height: 1.6;
 }
 
