@@ -81,6 +81,7 @@ Overall progress tracking for MVP 1.0 development across all developers.
 | REQ-B-B2-Plus | 실시간 저장 & 재개 | 4 | ✅ Done | 33 tests (100%), Commit: c95dfcb |
 | REQ-B-B3-Score | 채점 (정오답 판정) | 4 | ✅ Done | 36 tests (100%), Commit: (pending) |
 | REQ-B-B3-Explain | 해설 생성 | 4 | ✅ Done | 15 tests (100%), Commit: f653be5 |
+| REQ-B-B3-Explain-2 | 세션 해설 배치 조회 API | 4 | ✅ Done | 11 tests (100%), REST API endpoint + CLI integration, Commit: e175ca1, Progress: docs/progress/REQ-B-B3-Explain-2.md |
 | REQ-B-B3-Plus | 라운드 종료 및 세션 완료 | 4 | ✅ Done | 기능 구현 완료, 테스트 필요 |
 | REQ-B-B4 | 최종 등급 & 순위 산출 | 4 | ✅ Done | 21 tests (100%), Commit: 1de9a2d |
 | REQ-B-B4-Plus | 등급 기반 배지 부여 | 4 | ✅ Done | 6 badge tests included, Commit: 1de9a2d, Progress: docs/progress/REQ-B-B4-Plus.md |
