@@ -3,6 +3,7 @@ Question generation service for generating test questions.
 
 REQ: REQ-B-B2-Gen-1, REQ-B-B2-Gen-2, REQ-B-B2-Gen-3
 REQ: REQ-A-Agent-Backend-1 (Real Agent Integration)
+REQ: REQ-REFACTOR-SOLID-1 (AnswerSchemaTransformer Pattern)
 
 Implementation: Async service with Real Agent integration for LLM-based question generation.
 """
@@ -15,6 +16,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from src.agent.llm_agent import GenerateQuestionsRequest, create_agent
+from src.backend.models.answer_schema import TransformerFactory, ValidationError
 from src.backend.models.question import Question
 from src.backend.models.test_result import TestResult
 from src.backend.models.test_session import TestSession
@@ -246,22 +248,31 @@ class QuestionGenerationService:
 
         """
         self.session = session
+        self.transformer_factory = TransformerFactory()
 
-    def _normalize_answer_schema(self, raw_schema: dict | str | None, item_type: str) -> dict:
+    def _normalize_answer_schema(self, raw_schema: dict[str, Any] | str | None, item_type: str) -> dict[str, Any]:
         """
         Normalize answer_schema from various formats to standard format.
 
-        Converts Mock format {"correct_key": "B", "explanation": "..."} to
-        standard format {"type": "exact_match", "keywords": null, "correct_answer": "B"}
+        REQ: REQ-REFACTOR-SOLID-1
+
+        Uses the Transformer pattern to convert various formats:
+        - Agent: {"correct_keywords": [...], "explanation": "..."} → normalized via AgentResponseTransformer
+        - Mock: {"correct_key": "...", "explanation": "..."} → normalized via MockDataTransformer
+
+        The actual transformation is delegated to appropriate Transformer classes
+        registered in TransformerFactory, enabling clean separation of concerns
+        and extensibility without modifying this method.
 
         Args:
-            raw_schema: Raw answer_schema from mock data or LLM
+            raw_schema: Raw answer_schema from mock data or LLM agent
             item_type: Question type (multiple_choice, true_false, short_answer)
 
         Returns:
-            Normalized answer_schema dict with type, keywords, correct_answer
+            Normalized answer_schema dict with type, keywords, correct_answer, explanation, source_format
 
         """
+        # Handle null/None schema
         if raw_schema is None:
             return {
                 "type": "keyword_match" if item_type == "short_answer" else "exact_match",
@@ -269,35 +280,127 @@ class QuestionGenerationService:
                 "correct_answer": None,
             }
 
+        # Handle string schema (legacy format)
         if isinstance(raw_schema, str):
             return {"type": raw_schema, "keywords": None, "correct_answer": None}
 
+        # Handle dict schema - delegate to appropriate Transformer via Factory
         if isinstance(raw_schema, dict):
-            # Case 1: Standard Tool 5 format
-            if "type" in raw_schema and ("keywords" in raw_schema or "correct_answer" in raw_schema):
+            # If already transformed with source_format, return as-is
+            if "source_format" in raw_schema:
+                return raw_schema
+
+            # If already normalized by agent output converter (has type, keywords, correct_answer)
+            # and doesn't have the raw format keys, treat as already normalized
+            if (
+                "type" in raw_schema
+                and ("keywords" in raw_schema or "correct_answer" in raw_schema)
+                and "correct_keywords" not in raw_schema
+                and "correct_key" not in raw_schema
+            ):
+                # Already normalized by agent output converter
+                return raw_schema
+
+            # Detect format and get appropriate transformer
+            if "correct_keywords" in raw_schema:
+                # Agent response format
+                try:
+                    transformer = self.transformer_factory.get_transformer("agent_response")
+                    return transformer.transform(raw_schema)
+                except ValidationError as e:
+                    logger.error(f"Failed to transform agent response: {e}")
+                    # Fallback to safe default
+                    return {
+                        "type": "keyword_match",
+                        "keywords": raw_schema.get("correct_keywords", []),
+                        "explanation": raw_schema.get("explanation", ""),
+                        "source_format": "agent_response",
+                    }
+
+            elif "correct_key" in raw_schema:
+                # Mock data format
+                try:
+                    transformer = self.transformer_factory.get_transformer("mock_data")
+                    return transformer.transform(raw_schema)
+                except ValidationError as e:
+                    logger.error(f"Failed to transform mock data: {e}")
+                    # Fallback to safe default
+                    return {
+                        "type": "exact_match",
+                        "correct_answer": raw_schema.get("correct_key", ""),
+                        "explanation": raw_schema.get("explanation", ""),
+                        "source_format": "mock_data",
+                    }
+
+            elif "keywords" in raw_schema:
+                # Already in keyword format
                 return {
-                    "type": raw_schema.get("type", "exact_match"),
+                    "type": "keyword_match",
                     "keywords": raw_schema.get("keywords"),
-                    "correct_answer": raw_schema.get("correct_answer"),
+                    "explanation": raw_schema.get("explanation", ""),
+                    "source_format": "standard",
                 }
 
-            # Case 2: Mock format with correct_key
-            if "correct_key" in raw_schema:
-                return {"type": "exact_match", "keywords": None, "correct_answer": raw_schema.get("correct_key")}
-
-            # Case 3: Mock format with keywords (short answer)
-            if "keywords" in raw_schema:
-                return {"type": "keyword_match", "keywords": raw_schema.get("keywords"), "correct_answer": None}
-
-            # Case 4: Unknown format - best effort
-            return {
-                "type": raw_schema.get("type", raw_schema.get("answer_type", "exact_match")),
-                "keywords": raw_schema.get("keywords"),
-                "correct_answer": raw_schema.get("correct_answer", raw_schema.get("correct_key")),
-            }
+            else:
+                # Unknown/legacy format - best effort
+                return {
+                    "type": raw_schema.get("type", raw_schema.get("answer_type", "exact_match")),
+                    "keywords": raw_schema.get("keywords", raw_schema.get("correct_keywords")),
+                    "correct_answer": raw_schema.get("correct_answer", raw_schema.get("correct_key")),
+                    "explanation": raw_schema.get("explanation", ""),
+                    "source_format": "legacy",
+                }
 
         # Fallback
         return {"type": "exact_match", "keywords": None, "correct_answer": None}
+
+    def _validate_answer_schema_before_save(self, normalized_schema: dict[str, Any], item_type: str) -> None:
+        r"""
+        Validate answer_schema before saving to database (fail-fast pattern).
+
+        Ensures:
+        - Required fields are present (type, keywords, correct_answer)
+        - No null keywords for keyword_match type (indicates failed transformation)
+        - Proper structure for the question type
+
+        Args:
+            normalized_schema: Normalized answer_schema dict
+            item_type: Question type (multiple_choice, true_false, short_answer)
+
+        Raises:
+            ValueError: If validation fails
+
+        """
+        if not isinstance(normalized_schema, dict):
+            raise ValueError(f"answer_schema must be dict, got {type(normalized_schema)}")
+
+        if "type" not in normalized_schema:
+            raise ValueError("answer_schema missing required field: type")
+
+        schema_type = normalized_schema.get("type")
+
+        # Validate keyword_match type has keywords
+        if schema_type == "keyword_match":
+            keywords = normalized_schema.get("keywords")
+            if keywords is None or (isinstance(keywords, list) and len(keywords) == 0):
+                raise ValueError(
+                    f"answer_schema type={schema_type} requires non-empty keywords list. "
+                    f"Got: {keywords}. This indicates Agent response transformation failed. "
+                    f"Check if Agent sends 'correct_keywords' field."
+                )
+
+        # Validate exact_match type has correct_answer
+        if schema_type == "exact_match":
+            correct_answer = normalized_schema.get("correct_answer")
+            if correct_answer is None or (isinstance(correct_answer, str) and len(correct_answer.strip()) == 0):
+                raise ValueError(
+                    f"answer_schema type={schema_type} requires non-empty correct_answer. Got: {correct_answer}"
+                )
+
+        logger.debug(
+            f"✓ answer_schema validated: type={schema_type}, "
+            f"item_type={item_type}, keywords_count={len(normalized_schema.get('keywords') or [])}"
+        )
 
     async def generate_questions(
         self,
@@ -450,13 +553,23 @@ class QuestionGenerationService:
                         if hasattr(item.answer_schema, "model_dump")
                         else item.answer_schema
                     )
+                    # Normalize answer_schema to standard format (fixes agent response format)
+                    # Type: answer_schema_value is dict[str, Any] after model_dump() call
+                    normalized_schema = self._normalize_answer_schema(
+                        answer_schema_value,  # type: ignore[arg-type]
+                        item.type,
+                    )
+
+                    # Validate answer_schema before saving (fail-fast pattern)
+                    self._validate_answer_schema_before_save(normalized_schema, item.type)
+
                     question = Question(
                         id=item.id,
                         session_id=session_id,
                         item_type=item.type,
                         stem=item.stem,
                         choices=item.choices,
-                        answer_schema=answer_schema_value,
+                        answer_schema=normalized_schema,
                         difficulty=item.difficulty,
                         category=item.category,
                         round=round_num,
@@ -500,7 +613,7 @@ class QuestionGenerationService:
                 "attempt": max_retries,
             }
 
-    def _get_previous_answers(self, user_id: int, round_num: int) -> list[dict] | None:
+    def _get_previous_answers(self, user_id: int, round_num: int) -> list[dict[str, Any]] | None:
         """
         Retrieve previous round answers for adaptive difficulty.
 

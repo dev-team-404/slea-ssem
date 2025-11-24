@@ -16,6 +16,7 @@ from src.backend.services.autosave_service import AutosaveService
 from src.backend.services.explain_service import ExplainService
 from src.backend.services.question_gen_service import QuestionGenerationService
 from src.backend.services.scoring_service import ScoringService
+from src.backend.utils.auth import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +336,7 @@ class ExplanationResponse(BaseModel):
 )
 async def generate_questions(
     request: GenerateQuestionsRequest,
+    user_id: int = Depends(get_current_user_id),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> dict[str, Any]:
     """
@@ -347,6 +349,7 @@ async def generate_questions(
 
     Args:
         request: Question generation request with survey_id and round
+        user_id: Current user ID from JWT token
         db: Database session
 
     Returns:
@@ -356,9 +359,6 @@ async def generate_questions(
         HTTPException: If survey not found or generation fails
 
     """
-    # TODO: Extract user_id from JWT token in production
-    user_id = 1  # Placeholder - should come from JWT
-
     try:
         question_service = QuestionGenerationService(db)
         result = await question_service.generate_questions(
@@ -456,6 +456,7 @@ def calculate_round_score(
 )
 async def generate_adaptive_questions(
     request: GenerateAdaptiveQuestionsRequest,
+    user_id: int = Depends(get_current_user_id),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
 ) -> dict[str, Any]:
     """
@@ -471,6 +472,7 @@ async def generate_adaptive_questions(
 
     Args:
         request: Adaptive generation request with previous_session_id, round, and optional count
+        user_id: Current user ID from JWT token
         db: Database session
 
     Returns:
@@ -480,9 +482,6 @@ async def generate_adaptive_questions(
         HTTPException: If previous round not found or score unavailable
 
     """
-    # TODO: Extract user_id from JWT token in production
-    user_id = 1  # Placeholder - should come from JWT
-
     try:
         question_service = QuestionGenerationService(db)
         result = await question_service.generate_questions_adaptive(
