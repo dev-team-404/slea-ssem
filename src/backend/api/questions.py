@@ -12,11 +12,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.backend.database import get_db
+from src.backend.models.user import User
 from src.backend.services.autosave_service import AutosaveService
 from src.backend.services.explain_service import ExplainService
 from src.backend.services.question_gen_service import QuestionGenerationService
 from src.backend.services.scoring_service import ScoringService
-from src.backend.utils.auth import get_current_user_id
+from src.backend.utils.auth import get_current_user, get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -325,6 +326,42 @@ class ExplanationResponse(BaseModel):
     created_at: str = Field(..., description="Creation timestamp (ISO format)")
     is_fallback: bool = Field(..., description="Fallback flag (timeout/error)")
     error_message: str | None = Field(..., description="Error details if fallback")
+
+
+class SessionExplanationItem(BaseModel):
+    """Single answer with explanation in session."""
+
+    question_id: str = Field(..., description="Question ID")
+    user_answer: str | dict[str, Any] = Field(..., description="User's answer")
+    is_correct: bool = Field(..., description="Answer correctness")
+    score: float = Field(..., description="Answer score (0-100)")
+    explanation: ExplanationResponse | None = Field(
+        ..., description="Generated explanation (null if auto-generate needed)"
+    )
+
+
+class SessionExplanationResponse(BaseModel):
+    """
+    Response model for batch explanation retrieval.
+
+    REQ: REQ-B-B3-Explain-2
+
+    Attributes:
+        session_id: Test session ID
+        status: Session status (completed, in_progress, etc.)
+        round: Test round number
+        answered_count: Number of questions answered
+        total_questions: Total questions in session
+        explanations: List of answers with explanations
+
+    """
+
+    session_id: str = Field(..., description="Session ID")
+    status: str = Field(..., description="Session status")
+    round: int = Field(..., description="Test round number")
+    answered_count: int = Field(..., description="Number of questions answered")
+    total_questions: int = Field(..., description="Total questions in session")
+    explanations: list[SessionExplanationItem] = Field(..., description="Answers with explanations")
 
 
 @router.post(
@@ -817,6 +854,145 @@ def check_time_status(
     except Exception as e:
         logger.exception("Error checking time status")
         raise HTTPException(status_code=500, detail="Failed to check time status") from e
+
+
+@router.get(
+    "/explanations/session/{session_id}",
+    response_model=SessionExplanationResponse,
+    status_code=200,
+    summary="Get Session Explanations",
+    description="Retrieve all answers and explanations for a test session (batch retrieval API)",
+)
+def get_session_explanations(
+    session_id: str,
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Retrieve all answers and explanations for a test session.
+
+    REQ: REQ-B-B3-Explain-2
+
+    Batch retrieves explanations for all questions in a session.
+    If explanation doesn't exist, generates it on-the-fly.
+    Performance requirement: Complete within 10 seconds.
+
+    Args:
+        session_id: TestSession ID
+        user: Current user from JWT token
+        db: Database session
+
+    Returns:
+        SessionExplanationResponse with all answers and explanations
+
+    Raises:
+        HTTPException 401: If user not authenticated or unauthorized
+        HTTPException 404: If session not found
+        HTTPException 422: If session_id format invalid
+        HTTPException 500: If server error during explanation generation
+
+    """
+    from src.backend.models.attempt_answer import AttemptAnswer
+    from src.backend.models.question import Question
+    from src.backend.models.test_session import TestSession
+
+    try:
+        # Validate and retrieve session
+        test_session = db.query(TestSession).filter_by(id=session_id).first()
+
+        if not test_session:
+            raise HTTPException(status_code=404, detail=f"Test session {session_id} not found") from ValueError(
+                "Session not found"
+            )
+
+        # Verify user owns this session
+        if test_session.user_id != user.id:
+            raise HTTPException(
+                status_code=401, detail="Unauthorized: You can only access your own sessions"
+            ) from ValueError("Unauthorized access")
+
+        # Get all questions in this session
+        questions = db.query(Question).filter_by(session_id=session_id).all()
+
+        # Get all answers in this session
+        answers_map = {}  # question_id -> answer
+        answers_list = db.query(AttemptAnswer).filter_by(session_id=session_id).all()
+        for answer in answers_list:
+            answers_map[answer.question_id] = answer
+
+        # Build explanations list with parallel processing for performance
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        explain_service = ExplainService(db)
+        explanations_list: list[dict[str, Any]] = []
+        explanation_items_to_process = []
+
+        # First pass: prepare items
+        for question in questions:
+            answer = answers_map.get(question.id)
+
+            if not answer:
+                # No answer for this question, skip
+                continue
+
+            # Prepare explanation item
+            explanation_item: dict[str, Any] = {
+                "question_id": question.id,
+                "user_answer": answer.user_answer,
+                "is_correct": answer.is_correct,
+                "score": answer.score or 0,
+                "explanation": None,
+            }
+            explanation_items_to_process.append((explanation_item, question.id, answer))
+
+        # Second pass: generate explanations in parallel
+        def generate_explanation_safe(params: tuple) -> dict[str, Any]:
+            """Generate explanation for a single item (thread-safe)."""
+            item, question_id, answer = params
+            try:
+                explanation = explain_service.generate_explanation(
+                    question_id=question_id,
+                    user_answer=answer.user_answer,
+                    is_correct=answer.is_correct,
+                    attempt_answer_id=answer.id,
+                )
+                item["explanation"] = explanation
+            except Exception as e:
+                logger.warning(f"Failed to generate explanation for question {question_id}: {e}")
+                item["explanation"] = None
+            return item
+
+        # Use thread pool for parallel processing (up to 5 concurrent requests)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(generate_explanation_safe, item_params)
+                for item_params in explanation_items_to_process
+            ]
+            for future in as_completed(futures):
+                explanations_list.append(future.result())
+
+        # Count answered questions
+        answered_count = len(answers_list)
+        total_count = len(questions)
+
+        return {
+            "session_id": test_session.id,
+            "status": test_session.status,
+            "round": test_session.round,
+            "answered_count": answered_count,
+            "total_questions": total_count,
+            "explanations": explanations_list,
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Error retrieving session explanations")
+        raise HTTPException(status_code=500, detail="Failed to retrieve session explanations") from e
 
 
 @router.post(
