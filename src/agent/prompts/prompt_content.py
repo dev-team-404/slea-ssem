@@ -181,10 +181,10 @@ Final Answer: [
     "question_id": "uuid-generated-by-tool5",
     "type": "multiple_choice" | "true_false" | "short_answer",
     "stem": "Question text here (max 2000 chars)",
-    "choices": ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"] or null,
+    "choices": ["Option 1", "Option 2", "Option 3", "Option 4"] or null,
     "answer_schema": {
       "type": "exact_match" | "keyword_match" | "semantic_match",
-      "correct_answer": "B. Option 2" (for MC/TF only, null for SA),
+      "correct_answer": "Option 2" (for MC/TF only, null for SA),
       "keywords": ["keyword1", "keyword2"] (for SA only, null for MC/TF)
     },
     "difficulty": 5,
@@ -199,12 +199,13 @@ FIELD SPECIFICATIONS:
 - type: MUST be one of: "multiple_choice", "true_false", "short_answer"
 - stem: Question text (non-empty, max 2000 chars)
 - choices:
-    * MC: Array of 4-5 strings (e.g., ["A. Option", "B. Option", ...])
+    * MC: Array of 4-5 strings WITHOUT letter prefixes (e.g., ["Option A", "Option B", ...])
     * TF: Array of 2 strings (e.g., ["True", "False"])
     * SA: null (short answer has no choices)
+    * NOTE: Frontend will randomly shuffle MC choices and add letter prefixes dynamically
 - answer_schema: OBJECT (NOT string) with 3 fields:
     * type: "exact_match" (MC/TF) | "keyword_match" (SA) | "semantic_match" (advanced SA)
-    * correct_answer: String for MC/TF (e.g., "B. Option 2"), null for SA
+    * correct_answer: String for MC/TF WITHOUT prefix (e.g., "Option 2"), null for SA
     * keywords: Array of strings for SA (e.g., ["neural network", "deep learning"]), null for MC/TF
 - difficulty: Integer 1-10 (matching user's proficiency level)
 - category: String domain name (e.g., "AI", "Cloud Computing")
@@ -228,14 +229,14 @@ Final Answer: [
     "type": "multiple_choice",
     "stem": "What is the primary advantage of using RAG in LLM applications?",
     "choices": [
-      "A. Reduces model training time",
-      "B. Provides access to external knowledge",
-      "C. Increases model parameters",
-      "D. Eliminates need for fine-tuning"
+      "Reduces model training time",
+      "Provides access to external knowledge",
+      "Increases model parameters",
+      "Eliminates need for fine-tuning"
     ],
     "answer_schema": {
       "type": "exact_match",
-      "correct_answer": "B. Provides access to external knowledge",
+      "correct_answer": "Provides access to external knowledge",
       "keywords": null
     },
     "difficulty": 6,
