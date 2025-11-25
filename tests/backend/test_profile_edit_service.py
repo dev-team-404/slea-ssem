@@ -97,8 +97,9 @@ class TestNicknameEditService:
         """Input validation: Invalid nickname format."""
         service = ProfileService(db_session)
 
-        with pytest.raises(ValueError, match="at least 3 characters"):
-            service.edit_nickname(user_fixture.id, "ab")
+        # REQ-B-A2-Avail-2: MIN_LENGTH=1, so empty string is invalid
+        with pytest.raises(ValueError, match="at least 1 characters"):
+            service.edit_nickname(user_fixture.id, "")
 
         with pytest.raises(ValueError, match="prohibited word"):
             service.edit_nickname(user_fixture.id, "admin")

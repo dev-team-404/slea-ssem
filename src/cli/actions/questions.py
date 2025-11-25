@@ -5,186 +5,93 @@ from typing import Any
 
 from rich.table import Table
 
-from src.backend.database import SessionLocal
-from src.backend.models.attempt_answer import AttemptAnswer
-from src.backend.models.question import Question
-from src.backend.models.test_session import TestSession
-from src.backend.models.user_profile import UserProfileSurvey
 from src.cli.context import CLIContext
 
 # ============================================================================
-# DB Helper Functions for Latest Data Retrieval
+# API Helper Functions for Latest Data Retrieval
 # ============================================================================
 
 
-def _get_latest_survey(user_id: str | int | None) -> str | None:
-    """Get latest survey ID for user from DB."""
+def _get_latest_survey(context: CLIContext) -> str | None:
+    """Get latest survey ID for user via REST API."""
     try:
-        if not user_id:
+        status_code, response, error = context.client.make_request("GET", "/profile/survey")
+
+        if error or status_code not in (200, 204):
             return None
 
-        # Convert to int if string
-        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
-
-        db = SessionLocal()
-        survey = (
-            db.query(UserProfileSurvey)
-            .filter_by(user_id=user_id_int)
-            .order_by(UserProfileSurvey.submitted_at.desc())
-            .first()
-        )
-        db.close()
-        return survey.id if survey else None
+        return response.get("id") if response else None
     except Exception:
         return None
 
 
-def _get_latest_session(user_id: str | int | None) -> tuple[str | None, str | None]:
+def _get_latest_session(context: CLIContext) -> tuple[str | None, str | None]:
     """
-    Get latest session ID and session info from DB.
+    Get latest session ID and session info via REST API.
 
     Returns: (session_id, session_info_str)
     """
     try:
-        if not user_id:
+        status_code, response, error = context.client.make_request("GET", "/questions/session/latest")
+
+        if error or status_code != 200 or not response:
             return None, ""
 
-        # Convert to int if string
-        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
+        session_id = response.get("session_id")
+        if not session_id:
+            return None, ""
 
-        db = SessionLocal()
-        session = db.query(TestSession).filter_by(user_id=user_id_int).order_by(TestSession.created_at.desc()).first()
-        db.close()
-        if session:
-            info_str = f"[dim](round {session.round}, {session.status})[/dim]"
-            return session.id, info_str
-        return None, ""
+        round_num = response.get("round")
+        status = response.get("status")
+        info_str = f"[dim](round {round_num}, {status})[/dim]" if round_num and status else ""
+        return session_id, info_str
     except Exception:
         return None, ""
 
 
-def _get_latest_question(session_id: str | None = None) -> tuple[str | None, str | None, str | None]:
+def _get_session_questions(context: CLIContext, session_id: str | None) -> list[dict[str, Any]]:
     """
-    Get latest question ID, info, and its actual session_id from DB.
+    Get all questions in a session via REST API.
 
-    If session_id is provided, gets latest question from that session.
-    If session_id has no questions, finds the latest session that has questions.
-
-    Returns: (question_id, question_info_str, actual_session_id)
-    """
-    try:
-        db = SessionLocal()
-
-        # Try to get from specified session first
-        if session_id:
-            question = db.query(Question).filter_by(session_id=session_id).order_by(Question.id.desc()).first()
-            if question:
-                db.close()
-                info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
-                return question.id, info_str, question.session_id
-
-            # If no questions in specified session, try to find a session with questions
-            # Get sessions ordered by created_at descending, and find one with questions
-
-            session_with_q = (
-                db.query(TestSession)
-                .join(Question, TestSession.id == Question.session_id)
-                .order_by(TestSession.created_at.desc())
-                .first()
-            )
-            if session_with_q:
-                question = (
-                    db.query(Question).filter_by(session_id=session_with_q.id).order_by(Question.id.desc()).first()
-                )
-                if question:
-                    db.close()
-                    info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
-                    return question.id, info_str, question.session_id
-        else:
-            # Get latest question from any session
-            question = db.query(Question).order_by(Question.id.desc()).first()
-            if question:
-                db.close()
-                info_str = f"[dim]({question.item_type}, {question.stem[:40]}...)[/dim]"
-                return question.id, info_str, question.session_id
-
-        db.close()
-        return None, "", None
-    except Exception:
-        return None, "", None
-
-
-def _get_all_questions_in_session(session_id: str | None) -> list[dict[str, Any]]:
-    """
-    Get all questions in a session, ordered by creation.
-
-    Returns list of dicts with keys: id, stem, choices, item_type, answer_schema, category, difficulty
+    Returns list of dicts with question data
     """
     try:
         if not session_id:
             return []
 
-        db = SessionLocal()
-        questions = db.query(Question).filter_by(session_id=session_id).order_by(Question.created_at.asc()).all()
-        db.close()
+        status_code, response, error = context.client.make_request("GET", f"/questions/session/{session_id}/questions")
 
-        result = []
-        for question in questions:
-            result.append(
-                {
-                    "id": question.id,
-                    "stem": question.stem,
-                    "choices": question.choices,
-                    "item_type": question.item_type,
-                    "answer_schema": question.answer_schema,
-                    "category": question.category,
-                    "difficulty": question.difficulty,
-                }
-            )
-        return result
+        if error or status_code != 200 or not response:
+            return []
+
+        return response.get("questions", [])
     except Exception:
         return []
 
 
-def _get_unscored_answers(session_id: str | None) -> list[dict[str, Any]]:
+def _get_unscored_answers_api(context: CLIContext, session_id: str | None) -> list[dict[str, Any]]:
     """
-    Get all unscored attempt answers from a session.
+    Get all unscored answers for a session via REST API.
 
-    Returns list of dicts with keys: id, question_id, user_answer, session_id
+    Returns list of dicts with answer data
     """
     try:
         if not session_id:
             return []
 
-        db = SessionLocal()
-        # Query attempt_answers where score is 0 (unscored) or NULL
-        unscored = (
-            db.query(AttemptAnswer)
-            .filter_by(session_id=session_id)
-            .filter((AttemptAnswer.score == 0.0) | (AttemptAnswer.score.is_(None)))
-            .order_by(AttemptAnswer.created_at.asc())
-            .all()
-        )
-        db.close()
+        status_code, response, error = context.client.make_request("GET", f"/questions/session/{session_id}/unscored")
 
-        result = []
-        for answer in unscored:
-            result.append(
-                {
-                    "id": answer.id,
-                    "question_id": answer.question_id,
-                    "user_answer": answer.user_answer,
-                    "session_id": answer.session_id,
-                }
-            )
-        return result
+        if error or status_code != 200 or not response:
+            return []
+
+        return response.get("answers", [])
     except Exception:
         return []
 
 
-def _get_question_type(question_id: str | None) -> str | None:
+def _get_question_type(context: CLIContext, question_id: str | None) -> str | None:
     """
-    Get question type from database.
+    Get question type via REST API.
 
     Returns: item_type (e.g., 'multiple_choice', 'true_false', 'short_answer')
     """
@@ -192,11 +99,12 @@ def _get_question_type(question_id: str | None) -> str | None:
         if not question_id:
             return None
 
-        db = SessionLocal()
-        question = db.query(Question).filter_by(id=question_id).first()
-        db.close()
+        status_code, response, error = context.client.make_request("GET", f"/questions/{question_id}")
 
-        return question.item_type if question else None
+        if error or status_code != 200 or not response:
+            return None
+
+        return response.get("item_type")
     except Exception:
         return None
 
@@ -235,28 +143,6 @@ def _format_user_answer(user_answer: str, question_type: str | None) -> dict[str
 
     # Short answer: use text field
     return {"text": user_answer}
-
-
-def _get_answer_info(question_id: str | None) -> tuple[str | dict | None, bool | None]:
-    """
-    Get answer information for a question from database.
-
-    Returns: (user_answer, is_correct) tuple or (None, None) if not found
-    """
-    try:
-        if not question_id:
-            return None, None
-
-        db = SessionLocal()
-        answer = db.query(AttemptAnswer).filter_by(question_id=question_id).first()
-        db.close()
-
-        if not answer:
-            return None, None
-
-        return answer.user_answer, answer.is_correct
-    except Exception:
-        return None, None
 
 
 # ============================================================================
@@ -700,13 +586,9 @@ def show_session_questions(context: CLIContext, *args: str) -> None:
         context.console.print(f"[yellow]Expected UUID format, got: {session_id}[/yellow]")
         return
 
-    db_session = None
     try:
-        # Get database session
-        db_session = SessionLocal()
-
-        # Query questions for this session
-        questions = db_session.query(Question).filter_by(session_id=session_id).all()
+        # Get questions via REST API
+        questions = _get_session_questions(context, session_id)
 
         if not questions:
             context.console.print(f"[bold yellow]⚠️  No questions found for session {session_id}[/bold yellow]")
@@ -726,34 +608,36 @@ def show_session_questions(context: CLIContext, *args: str) -> None:
 
         for q in questions:
             # Truncate stem if too long
-            stem = q.stem[:50] + "..." if len(q.stem) > 50 else q.stem
+            stem = q.get("stem", "")[:50] + "..." if len(q.get("stem", "")) > 50 else q.get("stem", "")
 
             # Format choices
             choices_str = ""
-            if q.choices:
-                choices_str = ", ".join(q.choices[:3])
-                if len(q.choices) > 3:
+            if q.get("choices"):
+                choices_list = q.get("choices", [])
+                choices_str = ", ".join(choices_list[:3])
+                if len(choices_list) > 3:
                     choices_str += ", ..."
 
             # Format answer from answer_schema
             answer_str = ""
-            if isinstance(q.answer_schema, dict):
+            answer_schema = q.get("answer_schema", {})
+            if isinstance(answer_schema, dict):
                 # Try correct_answer first (newer format), then correct_key (legacy)
-                if "correct_answer" in q.answer_schema:
-                    answer_str = str(q.answer_schema["correct_answer"])[:40]  # Truncate long answers
-                elif "correct_key" in q.answer_schema:
-                    answer_str = q.answer_schema["correct_key"]
-                    validation_score = q.answer_schema.get("validation_score")
+                if "correct_answer" in answer_schema:
+                    answer_str = str(answer_schema["correct_answer"])[:40]  # Truncate long answers
+                elif "correct_key" in answer_schema:
+                    answer_str = answer_schema["correct_key"]
+                    validation_score = answer_schema.get("validation_score")
                     if validation_score is not None:
                         answer_str += f" ({validation_score:.2f})"
-                elif "correct_keywords" in q.answer_schema:
-                    keywords = q.answer_schema["correct_keywords"]
+                elif "correct_keywords" in answer_schema:
+                    keywords = answer_schema["correct_keywords"]
                     answer_str = ", ".join(keywords[:2])
                     if len(keywords) > 2:
                         answer_str += ", ..."
 
             table.add_row(
-                q.id[:12] + "...",
+                q.get("id", "")[:12] + "...",
                 stem,
                 choices_str,
                 answer_str,
@@ -766,34 +650,32 @@ def show_session_questions(context: CLIContext, *args: str) -> None:
         if questions:
             first_q = questions[0]
             context.console.print("[bold cyan]📄 First Question Details:[/bold cyan]")
-            context.console.print(f"  ID: {first_q.id}")
-            context.console.print(f"  Type: {first_q.item_type}")
-            context.console.print(f"  Stem: {first_q.stem}")
-            context.console.print(f"  Difficulty: {first_q.difficulty}/10")
-            context.console.print(f"  Category: {first_q.category}")
-            if first_q.choices:
-                context.console.print(f"  Choices: {first_q.choices}")
+            context.console.print(f"  ID: {first_q.get('id', 'N/A')}")
+            context.console.print(f"  Type: {first_q.get('item_type', 'N/A')}")
+            context.console.print(f"  Stem: {first_q.get('stem', 'N/A')}")
+            context.console.print(f"  Difficulty: {first_q.get('difficulty', 'N/A')}/10")
+            context.console.print(f"  Category: {first_q.get('category', 'N/A')}")
+            if first_q.get("choices"):
+                context.console.print(f"  Choices: {first_q.get('choices')}")
 
             # Display answer information
-            if isinstance(first_q.answer_schema, dict):
+            answer_schema = first_q.get("answer_schema", {})
+            if isinstance(answer_schema, dict):
                 context.console.print("  Answer Schema:")
-                if "correct_key" in first_q.answer_schema:
-                    context.console.print(f"    Correct Answer: {first_q.answer_schema['correct_key']}")
-                if "correct_keywords" in first_q.answer_schema:
-                    context.console.print(f"    Keywords: {first_q.answer_schema['correct_keywords']}")
-                if "validation_score" in first_q.answer_schema:
-                    context.console.print(f"    Validation Score: {first_q.answer_schema['validation_score']:.2f}")
-                if "explanation" in first_q.answer_schema:
-                    context.console.print(f"    Explanation: {first_q.answer_schema['explanation']}")
+                if "correct_key" in answer_schema:
+                    context.console.print(f"    Correct Answer: {answer_schema['correct_key']}")
+                if "correct_keywords" in answer_schema:
+                    context.console.print(f"    Keywords: {answer_schema['correct_keywords']}")
+                if "validation_score" in answer_schema:
+                    context.console.print(f"    Validation Score: {answer_schema['validation_score']:.2f}")
+                if "explanation" in answer_schema:
+                    context.console.print(f"    Explanation: {answer_schema['explanation']}")
             context.console.print()
 
     except Exception as e:
         context.console.print("[bold red]✗ Error retrieving questions[/bold red]")
         context.console.print(f"[red]  {str(e)}[/red]")
         context.logger.error(f"Error retrieving questions for session {session_id}: {e}", exc_info=True)
-    finally:
-        if db_session:
-            db_session.close()
 
 
 def resume_session(context: CLIContext, *args: str) -> None:
@@ -810,8 +692,8 @@ def resume_session(context: CLIContext, *args: str) -> None:
 
     context.console.print("[dim]Resuming test session...[/dim]")
 
-    # Get latest session from DB
-    session_id, session_info = _get_latest_session(context.session.user_id)
+    # Get latest session from API
+    session_id, session_info = _get_latest_session(context)
     if not session_id:
         context.console.print("[bold yellow]⚠️  No session found[/bold yellow]")
         context.console.print("[dim]Create a new session first with: questions generate[/dim]")
@@ -979,20 +861,20 @@ def generate_questions(context: CLIContext, *args: str) -> None:
         else:
             i += 1
 
-    # Auto-detect survey_id from DB if not provided
+    # Auto-detect survey_id from API if not provided
     if not survey_id:
-        if not context.session.user_id:
-            context.console.print("[bold yellow]⚠ Cannot auto-detect survey. Please specify --survey-id[/bold yellow]")
+        if not context.session.token:
+            context.console.print("[bold yellow]⚠ Cannot auto-detect survey. Please login first.[/bold yellow]")
             _print_generate_questions_help(context)
             return
 
-        survey_id = _get_latest_survey(context.session.user_id)
+        survey_id = _get_latest_survey(context)
 
         if not survey_id:
-            context.console.print("[bold yellow]⚠ No survey found in DB. Please create a survey first.[/bold yellow]")
+            context.console.print("[bold yellow]⚠ No survey found. Please create a survey first.[/bold yellow]")
             return
 
-        context.console.print(f"[dim]Using latest survey from DB: {survey_id}[/dim]")
+        context.console.print(f"[dim]Using latest survey: {survey_id}[/dim]")
 
     context.console.print(f"[dim]Generating Round {round_num} questions ({domain}, count={question_count})...[/dim]")
 
@@ -1155,44 +1037,33 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
         else:
             i += 1
 
-    # Auto-detect session_id from DB if not provided
+    # Auto-detect session_id from API if not provided
     if not session_id:
-        if not context.session.user_id:
-            context.console.print(
-                "[bold yellow]⚠ Cannot auto-detect session. Please specify --session-id[/bold yellow]"
-            )
-            _print_autosave_answer_help(context)
-            return
-
-        session_id, session_info = _get_latest_session(context.session.user_id)
+        session_id, session_info = _get_latest_session(context)
         if not session_id:
             context.console.print(
-                "[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]"
+                "[bold yellow]⚠ No session found. Please run 'questions generate' first.[/bold yellow]"
             )
             return
 
-        context.console.print(f"[dim]Using latest session from DB: {session_id} {session_info}[/dim]")
+        context.console.print(f"[dim]Using latest session: {session_id} {session_info}[/dim]")
 
-    # Auto-detect question_id from DB if not provided
+    # Auto-detect question_id from API if not provided
     if not question_id:
-        # Get latest question from the detected session (or find one with questions)
-        question_id, question_info, actual_session_id = _get_latest_question(session_id)
-        if not question_id:
-            context.console.print("[bold yellow]⚠ No questions found in DB.[/bold yellow]")
+        # Get questions from the session
+        questions = _get_session_questions(context, session_id)
+        if not questions:
+            context.console.print("[bold yellow]⚠ No questions found in session.[/bold yellow]")
             context.console.print(
                 "[yellow]Tip: Use 'questions generate --survey-id <id> --domain <domain>' to generate questions[/yellow]"
             )
             return
 
-        # Use the actual session_id from the question's session (may be different from the latest session)
-        if actual_session_id and actual_session_id != session_id:
-            context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
-            context.console.print(
-                "[dim](note: question belongs to a different session, using that session for autosave)[/dim]"
-            )
-            session_id = actual_session_id
-        else:
-            context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
+        # Use the first question
+        first_question = questions[0]
+        question_id = first_question.get("id")
+        question_stem = first_question.get("stem", "")[:40]
+        context.console.print(f"[dim]Using first question from session: {question_stem}...[/dim]")
 
     # Require answer text
     if not user_answer:
@@ -1201,7 +1072,7 @@ def autosave_answer(context: CLIContext, *args: str) -> None:
         return
 
     # Get question type to format answer correctly
-    question_type = _get_question_type(question_id)
+    question_type = _get_question_type(context, question_id)
     formatted_answer = _format_user_answer(user_answer, question_type)
 
     context.console.print(f"[dim]Autosaving answer for question {question_id}...[/dim]")
@@ -1266,20 +1137,20 @@ def solve(context: CLIContext, *args: str) -> None:
         else:
             i += 1
 
-    # Auto-detect session_id from DB if not provided
+    # Auto-detect session_id from API if not provided
     if not session_id:
-        session_id, session_info = _get_latest_session(context.session.user_id)
+        session_id, session_info = _get_latest_session(context)
 
         if not session_id:
             context.console.print(
-                "[bold yellow]⚠ No session found in DB. Please run 'questions generate' first.[/bold yellow]"
+                "[bold yellow]⚠ No session found. Please run 'questions generate' first.[/bold yellow]"
             )
             return
 
-        context.console.print(f"[dim]Using latest session from DB: {session_id}{session_info}[/dim]")
+        context.console.print(f"[dim]Using latest session: {session_id}{session_info}[/dim]")
 
     # Get all questions for this session
-    questions = _get_all_questions_in_session(session_id)
+    questions = _get_session_questions(context, session_id)
 
     if not questions:
         context.console.print("[bold yellow]⚠ No questions found in this session[/bold yellow]")
@@ -1499,7 +1370,7 @@ def score_answer(context: CLIContext, *args: str) -> None:
     # Get session_id: either from args or from latest session
     if not session_id:
         context.console.print("[dim]Starting auto-batch scoring...[/dim]")
-        session_id, session_info = _get_latest_session(context.session.user_id)
+        session_id, session_info = _get_latest_session(context)
         if not session_id:
             context.console.print("[bold yellow]⚠️  No session found[/bold yellow]")
             return
@@ -1509,7 +1380,7 @@ def score_answer(context: CLIContext, *args: str) -> None:
         context.console.print(f"[cyan]Session: {session_id}[/cyan]")
 
     # Get unscored answers (moved outside if-else block)
-    unscored_answers = _get_unscored_answers(session_id)
+    unscored_answers = _get_unscored_answers_api(context, session_id)
     if not unscored_answers:
         context.console.print("[bold yellow]⚠️  No unscored answers found[/bold yellow]")
         context.console.print("[dim]All answers are already scored.[/dim]")
@@ -1589,7 +1460,7 @@ def calculate_round_score(context: CLIContext, *args: str) -> None:
     if args:
         session_id = args[0]
     else:
-        session_id, _ = _get_latest_session(context.session.user_id)
+        session_id, _ = _get_latest_session(context)
 
     if not session_id:
         context.console.print("[bold yellow]⚠️  No session found[/bold yellow]")
@@ -1689,6 +1560,8 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
     # Parse arguments
     question_id = None
     session_id = None
+    user_answer = None
+    is_correct = None
     i = 0
     while i < len(args):
         if args[i] == "--help":
@@ -1697,8 +1570,17 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
         elif args[i] == "--session-id" and i + 1 < len(args):
             session_id = args[i + 1]
             i += 2
+        elif args[i] == "--question-id" and i + 1 < len(args):
+            question_id = args[i + 1]
+            i += 2
+        elif args[i] == "--user-answer" and i + 1 < len(args):
+            user_answer = args[i + 1]
+            i += 2
+        elif args[i] == "--is-correct" and i + 1 < len(args):
+            is_correct = args[i + 1].lower() in ("true", "yes", "1", "y")
+            i += 2
         else:
-            # First non-flag argument is question_id
+            # First non-flag argument is question_id (legacy support)
             if not question_id and not session_id:
                 question_id = args[i]
             i += 1
@@ -1787,44 +1669,38 @@ def generate_explanation(context: CLIContext, *args: str) -> None:
 
     # Mode 2: Single question explanation
     else:
-        # Auto-detect question_id from DB if not provided
+        # Require question_id for single question mode
         if not question_id:
-            if not context.session.user_id:
-                context.console.print(
-                    "[bold yellow]⚠ Cannot auto-detect question. Please specify question_id or --session-id[/bold yellow]"
-                )
-                _print_generate_explanation_help(context)
-                return
+            context.console.print("[bold red]✗ Question ID is required for single question explanation[/bold red]")
+            context.console.print("[yellow]Use: questions explanation generate --question-id QUESTION_ID[/yellow]")
+            context.console.print(
+                "[yellow]Or use batch mode with: questions explanation generate --session-id SESSION_ID[/yellow]"
+            )
+            _print_generate_explanation_help(context)
+            return
 
-            question_id, question_info, _ = _get_latest_question(None)
-            if not question_id:
-                context.console.print("[bold yellow]⚠ No questions found in DB.[/bold yellow]")
-                context.console.print(
-                    "[yellow]Tip: Use 'questions generate --survey-id <id> --domain <domain>' to generate questions[/yellow]"
-                )
-                return
-
-            context.console.print(f"[dim]Using latest question from DB: {question_info}[/dim]")
-
-        # Get answer information from DB
-        user_answer, is_correct = _get_answer_info(question_id)
-
-        if user_answer is None or is_correct is None:
-            context.console.print(f"[bold red]✗ No answer found for question {question_id}[/bold red]")
-            context.console.print("[yellow]Tip: Use 'questions answer autosave' to save an answer first[/yellow]")
+        # Require user_answer for single question mode
+        if user_answer is None:
+            context.console.print("[bold red]✗ User answer is required for single question explanation[/bold red]")
+            context.console.print("[yellow]Provide your answer with: --user-answer 'your answer text'[/yellow]")
+            _print_generate_explanation_help(context)
             return
 
         context.console.print(f"[dim]Generating explanation for question {question_id}...[/dim]")
+
+        # Build JSON data - only include is_correct if provided
+        json_data = {
+            "question_id": question_id,
+            "user_answer": user_answer,
+        }
+        if is_correct is not None:
+            json_data["is_correct"] = is_correct
 
         # API 호출
         status_code, response, error = context.client.make_request(
             "POST",
             "/questions/explanations",
-            json_data={
-                "question_id": question_id,
-                "user_answer": user_answer,
-                "is_correct": is_correct,
-            },
+            json_data=json_data,
         )
 
         if error:
@@ -1865,7 +1741,7 @@ def complete_session(context: CLIContext, *args: str) -> None:
     if args:
         session_id = args[0]
     else:
-        session_id, _ = _get_latest_session(context.session.user_id)
+        session_id, _ = _get_latest_session(context)
 
     if not session_id:
         context.console.print("[bold yellow]⚠️  No session found[/bold yellow]")
