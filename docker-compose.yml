@@ -70,6 +70,9 @@ services:
 
     environment:
       # 데이터베이스 연결
+      # 주의: 'db' 호스트명은 Docker 컨테이너 네트워크 내부 이름
+      # Docker 내부에서 PostgreSQL 컨테이너는 항상 5432에서 리스닝
+      # 호스트의 포트 5433 매핑은 여기서 불필요 (컨테이너 내부 통신)
       DATABASE_URL: postgresql://${DB_USER:-slea_user}:${DB_PASSWORD:-change_me_dev_password}@db:5432/${DB_NAME:-sleassem_dev}
 
       # FastAPI 설정
