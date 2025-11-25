@@ -20,7 +20,9 @@ export interface ProfileValidationResult {
 }
 
 /**
- * Validate nickname field
+ * Validate nickname field (basic empty check only)
+ * REQ: REQ-F-A2-3 - 닉네임 유효성 검사 (백엔드에서 처리)
+ *
  * @param nickname - Nickname to validate
  * @returns Validation result with error message if invalid
  */
@@ -32,6 +34,7 @@ export function validateNickname(nickname: string): NicknameValidationResult {
     }
   }
 
+  // All validation (length, characters, profanity) is handled by backend
   return {
     isValid: true,
     errorMessage: null,

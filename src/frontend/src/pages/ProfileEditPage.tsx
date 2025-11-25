@@ -11,9 +11,6 @@ import RadioButtonGrid, { type RadioButtonOption } from '../components/RadioButt
 import InfoBox, { InfoBoxIcons } from '../components/InfoBox'
 import { safeBackendToLevel } from '../utils/levelMapping'
 import {
-  validateNickname as validateNicknameField,
-  validateCareer as validateCareerField,
-  validateLevel as validateLevelField,
   shouldValidateNickname as shouldCheckNickname,
 } from '../utils/profileValidation'
 import { executeProfileUpdate, type UpdateHandlerContext } from '../utils/profileUpdateHandler'
@@ -84,6 +81,7 @@ const ProfileEditPage: React.FC = () => {
     nickname,
     setNickname,
     checkStatus,
+    errorMessage: nicknameErrorMessage,
     checkNickname: validateNickname,
     setManualError,
   } = useNicknameCheck()
@@ -187,22 +185,14 @@ const ProfileEditPage: React.FC = () => {
   const handleSave = useCallback(async () => {
     if (isSubmitting) return
 
-    // Validate required fields using utilities
-    const nicknameValidation = validateNicknameField(nickname)
-    if (!nicknameValidation.isValid) {
-      setErrorMessage(nicknameValidation.errorMessage || '닉네임이 유효하지 않습니다.')
+    // Basic client-side checks only
+    if (!nickname || !nickname.trim()) {
+      setErrorMessage('닉네임을 입력해주세요.')
       return
     }
 
-    const levelValidation = validateLevelField(level)
-    if (!levelValidation.isValid) {
-      setErrorMessage(levelValidation.errors.level || '기술 수준이 유효하지 않습니다.')
-      return
-    }
-
-    const careerValidation = validateCareerField(career)
-    if (!careerValidation.isValid) {
-      setErrorMessage(careerValidation.errorMessage || '경력이 유효하지 않습니다.')
+    if (level === null) {
+      setErrorMessage('기술 수준을 선택해주세요.')
       return
     }
 
@@ -331,9 +321,9 @@ const ProfileEditPage: React.FC = () => {
             {checkStatus === 'taken' && (
               <p className="status-message taken">이미 사용 중인 닉네임입니다</p>
             )}
-            {checkStatus === 'error' && (
+            {checkStatus === 'error' && nicknameErrorMessage && (
               <p className="status-message error">
-                닉네임 중복 확인 중 오류가 발생했습니다
+                {nicknameErrorMessage}
               </p>
             )}
           </div>

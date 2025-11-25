@@ -24,10 +24,11 @@ export interface UseNicknameCheckResult {
  * Hook for checking nickname availability
  *
  * REQ: REQ-F-A2-2 - 닉네임 입력 필드와 "중복 확인" 버튼 제공
+ * REQ: REQ-F-A2-3 - 닉네임 유효성 검사 (백엔드에서 처리)
  *
- * Validation rules:
- * - Length: 3-30 characters
- * - Characters: Letters (a-z, A-Z), numbers (0-9), underscore (_)
+ * Validation:
+ * - Frontend: Basic empty check only
+ * - Backend: All validation (length, characters, profanity filter)
  *
  * Usage:
  * ```tsx
@@ -64,27 +65,14 @@ export function useNicknameCheck(): UseNicknameCheckResult {
     setErrorMessage(null)
     setSuggestions([])
 
-    // Validate length (3-30 characters)
-    if (nickname.length < 3) {
+    // Basic empty check only
+    if (!nickname || nickname.trim().length === 0) {
       setCheckStatus('error')
-      setErrorMessage('닉네임은 3자 이상이어야 합니다.')
+      setErrorMessage('닉네임을 입력해주세요.')
       return
     }
 
-    if (nickname.length > 30) {
-      setCheckStatus('error')
-      setErrorMessage('닉네임은 30자 이하여야 합니다.')
-      return
-    }
-
-    // Validate characters (letters, numbers, underscore only)
-    const validPattern = /^[a-zA-Z0-9_]+$/
-    if (!validPattern.test(nickname)) {
-      setCheckStatus('error')
-      setErrorMessage('닉네임은 영문자, 숫자, 언더스코어만 사용 가능합니다.')
-      return
-    }
-
+    // All validation (length, characters, profanity) is handled by backend
     // Call API to check availability
     setCheckStatus('checking')
 
