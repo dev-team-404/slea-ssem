@@ -331,6 +331,7 @@ class ProfileService:
         # If no survey exists, return all null values
         if not survey:
             return {
+                "id": None,
                 "level": None,
                 "career": None,
                 "job_role": None,
@@ -340,6 +341,7 @@ class ProfileService:
 
         # Return survey data with field mappings
         return {
+            "id": survey.id,
             "level": survey.self_level,
             "career": survey.years_experience,
             "job_role": survey.job_role,

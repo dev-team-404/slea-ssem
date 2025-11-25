@@ -364,6 +364,109 @@ class SessionExplanationResponse(BaseModel):
     explanations: list[SessionExplanationItem] = Field(..., description="Answers with explanations")
 
 
+# ============================================================================
+# New Response Models for CLI REST API Migration
+# ============================================================================
+
+
+class LatestSessionResponse(BaseModel):
+    """
+    Response model for latest session retrieval.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Latest Session for CLI)
+
+    Attributes:
+        session_id: TestSession UUID (null if no session exists)
+        status: Session status (in_progress, completed, paused)
+        round: Round number (1 or 2)
+        created_at: Session creation timestamp (ISO format, null if no session)
+
+    """
+
+    session_id: str | None = Field(..., description="TestSession ID (null if no session)")
+    status: str | None = Field(..., description="Session status")
+    round: int | None = Field(..., description="Round number")
+    created_at: str | None = Field(..., description="Session creation timestamp (ISO format)")
+
+
+class QuestionDetailResponse(BaseModel):
+    """
+    Response model for single question details.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Question Details for CLI)
+
+    Attributes:
+        id: Question UUID
+        item_type: Question type (multiple_choice, true_false, short_answer)
+        stem: Question text/content
+        choices: Answer choices (for MC/TF, null for short_answer)
+        answer_schema: Correct answer and explanation
+        difficulty: Difficulty level (1-10)
+        category: Question category/topic
+        session_id: Parent TestSession ID
+        round: Round number
+        created_at: Question creation timestamp
+
+    """
+
+    id: str = Field(..., description="Question ID")
+    item_type: str = Field(..., description="Question type")
+    stem: str = Field(..., description="Question text")
+    choices: list[str] | None = Field(None, description="Answer choices (null for short_answer)")
+    answer_schema: dict[str, Any] = Field(..., description="Answer info and explanation")
+    difficulty: int = Field(..., description="Difficulty level (1-10)")
+    category: str = Field(..., description="Question category")
+    session_id: str = Field(..., description="Parent TestSession ID")
+    round: int = Field(..., description="Round number")
+    created_at: str = Field(..., description="Creation timestamp (ISO format)")
+
+
+class SessionQuestionsResponse(BaseModel):
+    """
+    Response model for session questions list.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get All Questions in Session for CLI)
+
+    Attributes:
+        session_id: TestSession UUID
+        total_count: Total number of questions in session
+        questions: List of questions ordered by created_at
+
+    """
+
+    session_id: str = Field(..., description="TestSession ID")
+    total_count: int = Field(..., description="Total number of questions")
+    questions: list[QuestionResponse] = Field(..., description="Questions ordered by created_at")
+
+
+class UnscoredAnswerItem(BaseModel):
+    """Single unscored answer item for CLI."""
+
+    id: str = Field(..., description="AttemptAnswer ID")
+    question_id: str = Field(..., description="Question ID")
+    user_answer: dict[str, Any] | str = Field(..., description="User's answer")
+    session_id: str = Field(..., description="TestSession ID")
+    created_at: str = Field(..., description="Creation timestamp (ISO format)")
+
+
+class UnscoredAnswersResponse(BaseModel):
+    """
+    Response model for unscored answers list.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Unscored Answers for CLI)
+
+    Attributes:
+        session_id: TestSession UUID
+        total_count: Total number of unscored answers
+        answers: List of unscored answers ordered by created_at
+
+    """
+
+    session_id: str = Field(..., description="TestSession ID")
+    total_count: int = Field(..., description="Total number of unscored answers")
+    answers: list[UnscoredAnswerItem] = Field(..., description="Unscored answers ordered by created_at")
+
+
 @router.post(
     "/generate",
     response_model=GenerateQuestionsResponse,
@@ -923,7 +1026,6 @@ def get_session_explanations(
         # Build explanations list with parallel processing for performance
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        explain_service = ExplainService(db)
         explanations_list: list[dict[str, Any]] = []
         explanation_items_to_process = []
 
@@ -947,10 +1049,15 @@ def get_session_explanations(
 
         # Second pass: generate explanations in parallel
         def generate_explanation_safe(params: tuple) -> dict[str, Any]:
-            """Generate explanation for a single item (thread-safe)."""
+            """Generate explanation for a single item (thread-safe with independent session)."""
+            from src.backend.database import SessionLocal
+
             item, question_id, answer = params
+            # Create independent session for this thread to avoid SQLAlchemy state conflicts
+            thread_db = SessionLocal()
             try:
-                explanation = explain_service.generate_explanation(
+                thread_explain_service = ExplainService(thread_db)
+                explanation = thread_explain_service.generate_explanation(
                     question_id=question_id,
                     user_answer=answer.user_answer,
                     is_correct=answer.is_correct,
@@ -960,6 +1067,8 @@ def get_session_explanations(
             except Exception as e:
                 logger.warning(f"Failed to generate explanation for question {question_id}: {e}")
                 item["explanation"] = None
+            finally:
+                thread_db.close()
             return item
 
         # Use thread pool for parallel processing (up to 5 concurrent requests)
@@ -1046,3 +1155,340 @@ def generate_explanation(
     except Exception as e:
         logger.exception("Error generating explanation")
         raise HTTPException(status_code=500, detail="Failed to generate explanation") from e
+
+
+# ============================================================================
+# New GET Endpoints for CLI REST API Migration
+# ============================================================================
+
+
+@router.get(
+    "/session/latest",
+    response_model=LatestSessionResponse,
+    status_code=200,
+    summary="Get Latest Session",
+    description="Retrieve the latest test session for the authenticated user",
+)
+def get_latest_session(
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Get the latest test session for the authenticated user.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Latest Session for CLI)
+
+    Retrieves the most recent TestSession for the authenticated user,
+    ordered by creation timestamp descending. Returns null fields if
+    no session exists.
+
+    Args:
+        user: Current authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        LatestSessionResponse with session details or null fields if no session
+
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 500: If database query fails
+
+    """
+    try:
+        from src.backend.models.test_session import TestSession
+
+        session = db.query(TestSession).filter_by(user_id=user.id).order_by(TestSession.created_at.desc()).first()
+
+        if session is None:
+            return {
+                "session_id": None,
+                "status": None,
+                "round": None,
+                "created_at": None,
+            }
+
+        return {
+            "session_id": session.id,
+            "status": session.status,
+            "round": session.round,
+            "created_at": session.created_at.isoformat() if session.created_at else None,
+        }
+    except Exception as e:
+        logger.exception("Error retrieving latest session")
+        raise HTTPException(status_code=500, detail="Failed to retrieve latest session") from e
+
+
+@router.get(
+    "/{question_id}",
+    response_model=QuestionDetailResponse,
+    status_code=200,
+    summary="Get Question Details",
+    description="Retrieve details of a specific test question",
+)
+def get_question(
+    question_id: str,
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Get details of a specific test question.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Question Details for CLI)
+
+    Retrieves full question details including stem, choices, and answer schema.
+    Verifies user ownership through session association.
+
+    Args:
+        question_id: Question UUID
+        user: Current authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        QuestionDetailResponse with complete question information
+
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 404: If question not found or user does not own the session
+        HTTPException 500: If database query fails
+
+    """
+    try:
+        from src.backend.models.question import Question
+        from src.backend.models.test_session import TestSession
+
+        question = db.query(Question).filter_by(id=question_id).first()
+
+        if question is None:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        session = db.query(TestSession).filter_by(id=question.session_id).first()
+        if session is None or session.user_id != user.id:
+            raise HTTPException(status_code=401, detail="Unauthorized to access this question")
+
+        return {
+            "id": question.id,
+            "item_type": question.item_type,
+            "stem": question.stem,
+            "choices": question.choices,
+            "answer_schema": question.answer_schema,
+            "difficulty": question.difficulty,
+            "category": question.category,
+            "session_id": question.session_id,
+            "round": question.round,
+            "created_at": question.created_at.isoformat() if question.created_at else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error retrieving question {question_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve question") from e
+
+
+@router.get(
+    "/session/{session_id}/questions",
+    response_model=SessionQuestionsResponse,
+    status_code=200,
+    summary="Get Session Questions",
+    description="Retrieve all questions in a test session",
+)
+def get_session_questions(
+    session_id: str,
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Get all questions in a test session.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get All Questions in Session for CLI)
+
+    Retrieves all questions in a session ordered by creation timestamp.
+    Verifies user ownership of the session.
+
+    Args:
+        session_id: TestSession UUID
+        user: Current authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        SessionQuestionsResponse with list of questions
+
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 404: If session not found or user does not own it
+        HTTPException 500: If database query fails
+
+    """
+    try:
+        from src.backend.models.question import Question
+        from src.backend.models.test_session import TestSession
+
+        session = db.query(TestSession).filter_by(id=session_id).first()
+        if session is None or session.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Session not found or access denied")
+
+        questions = db.query(Question).filter_by(session_id=session_id).order_by(Question.created_at).all()
+
+        questions_list = [
+            QuestionResponse(
+                id=q.id,
+                item_type=q.item_type,
+                stem=q.stem,
+                choices=q.choices,
+                answer_schema=q.answer_schema,
+                difficulty=q.difficulty,
+                category=q.category,
+                session_id=q.session_id,
+                round=q.round,
+                created_at=q.created_at.isoformat() if q.created_at else None,
+            )
+            for q in questions
+        ]
+
+        return {
+            "session_id": session_id,
+            "total_count": len(questions_list),
+            "questions": questions_list,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error retrieving questions for session {session_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve session questions") from e
+
+
+@router.get(
+    "/session/{session_id}/unscored",
+    response_model=UnscoredAnswersResponse,
+    status_code=200,
+    summary="Get Unscored Answers",
+    description="Retrieve unanswered or unscored questions in a test session",
+)
+def get_unscored_answers(
+    session_id: str,
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Get unscored answers in a test session.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Unscored Answers for CLI)
+
+    Retrieves all answers that have not been scored yet (score is None or 0).
+    Verifies user ownership of the session.
+
+    Args:
+        session_id: TestSession UUID
+        user: Current authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        UnscoredAnswersResponse with list of unscored answers
+
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 404: If session not found or user does not own it
+        HTTPException 500: If database query fails
+
+    """
+    try:
+        from src.backend.models.attempt_answer import AttemptAnswer
+        from src.backend.models.test_session import TestSession
+
+        session = db.query(TestSession).filter_by(id=session_id).first()
+        if session is None or session.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Session not found or access denied")
+
+        unscored = (
+            db.query(AttemptAnswer)
+            .filter(
+                AttemptAnswer.session_id == session_id,
+                (AttemptAnswer.score.is_(None)) | (AttemptAnswer.score == 0),
+            )
+            .order_by(AttemptAnswer.created_at)
+            .all()
+        )
+
+        answers_list = [
+            UnscoredAnswerItem(
+                id=answer.id,
+                question_id=answer.question_id,
+                user_answer=answer.user_answer,
+                session_id=answer.session_id,
+                created_at=answer.created_at.isoformat() if answer.created_at else None,
+            )
+            for answer in unscored
+        ]
+
+        return {
+            "session_id": session_id,
+            "total_count": len(answers_list),
+            "answers": answers_list,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error retrieving unscored answers for session {session_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve unscored answers") from e
+
+
+@router.get(
+    "/{question_id}",
+    response_model=QuestionResponse,
+    status_code=200,
+    summary="Get Question Details",
+    description="Retrieve details of a specific question by ID",
+)
+def get_question_detail(
+    question_id: str,
+    user: User = Depends(get_current_user),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """
+    Get details of a specific question.
+
+    REQ: REQ-CLI-QUESTIONS-1 (Get Question Details for CLI)
+
+    Retrieves a specific question by ID and verifies user owns the session
+    that contains this question.
+
+    Args:
+        question_id: Question UUID
+        user: Current authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        QuestionResponse with question details
+
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 404: If question not found or user does not own the session
+        HTTPException 500: If database query fails
+
+    """
+    try:
+        from src.backend.models.question import Question
+        from src.backend.models.test_session import TestSession
+
+        question = db.query(Question).filter_by(id=question_id).first()
+        if question is None:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Verify user owns the session containing this question
+        session = db.query(TestSession).filter_by(id=question.session_id).first()
+        if session is None or session.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Question not found or access denied")
+
+        return QuestionResponse(
+            id=question.id,
+            item_type=question.item_type,
+            stem=question.stem,
+            choices=question.choices,
+            answer_schema=question.answer_schema,
+            difficulty=question.difficulty,
+            category=question.category,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error retrieving question {question_id}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve question") from e

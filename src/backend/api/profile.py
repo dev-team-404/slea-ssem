@@ -102,6 +102,7 @@ class SurveyUpdateRequest(BaseModel):
 class SurveyRetrievalResponse(BaseModel):
     """Response model for survey retrieval."""
 
+    id: str | None = Field(..., description="Survey record ID (UUID)")
     level: str | None = Field(..., description="Self-assessed level")
     career: int | None = Field(..., description="Years of experience (0-60)")
     job_role: str | None = Field(..., description="Job role/title")
