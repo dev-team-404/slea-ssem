@@ -56,15 +56,16 @@ services:
       context: .
       dockerfile: Dockerfile
 
-      # 빌드 시점 args (사내 환경에서 오버라이드)
+      # 빌드 시점 args (Proxy 자동 주입)
+      # .env 파일 또는 호스트 환경변수에서 자동 감지
+      # 사외(기본값): 비워둠 → Dockerfile에서 무시
+      # 사내: .env 또는 호스트 설정 → 자동 주입
       args:
-        # 사외(기본값): 빌드 arg 없음
-        # 사내: docker-compose.override.yml에서 proxy/mirror 추가
         PIP_INDEX_URL: ${PIP_INDEX_URL:-}
         PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-}
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
-        NO_PROXY: ${NO_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-db,localhost,127.0.0.1}
 
     container_name: slea-backend
 
