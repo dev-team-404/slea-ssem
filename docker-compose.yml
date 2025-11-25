@@ -119,13 +119,55 @@ services:
         echo '🔄 Waiting for database...';
         sleep 5;
         echo '📦 Running migrations...';
-        alembic upgrade head;
+        python -m alembic upgrade head;
         echo '🚀 Starting Uvicorn server...';
-        python -m uvicorn src.backend.main:app
-          --host 0.0.0.0
-          --port 8000
-          --reload
+        python -m uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir src
       "
+
+  # ============================================================
+  # React 프론트엔드 (Vite 개발 서버)
+  # ============================================================
+  frontend:
+    image: node:20-alpine
+    container_name: slea-frontend
+
+    working_dir: /app/src/frontend
+
+    volumes:
+      # 소스 코드 실시간 동기화
+      - .:/app
+      # node_modules 캐시 (로컬과 분리)
+      - /app/src/frontend/node_modules
+
+    ports:
+      - "5173:5173"  # Vite dev server
+
+    environment:
+      # Vite 설정
+      VITE_API_URL: http://localhost:8000
+      NODE_ENV: development
+      PYTHONUNBUFFERED: 1
+
+    command: >
+      sh -c "
+        echo '📦 Installing dependencies...';
+        npm install;
+        echo '🚀 Starting Vite dev server...';
+        npm run dev -- --host 0.0.0.0
+      "
+
+    networks:
+      - slea-network
+
+    restart: unless-stopped
+
+    # Vite dev server 상태 확인
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ============================================================
   # Redis 캐시 (선택)
