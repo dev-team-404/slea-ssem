@@ -36,7 +36,7 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U slea_user -d sleassem_dev"]
-      interval: 10s
+      interval: 300s
       timeout: 5s
       retries: 5
       start_period: 10s
@@ -88,6 +88,14 @@ services:
 
       # 타임존
       TZ: Asia/Seoul
+
+      # LLM Configuration (Docker container → Host LiteLLM)
+      # host.docker.internal: 호스트의 localhost에 접근하기 위한 특수 DNS명
+      # 참고: Linux에서는 172.17.0.1 또는 host.docker.internal 사용
+      USE_LITE_LLM: "True"
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL:-http://host.docker.internal:4444/v1}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-sk-4444}
+      LITELLM_MODEL: ${LITELLM_MODEL:-gemini-2.0-flash}
 
       # 선택: 프록시 (사내 환경용)
       HTTP_PROXY: ${HTTP_PROXY:-}
