@@ -84,7 +84,24 @@ init:
 # 2. 빌드 (Proxy 자동 주입)
 # ============================================================
 
-build:
+# Pre-build validation (check required files exist)
+validate:
+	@echo -e "$(BLUE)✓ 빌드 전제조건 검사 중...$(NC)"
+	@if [ ! -f pyproject.toml ]; then \
+		echo -e "$(RED)❌ 오류: pyproject.toml 파일이 없습니다$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f README.md ]; then \
+		echo -e "$(RED)❌ 오류: README.md 파일이 없습니다$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f Dockerfile ]; then \
+		echo -e "$(RED)❌ 오류: Dockerfile이 없습니다$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✅ 모든 파일 검증 완료$(NC)"
+
+build: validate
 	@echo -e "$(YELLOW)🔨 이미지 빌드 중...$(NC)"
 	@echo -e "$(BLUE)   - HTTP_PROXY: $${HTTP_PROXY:-[미설정]}$(NC)"
 	@echo -e "$(BLUE)   - HTTPS_PROXY: $${HTTPS_PROXY:-[미설정]}$(NC)"

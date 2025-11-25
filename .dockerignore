@@ -41,9 +41,14 @@ docker-compose*.yml
 
 # Documentation & Config
 docs/
-README*.md
 LICENSE
-*.md
+# Keep README.md for pip install (needed by Dockerfile COPY)
+# Exclude other markdown files explicitly (not *.md which would match README.md)
+ANALYSIS_SUMMARY.md
+AGENTS.md
+GEMINI.md
+CLAUDE.md
+README.en.md
 
 # Tests
 tests/

@@ -2,8 +2,8 @@
 # Production-ready Dockerfile with multi-environment support
 # 사외(공개) + 사내(폐쇄) 환경 모두 지원
 
-# Base Image: Python 3.11 (3.13 요구 시 변경 가능)
-FROM python:3.11-slim as builder
+# Base Image: Python 3.13 (pyproject.toml requires-python: >=3.13)
+FROM python:3.13-slim as builder
 
 # ==================== BUILD-TIME ARGS ====================
 # 빌드 시점 전용 설정 (이미지에 고정되지 않음)
@@ -38,8 +38,9 @@ RUN python -m pip install --upgrade pip
 WORKDIR /app
 
 # ==================== DEPENDENCIES INSTALLATION ====================
-# 의존성 메타 먼저 복사 (빌드 캐시 최적화)
+# 패키지 메타 및 소스 코드 복사 (순서: 빌드 캐시 최적화)
 COPY pyproject.toml README.md ./
+COPY src/ ./src/
 
 # (선택) 사내 pip.conf 사용 시
 # COPY ./pip.conf /etc/pip.conf
@@ -48,7 +49,7 @@ COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir .
 
 # ==================== SOURCE CODE ====================
-# 소스 코드 복사
+# 나머지 파일 복사 (설정, 문서, CI 등)
 COPY . .
 
 # (디버그용) 파일 확인
@@ -57,7 +58,7 @@ RUN ls -la /app/src/ && \
 
 # ==================== RUNTIME IMAGE ====================
 # 최종 이미지 (builder 결과물 최소 복사)
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 ARG APP_VERSION="0.1.0"
 
@@ -88,7 +89,7 @@ WORKDIR /app
 # Builder에서 설치된 Python 패키지 복사
 # (또는 requirements.txt/uv.lock 있으면 재설치)
 COPY --from=builder /app .
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
 # ==================== SECURITY: NON-ROOT USER ====================
 # 비루트 사용자 생성
