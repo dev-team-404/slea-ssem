@@ -175,14 +175,27 @@ PASS: 'admin_😊' => valid=False, error='prohibited'
    - Removed regex character validation
    - Removed unused `import re`
 
-2. **`tests/backend/test_nickname_validator.py`** (182 lines)
+2. **`src/backend/api/profile.py`** (Pydantic field constraints)
+   - `NicknameRegisterRequest`: min_length=3 → 1, max_length=20 → 30
+   - `NicknameEditRequest`: min_length=3 → 1, max_length=20 → 30
+   - `NicknameCheckRequest`: min_length=1 (already correct)
+
+3. **`tests/backend/test_nickname_validator.py`** (182 lines)
    - Added 16 comprehensive tests
    - Reorganized with clear section comments
    - Each test mapped to TC number from specification
 
-3. **`tests/backend/test_profile_service.py`** (updated)
-   - Fixed validation error message expectation
-   - Updated test input to match new minimum length
+4. **`tests/backend/test_profile_service.py`** (fixed)
+   - Fixed validation error message expectation: "at least 3 characters" → "at least 1 characters"
+   - Updated test input: "ab" → "" (empty string, which now violates the rule)
+
+5. **`tests/backend/test_profile_edit_service.py`** (fixed)
+   - Fixed validation error message expectation: "at least 3 characters" → "at least 1 characters"
+   - Updated test input: "ab" → "" (empty string)
+
+6. **`tests/backend/test_profile_endpoint.py`** (fixed)
+   - Fixed test_post_profile_check_nickname_invalid: expects 422 for Pydantic validation
+   - Fixed test_post_profile_register_invalid_nickname: "ab" → "" and expects 422
 
 ### Implementation Details
 
@@ -351,9 +364,30 @@ All 13 critical test cases verified:
 - **Test Coverage**: 16 comprehensive tests covering all scenarios
 - **Code Standards**: Passes ruff, black, mypy, pylint checks
 
+### Test Results (After Fixes)
+```
+✓ test_profile_service.py: 10/10 tests passed
+✓ test_profile_edit_service.py: 18/18 tests passed
+✓ test_profile_endpoint.py: 6/6 tests passed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total: 34/34 profile tests PASSED ✓
+```
+
+### Additional Fix Notes
+- **Agent Implementation** (Commit 81f3863): Correctly implemented validator and test design
+- **Manual Fixes**: Had to update test expectations because:
+  - Tests were written for old requirement (MIN_LENGTH=3)
+  - New requirement (MIN_LENGTH=1) made some test inputs now valid
+  - Pydantic field constraints also needed updating to match new requirements
+  - Added API field constraint updates to profile.py
+
 ---
 
-**Commit**: [to be created in Phase 4]
+**Commits**:
+- `81f3863`: chore: Implement REQ-B-A2-Avail-2 (Nickname validation) [Agent]
+- `[THIS COMMIT]`: fix: Update test expectations for REQ-B-A2-Avail-2 and API field constraints [Manual]
+
 **Branch**: main
 **Date**: 2025-11-25
+**Status**: ✅ COMPLETE
 

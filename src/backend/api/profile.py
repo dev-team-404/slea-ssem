@@ -48,7 +48,8 @@ class NicknameCheckResponse(BaseModel):
 class NicknameRegisterRequest(BaseModel):
     """Request model for nickname registration."""
 
-    nickname: str = Field(..., description="Nickname to register", min_length=3, max_length=20)
+    # REQ-B-A2-Avail-2: Support 1-30 chars with Unicode/Korean/special chars
+    nickname: str = Field(..., description="Nickname to register", min_length=1, max_length=30)
 
 
 class NicknameRegisterResponse(BaseModel):
@@ -73,7 +74,8 @@ class NicknameViewResponse(BaseModel):
 class NicknameEditRequest(BaseModel):
     """Request model for nickname edit."""
 
-    nickname: str = Field(..., description="New nickname", min_length=3, max_length=20)
+    # REQ-B-A2-Avail-2: Support 1-30 chars with Unicode/Korean/special chars
+    nickname: str = Field(..., description="New nickname", min_length=1, max_length=30)
 
 
 class NicknameEditResponse(BaseModel):

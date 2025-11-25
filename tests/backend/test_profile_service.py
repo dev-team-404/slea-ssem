@@ -35,7 +35,7 @@ class TestNicknameDuplicateCheck:
         service = ProfileService(db_session)
 
         # REQ-B-A2-Avail-2: Minimum length is now 1 char, so empty string is invalid
-        with pytest.raises(ValueError, match="at least 1 character"):
+        with pytest.raises(ValueError, match="at least 1 characters"):
             service.check_nickname_availability("")
 
         with pytest.raises(ValueError, match="prohibited word"):
@@ -146,9 +146,10 @@ class TestProfileServiceRegistration:
 
         service = ProfileService(db_session)
 
-        # Test too short
-        with pytest.raises(ValueError, match="at least 3 characters"):
-            service.register_nickname(user.id, "ab")
+        # Test too short (empty string)
+        # REQ-B-A2-Avail-2: MIN_LENGTH=1, so empty string is invalid
+        with pytest.raises(ValueError, match="at least 1"):
+            service.register_nickname(user.id, "")
 
         # Test forbidden word
         with pytest.raises(ValueError, match="prohibited word"):

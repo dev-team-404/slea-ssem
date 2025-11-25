@@ -37,20 +37,18 @@ class TestProfileEndpoint:
 
     def test_post_profile_check_nickname_invalid(self, client: TestClient) -> None:
         """Integration test: POST /profile/nickname/check - invalid format."""
-        # Test too short
-        response = client.post("/profile/nickname/check", json={"nickname": "ab"})
-        assert response.status_code == 400
-        assert "at least 3 characters" in response.json()["detail"]
+        # Test too short (empty string)
+        # REQ-B-A2-Avail-2: MIN_LENGTH=1, Pydantic validates this and returns 422
+        response = client.post("/profile/nickname/check", json={"nickname": ""})
+        assert response.status_code == 422  # Pydantic validation error
 
-        # Test forbidden word
+        # Test forbidden word (passes Pydantic validation, fails our custom validation)
         response = client.post("/profile/nickname/check", json={"nickname": "admin"})
         assert response.status_code == 400
         assert "prohibited word" in response.json()["detail"]
 
-        # Test invalid characters
-        response = client.post("/profile/nickname/check", json={"nickname": "user@domain"})
-        assert response.status_code == 400
-        assert "letters, numbers, and underscores" in response.json()["detail"]
+        # REQ-B-A2-Avail-2: Special characters are now allowed (Korean/English/numbers/Unicode/special chars)
+        # So "user@domain" is now valid, not an error case
 
     def test_post_profile_register_nickname(self, client: TestClient, db_session: Session) -> None:
         """Integration test: POST /profile/register - successful registration."""
@@ -79,8 +77,9 @@ class TestProfileEndpoint:
 
     def test_post_profile_register_invalid_nickname(self, client: TestClient) -> None:
         """Integration test: POST /profile/register - validation error."""
-        # Test too short (Pydantic validation returns 422)
-        response = client.post("/profile/register", json={"nickname": "ab"})
+        # Test too short (empty string, Pydantic validation returns 422)
+        # REQ-B-A2-Avail-2: MIN_LENGTH=1, so empty string fails Pydantic validation
+        response = client.post("/profile/register", json={"nickname": ""})
         assert response.status_code == 422
 
         # Test forbidden word (business logic returns 400)
