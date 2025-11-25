@@ -17,21 +17,22 @@ services:
       POSTGRES_USER: slea_user
       POSTGRES_PASSWORD: change_me_dev_password
 
+      # 개발 환경: trust 인증으로 설정 (원격 접속 허용)
+      POSTGRES_HOST_AUTH_METHOD: trust
+
       # 타임존 설정
       TZ: Asia/Seoul
       PGTZ: Asia/Seoul
 
     ports:
       # 로컬 개발용 포트 노출 (사외)
+      # WSL 로컬 PostgreSQL과의 충돌을 피하기 위해 5433 사용
       # 사내: docker-compose.override.yml에서 제거
-      - "5432:5432"
+      - "5433:5432"
 
     volumes:
       # 데이터 영속성
       - postgres_data:/var/lib/postgresql/data
-
-      # 초기화 스크립트 (선택)
-      # - ./infra/init-db.sql:/docker-entrypoint-initdb.d/init.sql
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U slea_user"]
@@ -72,7 +73,7 @@ services:
       DATABASE_URL: postgresql://${DB_USER:-slea_user}:${DB_PASSWORD:-change_me_dev_password}@db:5432/${DB_NAME:-sleassem_dev}
 
       # FastAPI 설정
-      HOST: 0.0.0.0
+      HOST: 127.0.0.1
       PORT: 8000
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: ${ENVIRONMENT:-development}
@@ -113,16 +114,15 @@ services:
 
     restart: unless-stopped
 
-    # 개발 모드: 자동 다시로드 활성화
-    command: >
-      sh -c "
+    # 개발 모드: uvicorn 서버 시작 (환경변수 전달 위해 exec form 사용)
+    command:
+      - /bin/sh
+      - -c
+      - |
         echo '🔄 Waiting for database...';
         sleep 5;
-        echo '📦 Running migrations...';
-        python -m alembic upgrade head;
         echo '🚀 Starting Uvicorn server...';
-        python -m uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir src
-      "
+        python -m uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
 
   # ============================================================
   # React 프론트엔드 (Vite 개발 서버)

@@ -92,9 +92,10 @@ COPY --from=builder /app .
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
 # ==================== SECURITY: NON-ROOT USER ====================
-# 비루트 사용자 생성
-RUN useradd -u 10001 -m -s /usr/sbin/nologin appuser && \
-    chown -R appuser:appuser /app
+# 비루트 사용자 생성 (호스트 UID 1000과 동일하게 설정해서 volume mount 접근 가능하게 함)
+RUN useradd -u 1000 -m -s /usr/sbin/nologin appuser && \
+    chown -R appuser:appuser /app && \
+    chmod -R u+rwX,g+rX,o-rwx /app
 
 USER appuser
 
@@ -119,7 +120,5 @@ LABEL org.opencontainers.image.title="slea-ssem-backend" \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # 기본 명령: FastAPI uvicorn 서버
-CMD ["python", "-m", "uvicorn", "src.backend.main:app", \
-     "--host", "${HOST}", \
-     "--port", "${PORT}", \
-     "--reload"]
+# Shell form으로 환경변수 확장 가능하게 함 (exec form은 ${HOST} 리터럴로 전달됨)
+CMD ["sh", "-c", "python -m uvicorn src.backend.main:app --host ${HOST:-127.0.0.1} --port ${PORT:-8000}"]
