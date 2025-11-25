@@ -50,6 +50,7 @@ RUN pip install --no-cache-dir .
 
 # ==================== SOURCE CODE ====================
 # 나머지 파일 복사 (설정, 문서, CI 등)
+# .dockerignore에서 .env 제외 (Docker 환경에서는 docker-compose.yml 환경변수 사용)
 COPY . .
 
 # (디버그용) 파일 확인
