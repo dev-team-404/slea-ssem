@@ -1,6 +1,6 @@
 # REQ-B-A1: OIDC 인증 및 JWT 쿠키 발급 (Backend) - Progress Report
 
-**Status**: COMPLETED
+**Status**: COMPLETED (REQ-B-A1-1 ~ 9)
 **Last Updated**: 2025-11-26
 **Phases**: Phase 1 (Spec) → Phase 2 (Test Design) → Phase 3 (Implementation) → Phase 4 (Documentation)
 
@@ -8,12 +8,12 @@
 
 ## Executive Summary
 
-REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급 기능이 모두 구현 완료되었습니다. Azure AD와의 OIDC 통합, ID Token 검증, JWT 생성 및 HttpOnly 쿠키 설정이 모두 정상 작동합니다.
+REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급 기능이 모두 구현 완료되었습니다. Azure AD와의 OIDC 통합, ID Token 검증, JWT 생성 및 HttpOnly 쿠키 설정이 모두 정상 작동합니다. 추가로 REQ-B-A1-9의 인증 상태 확인 API도 완료되었습니다.
 
 **Key Metrics**:
-- Test Cases: 13개 (모두 통과)
+- Test Cases: 18개 (13 기존 + 5 신규)
 - Code Quality: ruff/black 통과
-- Implementation Files: 4 (config.py, auth_service.py, auth.py, test_oidc_auth.py)
+- Implementation Files: 4 (config.py, auth_service.py, auth.py, test_oidc_auth.py, test_auth_endpoint.py)
 
 ---
 
@@ -33,12 +33,20 @@ REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급 기능이 모두 구현 완료되었�
 | REQ-B-A1-6 | 생성한 JWT를 HttpOnly 쿠키로 Set-Cookie 헤더에 설정 | M |
 | REQ-B-A1-7 | 신규 사용자는 is_new_user=true, 기존 사용자는 is_new_user=false | M |
 | REQ-B-A1-8 | 모든 API 요청에서 쿠키의 JWT 검증하여 인증 | M |
+| REQ-B-A1-9 | 인증 상태 확인 API (`GET /api/auth/status`)로 쿠키 유효성 확인 | M |
 
 ---
 
 ## Phase 2: Test Design (COMPLETED)
 
-### Test Coverage: 13 Test Cases
+### Test Coverage: 18 Test Cases (13 기존 + 5 신규)
+
+#### TestAuthStatusEndpoint (5 tests) - NEW
+- TC-14: Valid JWT cookie → 200 with {authenticated: true, user_id, knox_id}
+- TC-15: No auth_token cookie → 401 Unauthorized
+- TC-16: Invalid JWT token → 401 Unauthorized
+- TC-17: Expired JWT token → 401 Unauthorized
+- TC-18: Token missing knox_id → 401 Unauthorized
 
 #### TestOIDCCallbackEndpoint (3 tests)
 - TC-1: Valid authorization code and code_verifier → 201/200 + HttpOnly cookie
@@ -84,11 +92,17 @@ REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급 기능이 모두 구현 완료되었�
 3. **src/backend/api/auth.py**
    - Added OIDCCallbackRequest model
    - Added POST /auth/oidc/callback endpoint
+   - Added StatusResponse model (REQ-B-A1-9)
+   - Added GET /auth/status endpoint (REQ-B-A1-9)
    - Integrated with existing AuthService for user creation/update
 
-4. **tests/backend/test_oidc_auth.py**
-   - New test file with 13 comprehensive test cases
-   - Tests cover all 8 requirements
+4. **tests/backend/test_auth_endpoint.py**
+   - Added TestAuthStatusEndpoint class with 5 test cases (REQ-B-A1-9)
+   - Tests cover GET /auth/status endpoint
+
+5. **tests/backend/test_oidc_auth.py**
+   - Existing test file with 13 comprehensive test cases
+   - Tests cover REQ-B-A1-1 ~ 8
 
 ### Test Results
 
@@ -133,6 +147,7 @@ ruff check . --fix → All checks passed
 | REQ-B-A1-6 | Set HttpOnly cookie | response.set_cookie() | TC-11 | ✅ |
 | REQ-B-A1-7 | Return is_new_user | oidc_callback() | TC-1,2,3 | ✅ |
 | REQ-B-A1-8 | Validate JWT | decode_jwt() | TC-12,13 | ✅ |
+| REQ-B-A1-9 | Check auth status | check_auth_status() | TC-14,15,16,17,18 | ✅ |
 
 ### Environment Variables Required
 
@@ -158,7 +173,7 @@ JWT_SECRET_KEY=<your-secret-key>
 
 ### Summary
 
-REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급이 완전히 구현되었습니다.
+REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급이 완전히 구현되었습니다. 추가로 REQ-B-A1-9의 인증 상태 확인 API도 완료되었습니다.
 
 **Key Achievements**:
 - Authorization code → Azure AD token exchange (PKCE)
@@ -166,5 +181,26 @@ REQ-B-A1 OIDC 인증 및 JWT 쿠키 발급이 완전히 구현되었습니다.
 - User auto-creation/update (신규/기존 사용자 구분)
 - Self-issued JWT + HttpOnly cookie
 - Security: Secure, HttpOnly, SameSite, 24-hour expiration
+- **NEW (REQ-B-A1-9)**: GET /auth/status endpoint for authentication status checking
+
+**New Endpoint (REQ-B-A1-9)**:
+```
+GET /auth/status
+Cookie: auth_token=<jwt>
+
+Response (authenticated):
+200 OK
+{
+  "authenticated": true,
+  "user_id": 123,
+  "knox_id": "user123"
+}
+
+Response (not authenticated):
+401 Unauthorized
+{
+  "authenticated": false
+}
+```
 
 Ready for production deployment.

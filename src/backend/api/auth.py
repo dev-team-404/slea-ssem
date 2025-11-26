@@ -1,12 +1,13 @@
 """
 Authentication API endpoints.
 
-REQ: REQ-B-A1-1, REQ-B-A1-2, REQ-B-A1-3, REQ-B-A1-4, REQ-B-A1-5, REQ-B-A1-6, REQ-B-A1-7, REQ-B-A1-8
+REQ: REQ-B-A1-1, REQ-B-A1-2, REQ-B-A1-3, REQ-B-A1-4, REQ-B-A1-5, REQ-B-A1-6, REQ-B-A1-7, REQ-B-A1-8, REQ-B-A1-9
 """
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+import jwt as pyjwt
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -71,6 +72,24 @@ class OIDCCallbackRequest(BaseModel):
 
     code: str = Field(..., description="Authorization code from Azure AD")
     code_verifier: str = Field(..., description="PKCE code verifier")
+
+
+class StatusResponse(BaseModel):
+    """
+    Response model for authentication status endpoint.
+
+    REQ: REQ-B-A1-9
+
+    Attributes:
+        authenticated: True if user is authenticated
+        user_id: User's database ID (only when authenticated)
+        knox_id: User's Knox ID (only when authenticated)
+
+    """
+
+    authenticated: bool = Field(..., description="Authentication status")
+    user_id: int | None = Field(default=None, description="User's database ID")
+    knox_id: str | None = Field(default=None, description="User's Knox ID")
 
 
 @router.post(
@@ -223,3 +242,80 @@ def oidc_callback(
     except Exception as e:
         logger.exception("OIDC callback error")
         raise HTTPException(status_code=500, detail="OIDC callback failed") from e
+
+
+@router.get(
+    "/status",
+    response_model=StatusResponse,
+    summary="Authentication Status Check",
+    description="Check if user is authenticated and retrieve user information from JWT cookie",
+)
+def check_auth_status(
+    auth_token: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),  # noqa: B008
+) -> JSONResponse:
+    """
+    Check authentication status by validating JWT from cookie.
+
+    REQ: REQ-B-A1-9
+
+    Args:
+        auth_token: JWT token from HttpOnly cookie
+        db: Database session
+
+    Returns:
+        JSONResponse with authentication status
+        - 200 with {authenticated: true, user_id, knox_id} if authenticated
+        - 401 with {authenticated: false} if not authenticated or invalid token
+
+    """
+    if not auth_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+        )
+
+    try:
+        auth_service = AuthService(db)
+        payload = auth_service.decode_jwt(auth_token)
+        knox_id = payload.get("knox_id")
+
+        # Get user from database to retrieve user_id
+        if not knox_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token: missing knox_id",
+            )
+
+        from src.backend.models.user import User
+
+        user = db.query(User).filter_by(knox_id=knox_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="User not found",
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": True,
+                "user_id": user.id,
+                "knox_id": knox_id,
+            },
+        )
+
+    except pyjwt.InvalidTokenError as e:
+        logger.warning(f"Invalid token: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Authentication status check error")
+        raise HTTPException(
+            status_code=500,
+            detail="Authentication status check failed",
+        ) from e
