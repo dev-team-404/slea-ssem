@@ -17,13 +17,14 @@ import { transport } from '../lib/transport'
  *
  * REQ: REQ-F-A1-3, REQ-B-A1-9
  *
- * @returns Promise<boolean> - true if authenticated (200 OK), false otherwise
+ * @returns Promise<boolean> - true if authenticated field is true, false otherwise
  */
 export const isAuthenticated = async (): Promise<boolean> => {
   try {
     // Use transport layer to respect VITE_MOCK_API setting
-    await transport.get<{ authenticated: boolean }>('/api/auth/status')
-    return true // 200 OK = authenticated
+    const response = await transport.get<{ authenticated: boolean }>('/api/auth/status')
+    // Check authenticated field explicitly (handles soft logout, expired sessions with 200 OK)
+    return response.authenticated === true
   } catch {
     return false // 401 or any error = not authenticated
   }
