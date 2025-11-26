@@ -769,8 +769,11 @@ REQ-F-B1은 원래 "레벨 테스트 시작 전 자기평가 입력"으로 정�
 | **REQ-B-A1-6** | **생성한 JWT를 HttpOnly 쿠키로 Set-Cookie 헤더에 설정하여 응답해야 한다.** | **M** |
 | **REQ-B-A1-7** | 신규 사용자 생성 시 is_new_user=true, 기존 사용자는 is_new_user=false로 응답해야 한다. | **M** |
 | **REQ-B-A1-8** | 이후 모든 API 요청에서 쿠키의 JWT를 검증하여 사용자를 인증해야 한다. | **M** |
+| **REQ-B-A1-9** | 인증 상태 확인 API(`GET /api/auth/status`)를 제공하여 쿠키의 유효성을 확인할 수 있어야 한다. | **M** |
 
 **API 엔드포인트**:
+
+**1. POST /api/auth/oidc/callback** - OIDC 토큰 교환 및 JWT 발급
 
 ```
 POST /api/auth/oidc/callback
@@ -792,6 +795,31 @@ Content-Type: application/json
   "user_id": "uuid-string",
   "knox_id": "bwyoon",
   "is_new_user": true
+}
+```
+
+**2. GET /api/auth/status** - 인증 상태 확인 (REQ-B-A1-9)
+
+```
+GET /api/auth/status
+Cookie: __Host-session={JWT}
+
+Response (인증됨):
+200 OK
+Content-Type: application/json
+
+{
+  "authenticated": true,
+  "user_id": "uuid-string",
+  "knox_id": "bwyoon"
+}
+
+Response (인증 안 됨):
+401 Unauthorized
+Content-Type: application/json
+
+{
+  "authenticated": false
 }
 ```
 

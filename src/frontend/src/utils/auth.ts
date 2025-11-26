@@ -1,35 +1,30 @@
-// REQ: REQ-F-A1-2
+// REQ: REQ-F-A1-1, REQ-F-A1-3, REQ-B-A1-9
 /**
- * Authentication utility functions for token management.
+ * Authentication utility functions for HttpOnly cookie-based auth.
  *
- * Handles JWT token storage, retrieval, and removal using localStorage.
+ * MIGRATION NOTE (2025-01):
+ * - Removed: saveToken, getToken, removeToken (localStorage 방식)
+ * - Migrated to HttpOnly cookie (XSS 방어)
+ * - JWT는 서버에서 Set-Cookie로 관리
+ * - 브라우저가 자동으로 모든 요청에 쿠키 포함
  */
 
-const TOKEN_KEY = 'slea_ssem_token'
-
 /**
- * Save JWT token to localStorage.
+ * Check if user is authenticated via GET /api/auth/status
+ * (HttpOnly cookie is automatically included by browser)
  *
- * @param token - JWT token string to save
- */
-export const saveToken = (token: string): void => {
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-/**
- * Retrieve JWT token from localStorage.
+ * REQ: REQ-F-A1-3, REQ-B-A1-9
  *
- * @returns JWT token string or null if not found
+ * @returns Promise<boolean> - true if authenticated (200 OK), false otherwise
  */
-export const getToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-/**
- * Remove JWT token from localStorage.
- * Also clears mock mode flag if present.
- */
-export const removeToken = (): void => {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem('slea_ssem_api_mock')
+export const isAuthenticated = async (): Promise<boolean> => {
+  try {
+    const response = await fetch('/api/auth/status', {
+      credentials: 'include', // Include HttpOnly cookies
+      method: 'GET',
+    })
+    return response.ok // 200 OK = authenticated, 401 = not authenticated
+  } catch {
+    return false
+  }
 }

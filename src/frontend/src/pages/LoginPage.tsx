@@ -1,58 +1,107 @@
-// REQ: REQ-F-A1-1
-import React from 'react'
+// REQ: REQ-F-A1-1, REQ-F-A1-2, REQ-F-A1-3
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PageLayout } from '../components'
+import { isAuthenticated } from '../utils/auth'
+import { generatePKCEParams, storePKCEParams } from '../utils/pkce'
 import './LoginPage.css'
 
+/**
+ * LoginPage - Auto-redirect to OIDC or /home
+ *
+ * REQ-F-A1-1: Check cookie, generate PKCE if not authenticated
+ * REQ-F-A1-2: Redirect to Azure AD with PKCE
+ * REQ-F-A1-3: Redirect to /home if already authenticated
+ */
 const LoginPage: React.FC = () => {
-  const handleLogin = () => {
-    // 개발 환경에서는 기본적으로 SSO mock 모드를 사용하지만,
-    // VITE_MOCK_SSO 값을 통해 명시적으로 제어할 수 있다.
-    const shouldMockSso =
-      import.meta.env.VITE_MOCK_SSO === 'true' ||
-      (import.meta.env.VITE_MOCK_SSO !== 'false' && import.meta.env.DEV)
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(true)
 
-    if (!shouldMockSso) {
-      // 실제 SSO 페이지로 리다이렉트
-      window.location.href = '/api/auth/sso/redirect'
-      return
+  useEffect(() => {
+    const handleAutoRedirect = async () => {
+      try {
+        // REQ-F-A1-3: Check if already authenticated
+        const authenticated = await isAuthenticated()
+
+        if (authenticated) {
+          // Already logged in, redirect to home
+          navigate('/home', { replace: true })
+          return
+        }
+
+        // REQ-F-A1-1: Generate PKCE parameters
+        const pkceParams = await generatePKCEParams()
+
+        // Store in sessionStorage for callback
+        storePKCEParams({
+          codeVerifier: pkceParams.codeVerifier,
+          state: pkceParams.state,
+          nonce: pkceParams.nonce,
+        })
+
+        // REQ-F-A1-2: Build Azure AD authorization URL
+        const authUrl = buildAzureADAuthUrl(
+          pkceParams.codeChallenge,
+          pkceParams.state,
+          pkceParams.nonce
+        )
+
+        // Redirect to Azure AD
+        window.location.href = authUrl
+      } catch (error) {
+        console.error('Auto-redirect failed:', error)
+        setIsLoading(false)
+      }
     }
 
-    // SSO mock 모드: CallbackPage로 직접 이동하면서 SSO 시뮬레이션 파라미터 부여
-    const mockSsoParams = new URLSearchParams({
-      sso_mock: 'true',
-      knox_id: import.meta.env.VITE_MOCK_SSO_KNOX_ID ?? 'mock_user_001',
-      name: import.meta.env.VITE_MOCK_SSO_NAME ?? 'Mock User',
-      dept: import.meta.env.VITE_MOCK_SSO_DEPT ?? 'Mock Department',
-      business_unit: import.meta.env.VITE_MOCK_SSO_BU ?? 'S.LSI',
-      email: import.meta.env.VITE_MOCK_SSO_EMAIL ?? 'mock.user@samsung.com',
-    })
+    handleAutoRedirect()
+  }, [navigate])
 
-    const shouldMockApi = import.meta.env.VITE_MOCK_API === 'true'
-
-    if (shouldMockApi) {
-      // 백엔드 API mock을 사용할 때는 하위 호환성을 위해 기존 mock 플래그도 유지한다.
-      mockSsoParams.set('api_mock', 'true')
-      mockSsoParams.set('mock', 'true')
-    }
-
-    window.location.href = `/auth/callback?${mockSsoParams.toString()}`
+  if (isLoading) {
+    return (
+      <PageLayout mainClassName="login-page" containerClassName="login-container">
+        <div data-testid="login-container">
+          <h1 className="login-title">SLEA-SSEM</h1>
+          <p>인증 중...</p>
+        </div>
+      </PageLayout>
+    )
   }
 
   return (
     <PageLayout mainClassName="login-page" containerClassName="login-container">
       <div data-testid="login-container">
         <h1 className="login-title">SLEA-SSEM</h1>
-        <button
-          type="button"
-          className="login-button"
-          onClick={handleLogin}
-          aria-label="Samsung AD로 로그인"
-        >
-          Samsung AD로 로그인
-        </button>
+        <p>로그인 처리 중 오류가 발생했습니다.</p>
       </div>
     </PageLayout>
   )
+}
+
+/**
+ * Build Azure AD authorization URL with PKCE
+ * @param codeChallenge - PKCE code_challenge
+ * @param state - CSRF protection state
+ * @param nonce - Replay attack protection nonce
+ * @returns Authorization URL
+ */
+function buildAzureADAuthUrl(codeChallenge: string, state: string, nonce: string): string {
+  const tenantId = import.meta.env.VITE_AZURE_AD_TENANT_ID || 'common'
+  const clientId = import.meta.env.VITE_AZURE_AD_CLIENT_ID || ''
+  const redirectUri = `${window.location.origin}/auth/callback`
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    scope: 'openid profile email',
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    state: state,
+    nonce: nonce,
+  })
+
+  return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`
 }
 
 export default LoginPage
