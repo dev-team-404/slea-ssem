@@ -48,13 +48,14 @@ export interface NicknameRegisterResponse {
 
 /**
  * Survey update request
+ * Note: Only level and career are required, other fields are optional (can be null)
  */
 export interface SurveyUpdateRequest {
   level: string
   career: number
-  job_role: string
-  duty: string
-  interests: string[]
+  job_role: string | null
+  duty: string | null
+  interests: string[] | null
 }
 
 /**
