@@ -1,7 +1,7 @@
 """
 Tests for authentication API endpoint.
 
-REQ: REQ-B-A1-1, REQ-B-A1-2, REQ-B-A1-3, REQ-B-A1-4
+REQ: REQ-B-A1-1, REQ-B-A1-2, REQ-B-A1-3, REQ-B-A1-4, REQ-B-A1-9
 """
 
 from fastapi.testclient import TestClient
@@ -118,3 +118,148 @@ class TestAuthEndpoint:
 
         # THEN: 422 Unprocessable Entity
         assert response.status_code == 422
+
+
+class TestAuthStatusEndpoint:
+    """REQ: REQ-B-A1-9 - Test authentication status check endpoint."""
+
+    def test_get_auth_status_authenticated(self, client: TestClient, user_fixture: User) -> None:
+        """
+        Integration test: GET /auth/status with valid JWT cookie.
+
+        REQ: REQ-B-A1-9
+
+        Given: Valid JWT token in auth_token cookie
+        When: GET /auth/status
+        Then: 200 OK with {authenticated: true, user_id, knox_id}
+        """
+        # GIVEN: Create JWT token for user
+        from src.backend.services.auth_service import AuthService
+        from src.backend.database import SessionLocal
+
+        db = SessionLocal()
+        try:
+            auth_service = AuthService(db)
+            jwt_token, _, _ = auth_service.authenticate_or_create_user({
+                "knox_id": user_fixture.knox_id,
+                "name": user_fixture.name,
+                "dept": user_fixture.dept,
+                "business_unit": user_fixture.business_unit,
+                "email": user_fixture.email,
+            })
+        finally:
+            db.close()
+
+        # WHEN: GET /auth/status with JWT in cookie
+        response = client.get("/auth/status", cookies={"auth_token": jwt_token})
+
+        # THEN: 200 OK with authenticated status
+        assert response.status_code == 200
+        data = response.json()
+        assert data["authenticated"] is True
+        assert data["user_id"] == user_fixture.id
+        assert data["knox_id"] == user_fixture.knox_id
+
+    def test_get_auth_status_no_cookie(self, client: TestClient) -> None:
+        """
+        Integration test: GET /auth/status without JWT cookie.
+
+        REQ: REQ-B-A1-9
+
+        Given: No auth_token cookie provided
+        When: GET /auth/status
+        Then: 401 Unauthorized
+        """
+        # GIVEN: No cookie provided
+
+        # WHEN: GET /auth/status without cookie
+        response = client.get("/auth/status")
+
+        # THEN: 401 Unauthorized
+        assert response.status_code == 401
+
+    def test_get_auth_status_invalid_token(self, client: TestClient) -> None:
+        """
+        Integration test: GET /auth/status with invalid JWT token.
+
+        REQ: REQ-B-A1-9
+
+        Given: Invalid JWT token
+        When: GET /auth/status
+        Then: 401 Unauthorized
+        """
+        # GIVEN: Invalid JWT token
+        invalid_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_payload.invalid_signature"
+
+        # WHEN: GET /auth/status with invalid token
+        response = client.get("/auth/status", cookies={"auth_token": invalid_token})
+
+        # THEN: 401 Unauthorized
+        assert response.status_code == 401
+
+    def test_get_auth_status_expired_token(self, client: TestClient) -> None:
+        """
+        Integration test: GET /auth/status with expired JWT token.
+
+        REQ: REQ-B-A1-9
+
+        Given: Expired JWT token
+        When: GET /auth/status
+        Then: 401 Unauthorized
+        """
+        # GIVEN: Create expired token
+        from datetime import UTC, datetime, timedelta
+        from src.backend.config import settings
+        import jwt
+
+        now = datetime.now(UTC)
+        expired_payload = {
+            "knox_id": "user123",
+            "iat": now - timedelta(hours=25),
+            "exp": now - timedelta(hours=1),  # Expired 1 hour ago
+        }
+        expired_token = jwt.encode(
+            expired_payload,
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        )
+
+        # WHEN: GET /auth/status with expired token
+        response = client.get("/auth/status", cookies={"auth_token": expired_token})
+
+        # THEN: 401 Unauthorized
+        assert response.status_code == 401
+
+    def test_get_auth_status_token_without_knox_id(self, client: TestClient) -> None:
+        """
+        Integration test: GET /auth/status with token missing knox_id.
+
+        REQ: REQ-B-A1-9
+
+        Given: JWT token without knox_id in payload
+        When: GET /auth/status
+        Then: 401 Unauthorized
+        """
+        # GIVEN: Token without knox_id
+        from datetime import UTC, datetime, timedelta
+        from src.backend.config import settings
+        import jwt
+
+        now = datetime.now(UTC)
+        expiration = now + timedelta(hours=24)
+        invalid_payload = {
+            "iat": now,
+            "exp": expiration,
+            # Missing: "knox_id"
+        }
+        token_without_knox_id = jwt.encode(
+            invalid_payload,
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM,
+        )
+
+        # WHEN: GET /auth/status with token missing knox_id
+        response = client.get("/auth/status", cookies={"auth_token": token_without_knox_id})
+
+        # THEN: 401 Unauthorized
+        assert response.status_code == 401
