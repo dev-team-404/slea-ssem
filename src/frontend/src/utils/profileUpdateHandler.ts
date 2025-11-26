@@ -49,12 +49,13 @@ export const surveyDataUpdateHandler: UpdateHandler = {
       throw new Error('Level is required for survey update')
     }
 
+    // Convert empty strings to null for optional fields (backend expects null for empty values)
     await profileService.updateSurvey({
       level: levelToBackend(ctx.current.level),
       career: ctx.current.career,
-      job_role: ctx.current.jobRole,
-      duty: ctx.current.duty,
-      interests: ctx.current.interests ? [ctx.current.interests] : [],
+      job_role: ctx.current.jobRole && ctx.current.jobRole.trim() ? ctx.current.jobRole : null,
+      duty: ctx.current.duty && ctx.current.duty.trim() ? ctx.current.duty : null,
+      interests: ctx.current.interests && ctx.current.interests.trim() ? [ctx.current.interests] : null,
     })
   },
 }
