@@ -1,4 +1,4 @@
-// REQ: REQ-F-A1-2
+// REQ: REQ-F-A1-4, REQ-F-A1-5
 import React from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageLayout } from '../components'
@@ -8,15 +8,19 @@ import { ErrorMessage } from '../components/ErrorMessage'
 import './CallbackPage.css'
 
 /**
- * SSO callback page for handling authentication
+ * OIDC callback page for handling authentication with PKCE
+ *
+ * REQ-F-A1-4: Receives authorization code and sends it with code_verifier to backend
+ * REQ-F-A1-5: Receives HttpOnly JWT cookie and redirects to /home
  *
  * Flow:
- * 1. Parse URL parameters (knox_id, name, dept, business_unit, email)
- * 2. Call backend authentication API
- * 3. Save JWT token to localStorage
- * 4. Redirect to home screen (/home)
- *
- * Supports mock mode for development/testing (add ?api_mock=true and/or ?sso_mock=true)
+ * 1. Extract code and state from URL (?code=xxx&state=xxx)
+ * 2. Retrieve PKCE params from sessionStorage
+ * 3. Verify state (CSRF protection)
+ * 4. Call POST /api/auth/oidc/callback with { code, code_verifier, nonce }
+ * 5. Receive HttpOnly cookie with JWT
+ * 6. Clear PKCE params from sessionStorage
+ * 7. Redirect to /home
  */
 const CallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams()

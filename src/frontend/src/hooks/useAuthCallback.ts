@@ -1,10 +1,7 @@
-// REQ: REQ-F-A1-2
+// REQ: REQ-F-A1-4, REQ-F-A1-5
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { saveToken } from '../utils/auth'
-import { parseUserData } from '../utils/parseUserData'
-import { authService, type LoginResponse } from '../services'
-import { debugLog } from '../utils/logger'
+import { retrievePKCEParams, clearPKCEParams } from '../utils/pkce'
 
 interface UseAuthCallbackResult {
   loading: boolean
@@ -12,14 +9,19 @@ interface UseAuthCallbackResult {
 }
 
 /**
- * Custom hook for handling SSO authentication callback
+ * Custom hook for handling OIDC authentication callback with PKCE
  *
- * Handles:
- * - Mock mode for development/testing (supports ?api_mock=true & ?sso_mock=true)
- * - User data parsing from URL params
- * - Backend API authentication
- * - JWT token storage
- * - Navigation to home screen
+ * REQ-F-A1-4: Receives authorization code and sends it with code_verifier to backend
+ * REQ-F-A1-5: Receives HttpOnly JWT cookie and redirects to /home
+ *
+ * Flow:
+ * 1. Extract code and state from URL
+ * 2. Retrieve PKCE params from sessionStorage
+ * 3. Verify state (CSRF protection)
+ * 4. Call POST /api/auth/oidc/callback with { code, code_verifier, nonce }
+ * 5. Receive HttpOnly cookie with JWT
+ * 6. Clear PKCE params from sessionStorage
+ * 7. Redirect to /home
  *
  * @param searchParams - URL search parameters from callback URL
  * @returns Object with loading and error states
@@ -32,73 +34,73 @@ export function useAuthCallback(searchParams: URLSearchParams): UseAuthCallbackR
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const isApiMock =
-          searchParams.get('api_mock') === 'true' ||
-          searchParams.get('mock') === 'true' ||
-          import.meta.env.VITE_MOCK_API === 'true'
-        const isSsoMock =
-          searchParams.get('sso_mock') === 'true' || searchParams.get('mock') === 'true'
+        // Step 1: Extract authorization code and state from URL
+        const code = searchParams.get('code')
+        const state = searchParams.get('state')
 
-        let data: LoginResponse
-
-        if (isApiMock) {
-          // Mock mode: 백엔드 없이 프론트엔드만 테스트할 때 사용
-          // 실제 API 호출 없이 mock 응답 반환
-            debugLog('🎭 Mock mode: 백엔드 API 호출 생략 (api_mock)')
-
-          // Save mock mode flag to localStorage to persist across page navigation
-          localStorage.setItem('slea_ssem_api_mock', 'true')
-
-          // Mock 응답 생성 (신규 사용자로 시뮬레이션)
-          data = {
-            access_token: 'mock_jwt_token_' + Date.now(),
-            token_type: 'bearer',
-            user_id: 'test_user_001',
-            is_new_user: true, // 신규 사용자 시뮬레이션 (false로 변경하면 기존 사용자)
-          }
-
-          // 실제 API 호출처럼 약간의 딜레이 추가
-          await new Promise((resolve) => setTimeout(resolve, 500))
-        } else {
-          // 실제 모드: 백엔드 API 호출 (Transport pattern 사용)
-          let userData
-
-          if (isSsoMock) {
-            // SSO mock mode: 가짜 SSO 데이터를 생성하여 백엔드에 전달
-            // 백엔드는 이를 처리하여 실제 JWT 토큰 반환
-              debugLog('🎭 SSO mock mode: 가짜 SSO 데이터로 백엔드 호출')
-            userData = {
-              knox_id: 'test_mock_user_' + Date.now(),
-              name: 'Test Mock User',
-              dept: 'Engineering',
-              business_unit: 'S.LSI',
-              email: `test_mock_${Date.now()}@samsung.com`,
-            }
-          } else {
-            // 실제 SSO 데이터를 URL 파라미터에서 파싱
-            userData = parseUserData(searchParams)
-
-            // Validate required parameters
-            if (!userData) {
-              setError('필수 정보가 누락되었습니다.')
-              setLoading(false)
-              return
-            }
-          }
-
-          // Call backend authentication API using service layer
-          data = await authService.login(userData)
+        if (!code) {
+          setError('인증 코드가 누락되었습니다.')
+          setLoading(false)
+          return
         }
 
-        // Save JWT token to localStorage
-        saveToken(data.access_token)
+        if (!state) {
+          setError('State 파라미터가 누락되었습니다.')
+          setLoading(false)
+          return
+        }
 
-        // REQ-F-A1-2: All users (new and existing) redirect to home screen
-        navigate('/home')
+        // Step 2: Retrieve PKCE params from sessionStorage
+        const pkceParams = retrievePKCEParams()
+
+        if (!pkceParams) {
+          setError('인증 정보가 만료되었습니다. 다시 로그인해주세요.')
+          setLoading(false)
+          return
+        }
+
+        // Step 3: Verify state (CSRF protection)
+        if (state !== pkceParams.state) {
+          setError('잘못된 요청입니다. (State mismatch)')
+          setLoading(false)
+          return
+        }
+
+        // Step 4: Call backend OIDC callback API
+        const response = await fetch('/api/auth/oidc/callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // REQ-F-A1-5: Include HttpOnly cookies
+          body: JSON.stringify({
+            code: code,
+            code_verifier: pkceParams.codeVerifier,
+            nonce: pkceParams.nonce,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage =
+            errorData.detail || '로그인에 실패했습니다. 다시 시도해주세요.'
+          setError(errorMessage)
+          setLoading(false)
+          return
+        }
+
+        // Step 5: Backend sets HttpOnly cookie automatically via Set-Cookie header
+        // No need to manually handle the cookie - browser does it automatically
+
+        // Step 6: Clear PKCE params from sessionStorage
+        clearPKCEParams()
+
+        // Step 7: Redirect to home page (REQ-F-A1-5)
+        navigate('/home', { replace: true })
       } catch (err) {
-        console.error('Authentication error:', err)
+        console.error('OIDC callback error:', err)
         setError(
-          err instanceof Error ? err.message : '로그인에 실패했습니다. 다시 시도해주세요.'
+          err instanceof Error ? err.message : '로그인 처리 중 오류가 발생했습니다.'
         )
         setLoading(false)
       }
