@@ -14,7 +14,8 @@ SHELL := /bin/bash
 # ============================================================
 
 PROJECT_NAME := slea-ssem
-DC := docker-compose
+# Use 'docker compose' (v2) by default, fallback to 'docker-compose' (v1)
+DC := $(shell command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose")
 
 # Service names (from docker-compose.yml)
 BACKEND := backend
